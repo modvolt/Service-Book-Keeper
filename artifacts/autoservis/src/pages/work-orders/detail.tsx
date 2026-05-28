@@ -4,10 +4,11 @@ import { LicensePlate } from "@/components/license-plate";
 import {
   useGetWorkOrder, useUpdateWorkOrder, useListWorkOrderPhotos, useDeletePhoto, useDeleteWorkOrder,
   useListWorkOrderMaterials, useAddWorkOrderMaterial, useDeleteWorkOrderMaterial,
-  useListMaterials, useImportInvoiceForWorkOrder, useGetVehicleByPlate,
+  useListMaterials, useImportInvoiceForWorkOrder, useGetVehicleByPlate, useGetSettings,
   getGetWorkOrderQueryKey, getListWorkOrderPhotosQueryKey, getListWorkOrdersQueryKey,
   getListWorkOrderMaterialsQueryKey, getListMaterialsQueryKey
 } from "@workspace/api-client-react";
+import { WorkOrderExportDialog } from "@/components/work-order-export-dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +19,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Camera, Upload, Trash2, CheckCircle2, X, Loader2, Plus, Minus, Package, Sparkles, FileText, Pencil, Check } from "lucide-react";
+import { ArrowLeft, Camera, Upload, Trash2, CheckCircle2, X, Loader2, Plus, Minus, Package, Sparkles, FileText, Pencil, Check, FileDown } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -54,6 +55,7 @@ export default function WorkOrderDetail() {
   const { data: photos, isLoading: photosLoading } = useListWorkOrderPhotos(id, { query: { enabled: !isNaN(id) } as any });
   const { data: materials = [] } = useListWorkOrderMaterials(id, { query: { enabled: !isNaN(id) } as any });
   const { data: catalog = [] } = useListMaterials();
+  const { data: settings } = useGetSettings();
   const updateOrder = useUpdateWorkOrder();
   const deletePhoto = useDeletePhoto();
   const deleteOrder = useDeleteWorkOrder();
@@ -382,7 +384,21 @@ export default function WorkOrderDetail() {
             </Select>
           </div>
           {!editMode ? (
-            <Button variant="outline" onClick={openEdit}>Upravit</Button>
+            <>
+              <WorkOrderExportDialog
+                order={order}
+                materials={materials}
+                vehicle={linkedVehicle}
+                settings={settings}
+                photos={photos ?? []}
+                trigger={
+                  <Button variant="outline">
+                    <FileDown className="h-4 w-4 mr-2" /> Export pro fakturaci
+                  </Button>
+                }
+              />
+              <Button variant="outline" onClick={openEdit}>Upravit</Button>
+            </>
           ) : (
             <>
               <Button variant="outline" onClick={() => setEditMode(false)}>Zrušit</Button>
