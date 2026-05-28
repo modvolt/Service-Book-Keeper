@@ -1,5 +1,6 @@
 import { useState, useRef, useMemo } from "react";
 import { useRoute, Link } from "wouter";
+import { LicensePlate } from "@/components/license-plate";
 import {
   useGetWorkOrder, useUpdateWorkOrder, useListWorkOrderPhotos, useDeletePhoto, useDeleteWorkOrder,
   useListWorkOrderMaterials, useAddWorkOrderMaterial, useDeleteWorkOrderMaterial,
@@ -347,7 +348,7 @@ export default function WorkOrderDetail() {
         </Link>
         <div className="flex-1 min-w-[200px]">
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-3xl font-bold font-mono uppercase tracking-wider">{order.licensePlate}</h1>
+            <LicensePlate plate={order.licensePlate} size="xl" />
             <WorkOrderStatusBadge status={order.status} />
           </div>
           <p className="text-muted-foreground text-sm mt-1">

@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link, useLocation, useSearch } from "wouter";
+import { LicensePlate } from "@/components/license-plate";
 import { useCreateWorkOrder, useGetVehicleByPlate, useListVehicles, getListWorkOrdersQueryKey } from "@workspace/api-client-react";
 import { DEFAULT_HOURLY_RATE, computeLaborPrice } from "@/lib/labor";
 import { useQueryClient } from "@tanstack/react-query";
@@ -154,7 +155,7 @@ export default function NewWorkOrder() {
                         onMouseDown={(e) => { e.preventDefault(); pickSuggestion(v.licensePlate); }}
                         className="w-full text-left px-3 py-2 hover:bg-accent flex items-center justify-between gap-3"
                       >
-                        <span className="font-mono font-semibold uppercase">{v.licensePlate}</span>
+                        <LicensePlate plate={v.licensePlate} size="sm" />
                         <span className="text-xs text-muted-foreground truncate">
                           {v.make} {v.model}{v.year ? ` (${v.year})` : ""}
                         </span>

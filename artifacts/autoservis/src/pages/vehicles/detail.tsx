@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRoute, Link, useLocation } from "wouter";
+import { LicensePlate } from "@/components/license-plate";
 import { useGetVehicle, useUpdateVehicle, useDeleteVehicle, useCreateServiceRecord, useDeleteServiceRecord, useListVehicleMakes, useListVehicleModels, getGetVehicleQueryKey, getListServiceRecordsQueryKey, getListVehiclesQueryKey } from "@workspace/api-client-react";
 import { AutocompleteInput } from "@/components/autocomplete-input";
 import { AresButton } from "@/components/ares-button";
@@ -269,7 +270,7 @@ export default function VehicleDetail() {
           <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
         </Link>
         <div className="flex-1">
-          <h1 className="text-3xl font-bold tracking-tight font-mono uppercase">{vehicle.licensePlate}</h1>
+          <LicensePlate plate={vehicle.licensePlate} size="xl" />
           <p className="text-muted-foreground">{vehicle.make} {vehicle.model} {vehicle.year ? `(${vehicle.year})` : ""}</p>
         </div>
         <div className="flex gap-2">
@@ -319,7 +320,7 @@ export default function VehicleDetail() {
           <CardHeader><CardTitle className="flex items-center gap-2"><Car className="h-4 w-4" />Základní informace</CardTitle></CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div className="grid grid-cols-2 gap-2">
-              <span className="text-muted-foreground">SPZ</span><span className="font-mono font-bold">{vehicle.licensePlate}</span>
+              <span className="text-muted-foreground">SPZ</span><LicensePlate plate={vehicle.licensePlate} size="sm" />
               <span className="text-muted-foreground">Výrobce</span><span>{vehicle.make}</span>
               <span className="text-muted-foreground">Model</span><span>{vehicle.model}</span>
               <span className="text-muted-foreground">Rok</span><span>{vehicle.year ?? "-"}</span>

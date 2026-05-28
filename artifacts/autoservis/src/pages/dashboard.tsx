@@ -1,4 +1,5 @@
 import { useGetDashboardSummary } from "@workspace/api-client-react";
+import { LicensePlate } from "@/components/license-plate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Car, ClipboardList, Wrench, AlertTriangle } from "lucide-react";
 import { Link } from "wouter";
@@ -95,7 +96,7 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer group">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-lg font-mono uppercase tracking-wider">{order.licensePlate}</span>
+                          <LicensePlate plate={order.licensePlate} size="lg" />
                           {getStatusBadge(order.status)}
                         </div>
                         <p className="text-sm text-muted-foreground line-clamp-1">

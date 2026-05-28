@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useListWorkOrders, getListWorkOrdersQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { LicensePlate } from "@/components/license-plate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -106,7 +107,7 @@ export default function WorkOrdersList() {
                   <div className="flex items-center gap-4 px-6 py-4 hover:bg-accent/50 transition-colors cursor-pointer">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 flex-wrap mb-1">
-                        <span className="font-mono font-bold text-lg tracking-wider uppercase">{wo.licensePlate}</span>
+                        <LicensePlate plate={wo.licensePlate} size="lg" />
                         <WorkOrderStatusBadge status={wo.status} size="sm" />
                         {wo.photos && wo.photos.length > 0 && (
                           <span className="flex items-center gap-1 text-xs text-muted-foreground">

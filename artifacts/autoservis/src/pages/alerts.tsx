@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "wouter";
 import { useListVehicles } from "@workspace/api-client-react";
+import { LicensePlate } from "@/components/license-plate";
 import type { Vehicle } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -195,7 +196,9 @@ export default function AlertsPage() {
                       <tr key={v.id} className={hasOverdue ? "bg-destructive/5 hover:bg-destructive/10" : "bg-amber-50/50 hover:bg-amber-50"}>
                         <td className="px-4 py-3 align-top">
                           <Link href={`/vehicles/${v.id}`}>
-                            <span className="font-mono font-bold uppercase tracking-wider cursor-pointer hover:text-primary">{v.licensePlate}</span>
+                            <span className="cursor-pointer">
+                              <LicensePlate plate={v.licensePlate} size="md" />
+                            </span>
                           </Link>
                         </td>
                         <td className="px-4 py-3 align-top">

@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link } from "wouter";
+import { LicensePlate } from "@/components/license-plate";
 import {
   useListAppointments, useCreateAppointment, useUpdateAppointment, useDeleteAppointment,
   useGetVehicleByPlate, getListAppointmentsQueryKey,
@@ -313,7 +314,7 @@ export default function CalendarPage() {
                       <Badge className={STATUS_BADGE[a.status] ?? ""} variant="secondary">{STATUS_LABEL[a.status] ?? a.status}</Badge>
                     </div>
                     <div className="text-sm text-muted-foreground mt-0.5 truncate">
-                      {a.licensePlate && <span className="font-mono font-semibold mr-2">{a.licensePlate}</span>}
+                      {a.licensePlate && <LicensePlate plate={a.licensePlate} size="sm" className="mr-2" />}
                       {a.customerName && <span className="mr-2">{a.customerName}</span>}
                       {a.description}
                     </div>

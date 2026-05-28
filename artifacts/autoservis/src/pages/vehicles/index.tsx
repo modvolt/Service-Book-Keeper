@@ -3,6 +3,7 @@ import { useListVehicles } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { LicensePlate } from "@/components/license-plate";
 import { Search, Plus, AlertCircle } from "lucide-react";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
@@ -73,8 +74,8 @@ export default function VehiclesList() {
                       <tr key={v.id} className="hover:bg-accent/50 transition-colors group">
                         <td className="px-4 py-3">
                           <Link href={`/vehicles/${v.id}`}>
-                            <span className="font-mono font-bold tracking-wider uppercase text-foreground group-hover:text-primary transition-colors cursor-pointer">
-                              {v.licensePlate}
+                            <span className="cursor-pointer">
+                              <LicensePlate plate={v.licensePlate} size="md" />
                             </span>
                           </Link>
                         </td>
