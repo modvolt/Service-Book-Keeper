@@ -212,16 +212,16 @@ export default function NewWorkOrder() {
                 { key: "oilChange", label: "Výměna motorového oleje" },
                 ...(foundVehicle?.transmission === "automatic" ? [{ key: "transmissionOil", label: "Olej v převodovce" }] : []),
                 { key: "brakes", label: "Servis brzd" },
-                { key: "timing", label: "Rozvody" },
                 { key: "airFilter", label: "Filtr vzduchový" },
+                { key: "timing", label: "Rozvody" },
                 { key: "cabinFilter", label: "Filtr kabinový" },
                 { key: "brakeFluid", label: "Výměna brzdové kapaliny" },
                 { key: "tireChange", label: "Přezutí pneumatik" },
                 { key: "diagnostics", label: "Diagnostika" },
                 { key: "lightsCheck", label: "Kontrola osvětlení" },
                 { key: "frontAxleCheck", label: "Kontrola přední nápravy" },
-                { key: "rearAxleCheck", label: "Kontrola zadní nápravy" },
                 { key: "stk", label: "STK" },
+                { key: "rearAxleCheck", label: "Kontrola zadní nápravy" },
               ].map(item => (
                 <Label
                   key={item.key}

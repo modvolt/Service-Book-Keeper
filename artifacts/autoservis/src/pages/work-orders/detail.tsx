@@ -503,16 +503,16 @@ export default function WorkOrderDetail() {
                   { key: "oilChange", label: "Výměna motorového oleje" },
                   ...(isAutomatic || editForm.transmissionOil ? [{ key: "transmissionOil", label: "Olej v převodovce" }] : []),
                   { key: "brakes", label: "Servis brzd" },
-                  { key: "timing", label: "Rozvody" },
                   { key: "airFilter", label: "Filtr vzduchový" },
+                  { key: "timing", label: "Rozvody" },
                   { key: "cabinFilter", label: "Filtr kabinový" },
                   { key: "brakeFluid", label: "Výměna brzdové kapaliny" },
                   { key: "tireChange", label: "Přezutí pneumatik" },
                   { key: "diagnostics", label: "Diagnostika" },
                   { key: "lightsCheck", label: "Kontrola osvětlení" },
                   { key: "frontAxleCheck", label: "Kontrola přední nápravy" },
-                  { key: "rearAxleCheck", label: "Kontrola zadní nápravy" },
                   { key: "stk", label: "STK" },
+                  { key: "rearAxleCheck", label: "Kontrola zadní nápravy" },
                 ].map(item => (
                   <div key={item.key} className="flex items-center space-x-2">
                     <Checkbox
@@ -538,16 +538,16 @@ export default function WorkOrderDetail() {
                   { checked: order.oilChange, label: "Výměna motorového oleje" },
                   ...(order.transmissionOil ? [{ checked: true, label: "Olej v převodovce" }] : []),
                   { checked: order.brakes, label: "Servis brzd" },
-                  { checked: order.timing, label: "Rozvody" },
                   { checked: order.airFilter, label: "Filtr vzduchový" },
+                  { checked: order.timing, label: "Rozvody" },
                   { checked: order.cabinFilter, label: "Filtr kabinový" },
                   { checked: order.brakeFluid, label: "Výměna brzdové kapaliny" },
                   { checked: order.tireChange, label: "Přezutí pneumatik" },
                   { checked: order.diagnostics, label: "Diagnostika" },
                   { checked: order.lightsCheck, label: "Kontrola osvětlení" },
                   { checked: order.frontAxleCheck, label: "Kontrola přední nápravy" },
-                  { checked: order.rearAxleCheck, label: "Kontrola zadní nápravy" },
                   { checked: order.stk, label: "STK" },
+                  { checked: order.rearAxleCheck, label: "Kontrola zadní nápravy" },
                 ].map(item => (
                   <div key={item.label} className="flex items-center gap-3 py-2">
                     <div className={`h-5 w-5 rounded-full flex items-center justify-center ${item.checked ? "bg-emerald-100 text-emerald-600" : "bg-muted text-muted-foreground"}`}>
