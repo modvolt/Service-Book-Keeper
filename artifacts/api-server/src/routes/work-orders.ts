@@ -27,6 +27,45 @@ async function getWorkOrderWithPhotos(id: number) {
   return { ...order, photos };
 }
 
+/**
+ * Propagate completed/recorded service items from a work order into the vehicle's
+ * status fields (current km, last service dates, last oil km).
+ * Only overwrites when the new date is strictly newer or the field is empty.
+ */
+async function propagateWorkOrderToVehicle(orderId: number): Promise<void> {
+  const [order] = await db.select().from(workOrdersTable).where(eq(workOrdersTable.id, orderId));
+  if (!order || !order.vehicleId) return;
+  const [vehicle] = await db.select().from(vehiclesTable).where(eq(vehiclesTable.id, order.vehicleId));
+  if (!vehicle) return;
+
+  const today = new Date().toISOString().slice(0, 10);
+  const serviceDate = order.serviceDate ?? today;
+
+  const updates: Partial<typeof vehiclesTable.$inferInsert> = {};
+  const isNewer = (existing: string | null) => !existing || serviceDate >= existing;
+
+  if (order.km != null && (vehicle.currentKm == null || order.km > vehicle.currentKm)) {
+    updates.currentKm = order.km;
+  }
+  if (order.oilChange && isNewer(vehicle.lastOilChangeDate)) {
+    updates.lastOilChangeDate = serviceDate;
+    if (order.km != null) updates.lastOilChangeKm = order.km;
+  }
+  if (order.transmissionOil && isNewer(vehicle.lastTransmissionOilDate)) {
+    updates.lastTransmissionOilDate = serviceDate;
+    if (order.km != null) updates.lastTransmissionOilKm = order.km;
+  }
+  if (order.brakes && isNewer(vehicle.lastBrakesDate)) {
+    updates.lastBrakesDate = serviceDate;
+  }
+  if (order.timing && isNewer(vehicle.lastTimingDate)) {
+    updates.lastTimingDate = serviceDate;
+  }
+
+  if (Object.keys(updates).length === 0) return;
+  await db.update(vehiclesTable).set(updates).where(eq(vehiclesTable.id, vehicle.id));
+}
+
 router.get("/work-orders", async (req, res): Promise<void> => {
   const query = ListWorkOrdersQueryParams.safeParse(req.query);
   if (!query.success) {
@@ -79,6 +118,8 @@ router.post("/work-orders", async (req, res): Promise<void> => {
     stk: parsed.data.stk ?? false,
   }).returning();
 
+  await propagateWorkOrderToVehicle(order.id);
+
   res.status(201).json({ ...order, photos: [] });
 });
 
@@ -118,6 +159,8 @@ router.patch("/work-orders/:id", async (req, res): Promise<void> => {
     .where(eq(workOrdersTable.id, params.data.id)).returning();
 
   if (!order) { res.status(404).json({ error: "Zakázka nenalezena" }); return; }
+
+  await propagateWorkOrderToVehicle(order.id);
 
   const photos = await db.select().from(photosTable).where(eq(photosTable.workOrderId, order.id));
   res.json({ ...order, photos });
