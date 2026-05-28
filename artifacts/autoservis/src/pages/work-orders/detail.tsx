@@ -460,7 +460,7 @@ export default function WorkOrderDetail() {
                 photos={photos ?? []}
                 trigger={
                   <Button variant="outline">
-                    <FileDown className="h-4 w-4 mr-2" /> Export pro fakturaci
+                    <FileDown className="h-4 w-4 mr-2" /> Zakázkový list
                   </Button>
                 }
               />
