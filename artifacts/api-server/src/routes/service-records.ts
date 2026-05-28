@@ -87,6 +87,9 @@ router.post("/vehicles/:id/service-records", async (req, res): Promise<void> => 
     updates.lastTransmissionOilDate = parsed.data.date;
     if (parsed.data.km != null) updates.lastTransmissionOilKm = parsed.data.km;
   }
+  if (parsed.data.brakeFluidChanged && isNewer(vehicle.lastBrakeFluidDate)) {
+    updates.lastBrakeFluidDate = parsed.data.date;
+  }
 
   if (Object.keys(updates).length > 0) {
     await db.update(vehiclesTable).set(updates).where(eq(vehiclesTable.id, params.data.id));

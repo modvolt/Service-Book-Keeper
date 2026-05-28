@@ -49,6 +49,12 @@ const SERVICE_FLAGS: Array<{ key: keyof WorkOrder; label: string }> = [
   { key: "timing", label: "Rozvody" },
   { key: "airFilter", label: "Filtr vzduchu" },
   { key: "cabinFilter", label: "Filtr kabiny" },
+  { key: "brakeFluid", label: "Brzdová kapalina" },
+  { key: "tireChange", label: "Přezutí pneumatik" },
+  { key: "diagnostics", label: "Diagnostika" },
+  { key: "lightsCheck", label: "Kontrola osvětlení" },
+  { key: "frontAxleCheck", label: "Přední náprava" },
+  { key: "rearAxleCheck", label: "Zadní náprava" },
   { key: "stk", label: "STK" },
 ];
 

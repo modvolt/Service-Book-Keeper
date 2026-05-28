@@ -60,6 +60,8 @@ export interface VehicleInput {
   /** @nullable */
   lastTransmissionOilKm?: number | null;
   /** @nullable */
+  lastBrakeFluidDate?: string | null;
+  /** @nullable */
   oilChangeIntervalKm?: number | null;
   /** @nullable */
   oilChangeIntervalMonths?: number | null;
@@ -73,4 +75,6 @@ export interface VehicleInput {
   timingIntervalKm?: number | null;
   /** @nullable */
   timingIntervalMonths?: number | null;
+  /** @nullable */
+  brakeFluidIntervalMonths?: number | null;
 }

@@ -67,7 +67,10 @@ export default function WorkOrderDetail() {
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({
     km: "", description: "", oilChange: false, transmissionOil: false, brakes: false,
-    timing: false, airFilter: false, cabinFilter: false, stk: false, otherWork: "", otherServices: "", notes: "",
+    timing: false, airFilter: false, cabinFilter: false, stk: false,
+    tireChange: false, diagnostics: false, lightsCheck: false, brakeFluid: false,
+    frontAxleCheck: false, rearAxleCheck: false,
+    otherWork: "", otherServices: "", notes: "",
     laborHours: "", laborPrice: "", serviceDate: "",
   });
 
@@ -134,6 +137,12 @@ export default function WorkOrderDetail() {
       brakes: order.brakes ?? false, timing: order.timing ?? false,
       airFilter: order.airFilter ?? false, cabinFilter: order.cabinFilter ?? false,
       stk: order.stk ?? false,
+      tireChange: order.tireChange ?? false,
+      diagnostics: order.diagnostics ?? false,
+      lightsCheck: order.lightsCheck ?? false,
+      brakeFluid: order.brakeFluid ?? false,
+      frontAxleCheck: order.frontAxleCheck ?? false,
+      rearAxleCheck: order.rearAxleCheck ?? false,
       otherWork: order.otherWork ?? "", otherServices: order.otherServices ?? "", notes: order.notes ?? "",
       laborHours: order.laborHours ?? "", laborPrice: order.laborPrice != null ? String(order.laborPrice) : "",
       serviceDate: order.serviceDate ?? "",
@@ -188,6 +197,12 @@ export default function WorkOrderDetail() {
         airFilter: editForm.airFilter,
         cabinFilter: editForm.cabinFilter,
         stk: editForm.stk,
+        tireChange: editForm.tireChange,
+        diagnostics: editForm.diagnostics,
+        lightsCheck: editForm.lightsCheck,
+        brakeFluid: editForm.brakeFluid,
+        frontAxleCheck: editForm.frontAxleCheck,
+        rearAxleCheck: editForm.rearAxleCheck,
         serviceDate: editForm.serviceDate || null,
         otherWork: editForm.otherWork || null,
         otherServices: editForm.otherServices || null,
@@ -491,6 +506,12 @@ export default function WorkOrderDetail() {
                   { key: "timing", label: "Rozvody" },
                   { key: "airFilter", label: "Filtr vzduchový" },
                   { key: "cabinFilter", label: "Filtr kabinový" },
+                  { key: "brakeFluid", label: "Výměna brzdové kapaliny" },
+                  { key: "tireChange", label: "Přezutí pneumatik" },
+                  { key: "diagnostics", label: "Diagnostika" },
+                  { key: "lightsCheck", label: "Kontrola osvětlení" },
+                  { key: "frontAxleCheck", label: "Kontrola přední nápravy" },
+                  { key: "rearAxleCheck", label: "Kontrola zadní nápravy" },
                   { key: "stk", label: "STK" },
                 ].map(item => (
                   <div key={item.key} className="flex items-center space-x-2">
@@ -520,6 +541,12 @@ export default function WorkOrderDetail() {
                   { checked: order.timing, label: "Rozvody" },
                   { checked: order.airFilter, label: "Filtr vzduchový" },
                   { checked: order.cabinFilter, label: "Filtr kabinový" },
+                  { checked: order.brakeFluid, label: "Výměna brzdové kapaliny" },
+                  { checked: order.tireChange, label: "Přezutí pneumatik" },
+                  { checked: order.diagnostics, label: "Diagnostika" },
+                  { checked: order.lightsCheck, label: "Kontrola osvětlení" },
+                  { checked: order.frontAxleCheck, label: "Kontrola přední nápravy" },
+                  { checked: order.rearAxleCheck, label: "Kontrola zadní nápravy" },
                   { checked: order.stk, label: "STK" },
                 ].map(item => (
                   <div key={item.label} className="flex items-center gap-3 py-2">

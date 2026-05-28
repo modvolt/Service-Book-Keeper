@@ -16,6 +16,7 @@ export interface ServiceRecordInput {
   brakesServiced?: boolean;
   timingServiced?: boolean;
   transmissionOilChanged?: boolean;
+  brakeFluidChanged?: boolean;
   stkPassed?: boolean;
   /** @nullable */
   otherWork?: string | null;

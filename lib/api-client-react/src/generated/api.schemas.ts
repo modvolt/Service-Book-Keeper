@@ -77,6 +77,8 @@ export interface Vehicle {
   /** @nullable */
   lastTransmissionOilKm?: number | null;
   /** @nullable */
+  lastBrakeFluidDate?: string | null;
+  /** @nullable */
   oilChangeIntervalKm?: number | null;
   /** @nullable */
   oilChangeIntervalMonths?: number | null;
@@ -90,6 +92,8 @@ export interface Vehicle {
   timingIntervalKm?: number | null;
   /** @nullable */
   timingIntervalMonths?: number | null;
+  /** @nullable */
+  brakeFluidIntervalMonths?: number | null;
   createdAt: string;
 }
 
@@ -124,6 +128,7 @@ export interface ServiceRecord {
   brakesServiced?: boolean;
   timingServiced?: boolean;
   transmissionOilChanged?: boolean;
+  brakeFluidChanged?: boolean;
   stkPassed?: boolean;
   /** @nullable */
   otherWork?: string | null;
@@ -168,6 +173,12 @@ export interface WorkOrder {
   airFilter?: boolean;
   cabinFilter?: boolean;
   stk?: boolean;
+  tireChange?: boolean;
+  diagnostics?: boolean;
+  lightsCheck?: boolean;
+  brakeFluid?: boolean;
+  frontAxleCheck?: boolean;
+  rearAxleCheck?: boolean;
   /**
      * Date when service was performed (for backdated/historical orders)
      * @nullable
@@ -244,6 +255,8 @@ export interface VehicleDetail {
   /** @nullable */
   lastTransmissionOilKm?: number | null;
   /** @nullable */
+  lastBrakeFluidDate?: string | null;
+  /** @nullable */
   oilChangeIntervalKm?: number | null;
   /** @nullable */
   oilChangeIntervalMonths?: number | null;
@@ -257,6 +270,8 @@ export interface VehicleDetail {
   timingIntervalKm?: number | null;
   /** @nullable */
   timingIntervalMonths?: number | null;
+  /** @nullable */
+  brakeFluidIntervalMonths?: number | null;
   createdAt: string;
   serviceRecords: ServiceRecord[];
   openWorkOrders: WorkOrder[];
@@ -337,6 +352,8 @@ export interface VehicleInput {
   /** @nullable */
   lastTransmissionOilKm?: number | null;
   /** @nullable */
+  lastBrakeFluidDate?: string | null;
+  /** @nullable */
   oilChangeIntervalKm?: number | null;
   /** @nullable */
   oilChangeIntervalMonths?: number | null;
@@ -350,6 +367,8 @@ export interface VehicleInput {
   timingIntervalKm?: number | null;
   /** @nullable */
   timingIntervalMonths?: number | null;
+  /** @nullable */
+  brakeFluidIntervalMonths?: number | null;
 }
 
 /**
@@ -423,6 +442,8 @@ export interface VehicleUpdate {
   /** @nullable */
   lastTransmissionOilKm?: number | null;
   /** @nullable */
+  lastBrakeFluidDate?: string | null;
+  /** @nullable */
   oilChangeIntervalKm?: number | null;
   /** @nullable */
   oilChangeIntervalMonths?: number | null;
@@ -436,6 +457,8 @@ export interface VehicleUpdate {
   timingIntervalKm?: number | null;
   /** @nullable */
   timingIntervalMonths?: number | null;
+  /** @nullable */
+  brakeFluidIntervalMonths?: number | null;
 }
 
 export interface ServiceRecordInput {
@@ -448,6 +471,7 @@ export interface ServiceRecordInput {
   brakesServiced?: boolean;
   timingServiced?: boolean;
   transmissionOilChanged?: boolean;
+  brakeFluidChanged?: boolean;
   stkPassed?: boolean;
   /** @nullable */
   otherWork?: string | null;
@@ -469,6 +493,12 @@ export interface WorkOrderInput {
   airFilter?: boolean;
   cabinFilter?: boolean;
   stk?: boolean;
+  tireChange?: boolean;
+  diagnostics?: boolean;
+  lightsCheck?: boolean;
+  brakeFluid?: boolean;
+  frontAxleCheck?: boolean;
+  rearAxleCheck?: boolean;
   /** @nullable */
   serviceDate?: string | null;
   /** @nullable */
@@ -507,6 +537,12 @@ export interface WorkOrderUpdate {
   airFilter?: boolean;
   cabinFilter?: boolean;
   stk?: boolean;
+  tireChange?: boolean;
+  diagnostics?: boolean;
+  lightsCheck?: boolean;
+  brakeFluid?: boolean;
+  frontAxleCheck?: boolean;
+  rearAxleCheck?: boolean;
   /** @nullable */
   serviceDate?: string | null;
   /** @nullable */

@@ -121,9 +121,11 @@ export default function VehicleDetail() {
     ownerName: "", ownerAddress: "", ownerIco: "", ownerDic: "", ownerPhone: "", ownerEmail: "",
     lastOilChangeKm: "", lastOilChangeDate: "", lastBrakesDate: "", lastTimingDate: "",
     lastTransmissionOilDate: "", lastTransmissionOilKm: "",
+    lastBrakeFluidDate: "",
     oilChangeIntervalKm: "", oilChangeIntervalMonths: "",
     transmissionOilIntervalKm: "", transmissionOilIntervalMonths: "",
     brakesIntervalMonths: "", timingIntervalKm: "", timingIntervalMonths: "",
+    brakeFluidIntervalMonths: "",
   });
 
   const { data: editMakeOptions = [] } = useListVehicleMakes();
@@ -136,7 +138,7 @@ export default function VehicleDetail() {
     date: new Date().toISOString().split("T")[0],
     km: "", description: "",
     oilChanged: false, transmissionOilChanged: false, brakesServiced: false,
-    timingServiced: false, stkPassed: false, otherWork: "", technician: ""
+    timingServiced: false, brakeFluidChanged: false, stkPassed: false, otherWork: "", technician: ""
   });
 
   const isAutomatic = vehicle?.transmission === "automatic";
@@ -170,6 +172,8 @@ export default function VehicleDetail() {
       brakesIntervalMonths: vehicle.brakesIntervalMonths?.toString() ?? "",
       timingIntervalKm: vehicle.timingIntervalKm?.toString() ?? "",
       timingIntervalMonths: vehicle.timingIntervalMonths?.toString() ?? "",
+      lastBrakeFluidDate: vehicle.lastBrakeFluidDate ?? "",
+      brakeFluidIntervalMonths: vehicle.brakeFluidIntervalMonths?.toString() ?? "",
     });
     setEditOpen(true);
   }
@@ -210,6 +214,8 @@ export default function VehicleDetail() {
         brakesIntervalMonths: toInt(editForm.brakesIntervalMonths),
         timingIntervalKm: toInt(editForm.timingIntervalKm),
         timingIntervalMonths: toInt(editForm.timingIntervalMonths),
+        lastBrakeFluidDate: editForm.lastBrakeFluidDate || null,
+        brakeFluidIntervalMonths: toInt(editForm.brakeFluidIntervalMonths),
         color: editForm.color || null,
         vin: editForm.vin || null,
         notes: editForm.notes || null,
@@ -239,7 +245,7 @@ export default function VehicleDetail() {
         queryClient.invalidateQueries({ queryKey: getGetVehicleQueryKey(id) });
         queryClient.invalidateQueries({ queryKey: getListServiceRecordsQueryKey(id) });
         setAddServiceOpen(false);
-        setServiceForm({ date: new Date().toISOString().split("T")[0], km: "", description: "", oilChanged: false, transmissionOilChanged: false, brakesServiced: false, timingServiced: false, stkPassed: false, otherWork: "", technician: "" });
+        setServiceForm({ date: new Date().toISOString().split("T")[0], km: "", description: "", oilChanged: false, transmissionOilChanged: false, brakesServiced: false, timingServiced: false, brakeFluidChanged: false, stkPassed: false, otherWork: "", technician: "" });
         toast({ title: "Servisní záznam přidán" });
       }
     });
@@ -402,6 +408,11 @@ export default function VehicleDetail() {
               intervalKm={vehicle.timingIntervalKm ?? 120000}
               intervalMonths={vehicle.timingIntervalMonths ?? 120}
             />
+            <ServiceRow
+              label="Brzdová kapalina"
+              lastDate={vehicle.lastBrakeFluidDate}
+              intervalMonths={vehicle.brakeFluidIntervalMonths ?? 24}
+            />
           </CardContent>
         </Card>
       </div>
@@ -460,6 +471,7 @@ export default function VehicleDetail() {
                       ...(isAutomatic ? [{ key: "transmissionOilChanged", label: "Olej v převodovce" }] : []),
                       { key: "brakesServiced", label: "Brzdy" },
                       { key: "timingServiced", label: "Rozvody" },
+                      { key: "brakeFluidChanged", label: "Brzdová kapalina" },
                       { key: "stkPassed", label: "STK provedena" },
                     ].map(item => (
                       <div key={item.key} className="flex items-center space-x-2">
@@ -507,6 +519,12 @@ export default function VehicleDetail() {
                         {wo.transmissionOil && <Badge variant="outline" className="text-xs">Olej převodovky</Badge>}
                         {wo.brakes && <Badge variant="outline" className="text-xs">Brzdy</Badge>}
                         {wo.timing && <Badge variant="outline" className="text-xs">Rozvody</Badge>}
+                        {wo.brakeFluid && <Badge variant="outline" className="text-xs">Brzd. kapalina</Badge>}
+                        {wo.tireChange && <Badge variant="outline" className="text-xs">Přezutí</Badge>}
+                        {wo.diagnostics && <Badge variant="outline" className="text-xs">Diagnostika</Badge>}
+                        {wo.lightsCheck && <Badge variant="outline" className="text-xs">Osvětlení</Badge>}
+                        {wo.frontAxleCheck && <Badge variant="outline" className="text-xs">Přední náprava</Badge>}
+                        {wo.rearAxleCheck && <Badge variant="outline" className="text-xs">Zadní náprava</Badge>}
                         {wo.stk && <Badge variant="outline" className="text-xs">STK</Badge>}
                       </div>
                       {wo.description && <p className="text-sm text-muted-foreground">{wo.description}</p>}
@@ -526,6 +544,7 @@ export default function VehicleDetail() {
                       {record.transmissionOilChanged && <Badge variant="outline" className="text-xs">Olej převodovky</Badge>}
                       {record.brakesServiced && <Badge variant="outline" className="text-xs">Brzdy</Badge>}
                       {record.timingServiced && <Badge variant="outline" className="text-xs">Rozvody</Badge>}
+                      {record.brakeFluidChanged && <Badge variant="outline" className="text-xs">Brzd. kapalina</Badge>}
                       {record.stkPassed && <Badge variant="outline" className="text-xs">STK</Badge>}
                     </div>
                     {record.description && <p className="text-sm text-muted-foreground">{record.description}</p>}
@@ -644,6 +663,7 @@ export default function VehicleDetail() {
                 )}
                 <div className="space-y-1"><Label>Datum servisu brzd</Label><Input type="date" value={editForm.lastBrakesDate} onChange={e => setEditForm(f => ({ ...f, lastBrakesDate: e.target.value }))} /></div>
                 <div className="space-y-1"><Label>Datum servisu rozvodů</Label><Input type="date" value={editForm.lastTimingDate} onChange={e => setEditForm(f => ({ ...f, lastTimingDate: e.target.value }))} /></div>
+                <div className="space-y-1"><Label>Datum výměny brzdové kapaliny</Label><Input type="date" value={editForm.lastBrakeFluidDate} onChange={e => setEditForm(f => ({ ...f, lastBrakeFluidDate: e.target.value }))} /></div>
               </div>
             </div>
 
@@ -677,6 +697,10 @@ export default function VehicleDetail() {
                     <Input type="number" placeholder="km" value={editForm.timingIntervalKm} onChange={e => setEditForm(f => ({ ...f, timingIntervalKm: e.target.value }))} />
                     <Input type="number" placeholder="měsíců" value={editForm.timingIntervalMonths} onChange={e => setEditForm(f => ({ ...f, timingIntervalMonths: e.target.value }))} />
                   </div>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium">Brzdová kapalina</Label>
+                  <Input type="number" className="mt-1" placeholder="měsíců" value={editForm.brakeFluidIntervalMonths} onChange={e => setEditForm(f => ({ ...f, brakeFluidIntervalMonths: e.target.value }))} />
                 </div>
               </div>
             </div>

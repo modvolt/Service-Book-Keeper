@@ -29,6 +29,7 @@ export const vehiclesTable = pgTable("vehicles", {
   lastTimingDate: date("last_timing_date", { mode: "string" }),
   lastTransmissionOilDate: date("last_transmission_oil_date", { mode: "string" }),
   lastTransmissionOilKm: integer("last_transmission_oil_km"),
+  lastBrakeFluidDate: date("last_brake_fluid_date", { mode: "string" }),
   // Service intervals (km or months per item; nulls mean "no reminder")
   oilChangeIntervalKm: integer("oil_change_interval_km"),
   oilChangeIntervalMonths: integer("oil_change_interval_months"),
@@ -37,6 +38,7 @@ export const vehiclesTable = pgTable("vehicles", {
   brakesIntervalMonths: integer("brakes_interval_months"),
   timingIntervalKm: integer("timing_interval_km"),
   timingIntervalMonths: integer("timing_interval_months"),
+  brakeFluidIntervalMonths: integer("brake_fluid_interval_months"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

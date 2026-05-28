@@ -61,6 +61,9 @@ async function propagateWorkOrderToVehicle(orderId: number): Promise<void> {
   if (order.timing && isNewer(vehicle.lastTimingDate)) {
     updates.lastTimingDate = serviceDate;
   }
+  if (order.brakeFluid && isNewer(vehicle.lastBrakeFluidDate)) {
+    updates.lastBrakeFluidDate = serviceDate;
+  }
 
   if (Object.keys(updates).length === 0) return;
   await db.update(vehiclesTable).set(updates).where(eq(vehiclesTable.id, vehicle.id));
@@ -118,6 +121,12 @@ router.post("/work-orders", async (req, res): Promise<void> => {
     airFilter: parsed.data.airFilter ?? false,
     cabinFilter: parsed.data.cabinFilter ?? false,
     stk: parsed.data.stk ?? false,
+    tireChange: parsed.data.tireChange ?? false,
+    diagnostics: parsed.data.diagnostics ?? false,
+    lightsCheck: parsed.data.lightsCheck ?? false,
+    brakeFluid: parsed.data.brakeFluid ?? false,
+    frontAxleCheck: parsed.data.frontAxleCheck ?? false,
+    rearAxleCheck: parsed.data.rearAxleCheck ?? false,
   }).returning();
 
   await propagateWorkOrderToVehicle(order.id);

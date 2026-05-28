@@ -32,6 +32,7 @@ function fileToBase64(file: File): Promise<string> {
 const DEFAULT_OIL_MONTHS = "12";
 const DEFAULT_TRANS_KM = "60000";
 const DEFAULT_TRANS_MONTHS = "48";
+const DEFAULT_BRAKE_FLUID_MONTHS = "24";
 
 export default function NewVehicle() {
   const [, navigate] = useLocation();
@@ -50,9 +51,11 @@ export default function NewVehicle() {
     currentKm: "", notes: "", stkValidUntil: "",
     lastOilChangeKm: "", lastOilChangeDate: "", lastBrakesDate: "", lastTimingDate: "",
     lastTransmissionOilDate: "", lastTransmissionOilKm: "",
+    lastBrakeFluidDate: "",
     oilChangeIntervalKm: "", oilChangeIntervalMonths: DEFAULT_OIL_MONTHS,
     transmissionOilIntervalKm: DEFAULT_TRANS_KM, transmissionOilIntervalMonths: DEFAULT_TRANS_MONTHS,
     brakesIntervalMonths: "", timingIntervalKm: "", timingIntervalMonths: "",
+    brakeFluidIntervalMonths: DEFAULT_BRAKE_FLUID_MONTHS,
   });
 
   const [importOpen, setImportOpen] = useState(false);
@@ -117,6 +120,8 @@ export default function NewVehicle() {
         brakesIntervalMonths: toInt(form.brakesIntervalMonths),
         timingIntervalKm: toInt(form.timingIntervalKm),
         timingIntervalMonths: toInt(form.timingIntervalMonths),
+        lastBrakeFluidDate: form.lastBrakeFluidDate || null,
+        brakeFluidIntervalMonths: toInt(form.brakeFluidIntervalMonths),
       }
     }, {
       onSuccess: (vehicle) => {
@@ -403,6 +408,10 @@ export default function NewVehicle() {
                   <Label>Datum servisu rozvodů</Label>
                   <Input type="date" value={form.lastTimingDate} onChange={e => setForm(f => ({ ...f, lastTimingDate: e.target.value }))} />
                 </div>
+                <div className="space-y-1">
+                  <Label>Datum výměny brzdové kapaliny</Label>
+                  <Input type="date" value={form.lastBrakeFluidDate} onChange={e => setForm(f => ({ ...f, lastBrakeFluidDate: e.target.value }))} />
+                </div>
               </div>
             </div>
 
@@ -436,6 +445,10 @@ export default function NewVehicle() {
                     <Input type="number" placeholder="km, např. 120000" value={form.timingIntervalKm} onChange={e => setForm(f => ({ ...f, timingIntervalKm: e.target.value }))} />
                     <Input type="number" placeholder="měsíců" value={form.timingIntervalMonths} onChange={e => setForm(f => ({ ...f, timingIntervalMonths: e.target.value }))} />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Brzdová kapalina</Label>
+                  <Input type="number" placeholder="měsíců" value={form.brakeFluidIntervalMonths} onChange={e => setForm(f => ({ ...f, brakeFluidIntervalMonths: e.target.value }))} />
                 </div>
               </div>
             </div>

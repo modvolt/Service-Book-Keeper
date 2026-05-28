@@ -48,7 +48,10 @@ export default function NewWorkOrder() {
   const [form, setForm] = useState({
     km: "", description: "",
     oilChange: false, transmissionOil: false, brakes: false,
-    timing: false, airFilter: false, cabinFilter: false, stk: false, otherWork: "", otherServices: "", notes: "",
+    timing: false, airFilter: false, cabinFilter: false, stk: false,
+    tireChange: false, diagnostics: false, lightsCheck: false, brakeFluid: false,
+    frontAxleCheck: false, rearAxleCheck: false,
+    otherWork: "", otherServices: "", notes: "",
     laborHours: "", laborPrice: "",
     serviceDate: today,
   });
@@ -99,6 +102,12 @@ export default function NewWorkOrder() {
         airFilter: form.airFilter,
         cabinFilter: form.cabinFilter,
         stk: form.stk,
+        tireChange: form.tireChange,
+        diagnostics: form.diagnostics,
+        lightsCheck: form.lightsCheck,
+        brakeFluid: form.brakeFluid,
+        frontAxleCheck: form.frontAxleCheck,
+        rearAxleCheck: form.rearAxleCheck,
         serviceDate: form.serviceDate || null,
         otherWork: form.otherWork || null,
         otherServices: form.otherServices || null,
@@ -206,6 +215,12 @@ export default function NewWorkOrder() {
                 { key: "timing", label: "Rozvody" },
                 { key: "airFilter", label: "Filtr vzduchový" },
                 { key: "cabinFilter", label: "Filtr kabinový" },
+                { key: "brakeFluid", label: "Výměna brzdové kapaliny" },
+                { key: "tireChange", label: "Přezutí pneumatik" },
+                { key: "diagnostics", label: "Diagnostika" },
+                { key: "lightsCheck", label: "Kontrola osvětlení" },
+                { key: "frontAxleCheck", label: "Kontrola přední nápravy" },
+                { key: "rearAxleCheck", label: "Kontrola zadní nápravy" },
                 { key: "stk", label: "STK" },
               ].map(item => (
                 <Label

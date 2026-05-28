@@ -73,6 +73,12 @@ function buildHtml(opts: {
     ["timing", "Výměna rozvodů"],
     ["airFilter", "Výměna vzduchového filtru"],
     ["cabinFilter", "Výměna kabinového filtru"],
+    ["brakeFluid", "Výměna brzdové kapaliny"],
+    ["tireChange", "Přezutí pneumatik"],
+    ["diagnostics", "Diagnostika"],
+    ["lightsCheck", "Kontrola osvětlení"],
+    ["frontAxleCheck", "Kontrola přední nápravy"],
+    ["rearAxleCheck", "Kontrola zadní nápravy"],
     ["stk", "STK"],
   ];
   const performedItems = SERVICE_FLAGS.filter(([k]) => order[k]).map(([, l]) => l);

@@ -760,6 +760,8 @@ components:
           type: ["string", "null"]
         lastTransmissionOilKm:
           type: ["integer", "null"]
+        lastBrakeFluidDate:
+          type: ["string", "null"]
         oilChangeIntervalKm:
           type: ["integer", "null"]
         oilChangeIntervalMonths:
@@ -773,6 +775,8 @@ components:
         timingIntervalKm:
           type: ["integer", "null"]
         timingIntervalMonths:
+          type: ["integer", "null"]
+        brakeFluidIntervalMonths:
           type: ["integer", "null"]
         createdAt:
           type: string
@@ -836,6 +840,8 @@ components:
           type: ["string", "null"]
         lastTransmissionOilKm:
           type: ["integer", "null"]
+        lastBrakeFluidDate:
+          type: ["string", "null"]
         oilChangeIntervalKm:
           type: ["integer", "null"]
         oilChangeIntervalMonths:
@@ -849,6 +855,8 @@ components:
         timingIntervalKm:
           type: ["integer", "null"]
         timingIntervalMonths:
+          type: ["integer", "null"]
+        brakeFluidIntervalMonths:
           type: ["integer", "null"]
         createdAt:
           type: string
@@ -925,6 +933,8 @@ components:
           type: ["string", "null"]
         lastTransmissionOilKm:
           type: ["integer", "null"]
+        lastBrakeFluidDate:
+          type: ["string", "null"]
         oilChangeIntervalKm:
           type: ["integer", "null"]
         oilChangeIntervalMonths:
@@ -938,6 +948,8 @@ components:
         timingIntervalKm:
           type: ["integer", "null"]
         timingIntervalMonths:
+          type: ["integer", "null"]
+        brakeFluidIntervalMonths:
           type: ["integer", "null"]
 
     VehicleUpdate:
@@ -995,6 +1007,8 @@ components:
           type: ["string", "null"]
         lastTransmissionOilKm:
           type: ["integer", "null"]
+        lastBrakeFluidDate:
+          type: ["string", "null"]
         oilChangeIntervalKm:
           type: ["integer", "null"]
         oilChangeIntervalMonths:
@@ -1008,6 +1022,8 @@ components:
         timingIntervalKm:
           type: ["integer", "null"]
         timingIntervalMonths:
+          type: ["integer", "null"]
+        brakeFluidIntervalMonths:
           type: ["integer", "null"]
 
     ServiceRecord:
@@ -1031,6 +1047,8 @@ components:
         timingServiced:
           type: boolean
         transmissionOilChanged:
+          type: boolean
+        brakeFluidChanged:
           type: boolean
         stkPassed:
           type: boolean
@@ -1059,6 +1077,8 @@ components:
         timingServiced:
           type: boolean
         transmissionOilChanged:
+          type: boolean
+        brakeFluidChanged:
           type: boolean
         stkPassed:
           type: boolean
@@ -1097,6 +1117,18 @@ components:
         cabinFilter:
           type: boolean
         stk:
+          type: boolean
+        tireChange:
+          type: boolean
+        diagnostics:
+          type: boolean
+        lightsCheck:
+          type: boolean
+        brakeFluid:
+          type: boolean
+        frontAxleCheck:
+          type: boolean
+        rearAxleCheck:
           type: boolean
         serviceDate:
           type: ["string", "null"]
@@ -1149,6 +1181,18 @@ components:
           type: boolean
         stk:
           type: boolean
+        tireChange:
+          type: boolean
+        diagnostics:
+          type: boolean
+        lightsCheck:
+          type: boolean
+        brakeFluid:
+          type: boolean
+        frontAxleCheck:
+          type: boolean
+        rearAxleCheck:
+          type: boolean
         serviceDate:
           type: ["string", "null"]
         otherWork:
@@ -1185,6 +1229,18 @@ components:
         cabinFilter:
           type: boolean
         stk:
+          type: boolean
+        tireChange:
+          type: boolean
+        diagnostics:
+          type: boolean
+        lightsCheck:
+          type: boolean
+        brakeFluid:
+          type: boolean
+        frontAxleCheck:
+          type: boolean
+        rearAxleCheck:
           type: boolean
         serviceDate:
           type: ["string", "null"]

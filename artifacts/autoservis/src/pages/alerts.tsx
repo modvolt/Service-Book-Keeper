@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { computeServiceStatus, type ServiceStatus, formatCzDate } from "@/lib/service-status";
 import { differenceInDays, parseISO, isValid } from "date-fns";
 
-type AlertKind = "stk" | "oil" | "brakes" | "timing" | "transmission";
+type AlertKind = "stk" | "oil" | "brakes" | "timing" | "transmission" | "brakeFluid";
 
 const KIND_LABEL: Record<AlertKind, string> = {
   stk: "STK",
@@ -21,6 +21,7 @@ const KIND_LABEL: Record<AlertKind, string> = {
   brakes: "Brzdy",
   timing: "Rozvody",
   transmission: "Olej převodovky",
+  brakeFluid: "Brzdová kapalina",
 };
 
 type Severity = "overdue" | "due-soon";
@@ -69,6 +70,11 @@ function computeAlerts(v: Vehicle): VehicleAlert[] {
   }));
   if (timing) out.push(timing);
 
+  const brakeFluid = statusToAlert("brakeFluid", computeServiceStatus({
+    lastDate: v.lastBrakeFluidDate, intervalMonths: v.brakeFluidIntervalMonths ?? 24,
+  }));
+  if (brakeFluid) out.push(brakeFluid);
+
   if (v.transmission === "automatic") {
     const trans = statusToAlert("transmission", computeServiceStatus({
       lastDate: v.lastTransmissionOilDate, lastKm: v.lastTransmissionOilKm, currentKm: v.currentKm,
@@ -85,7 +91,7 @@ export default function AlertsPage() {
   const [search, setSearch] = useState("");
 
   const [filters, setFilters] = useState<Record<AlertKind, boolean>>({
-    stk: true, oil: true, brakes: true, timing: true, transmission: true,
+    stk: true, oil: true, brakes: true, timing: true, transmission: true, brakeFluid: true,
   });
   const [includeDueSoon, setIncludeDueSoon] = useState(true);
 
@@ -119,7 +125,7 @@ export default function AlertsPage() {
   const dueSoonOnlyCount = rows.length - overdueCount;
 
   function toggleAll(value: boolean) {
-    setFilters({ stk: value, oil: value, brakes: value, timing: value, transmission: value });
+    setFilters({ stk: value, oil: value, brakes: value, timing: value, transmission: value, brakeFluid: value });
   }
 
   return (

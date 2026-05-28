@@ -64,6 +64,12 @@ const SERVICE_FLAGS: Array<[keyof WorkOrder, string]> = [
   ["timing", "Rozvody"],
   ["airFilter", "Filtr vzduchový"],
   ["cabinFilter", "Filtr kabinový"],
+  ["brakeFluid", "Brzdová kapalina"],
+  ["tireChange", "Přezutí pneumatik"],
+  ["diagnostics", "Diagnostika"],
+  ["lightsCheck", "Kontrola osvětlení"],
+  ["frontAxleCheck", "Přední náprava"],
+  ["rearAxleCheck", "Zadní náprava"],
   ["stk", "STK"],
 ];
 
@@ -205,6 +211,7 @@ function buildHtml(opts: {
       <tr><td>Poslední výměna oleje</td><td>${dateOnly(vehicle.lastOilChangeDate) || "—"}${vehicle.lastOilChangeKm != null ? ` (${vehicle.lastOilChangeKm.toLocaleString("cs-CZ")} km)` : ""}</td></tr>
       <tr><td>Poslední servis brzd</td><td>${dateOnly(vehicle.lastBrakesDate) || "—"}</td></tr>
       <tr><td>Poslední výměna rozvodů</td><td>${dateOnly(vehicle.lastTimingDate) || "—"}</td></tr>
+      <tr><td>Poslední výměna brzdové kapaliny</td><td>${dateOnly(vehicle.lastBrakeFluidDate) || "—"}</td></tr>
       ${vehicle.transmission === "automatic" ? `<tr><td>Poslední olej v převodovce</td><td>${dateOnly(vehicle.lastTransmissionOilDate) || "—"}${vehicle.lastTransmissionOilKm != null ? ` (${vehicle.lastTransmissionOilKm.toLocaleString("cs-CZ")} km)` : ""}</td></tr>` : ""}
     </table>
   ` : "";
@@ -282,6 +289,7 @@ function buildHtml(opts: {
             r.brakesServiced ? "brzdy" : null,
             r.timingServiced ? "rozvody" : null,
             r.transmissionOilChanged ? "převodovka" : null,
+            r.brakeFluidChanged ? "brzdová kapalina" : null,
             r.stkPassed ? "STK" : null,
           ].filter(Boolean).join(", ");
           const text = [r.description, ops, r.otherWork].filter(Boolean).join(" — ");

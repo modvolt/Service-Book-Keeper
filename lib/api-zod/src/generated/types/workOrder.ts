@@ -25,6 +25,12 @@ export interface WorkOrder {
   airFilter?: boolean;
   cabinFilter?: boolean;
   stk?: boolean;
+  tireChange?: boolean;
+  diagnostics?: boolean;
+  lightsCheck?: boolean;
+  brakeFluid?: boolean;
+  frontAxleCheck?: boolean;
+  rearAxleCheck?: boolean;
   /**
      * Date when service was performed (for backdated/historical orders)
      * @nullable

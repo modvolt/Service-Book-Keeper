@@ -20,6 +20,12 @@ export interface WorkOrderInput {
   airFilter?: boolean;
   cabinFilter?: boolean;
   stk?: boolean;
+  tireChange?: boolean;
+  diagnostics?: boolean;
+  lightsCheck?: boolean;
+  brakeFluid?: boolean;
+  frontAxleCheck?: boolean;
+  rearAxleCheck?: boolean;
   /** @nullable */
   serviceDate?: string | null;
   /** @nullable */
