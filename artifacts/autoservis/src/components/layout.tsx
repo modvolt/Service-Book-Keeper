@@ -8,14 +8,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Přehled", icon: LayoutDashboard },
-  { href: "/vehicles", label: "Vozidla", icon: Car },
-  { href: "/work-orders", label: "Zakázky", icon: ClipboardList },
-  { href: "/po-terminu", label: "Po termínu", icon: AlertTriangle },
-  { href: "/kalendar", label: "Kalendář", icon: Calendar },
-  { href: "/sklad", label: "Sklad", icon: Package },
-  { href: "/nacteni-tp", label: "Načtení TP", icon: ScanLine },
-  { href: "/nastaveni", label: "Nastavení", icon: SettingsIcon },
+  { href: "/", label: "Přehled", icon: LayoutDashboard, color: "text-sky-600", bg: "hover:bg-sky-50" },
+  { href: "/vehicles", label: "Vozidla", icon: Car, color: "text-indigo-600", bg: "hover:bg-indigo-50" },
+  { href: "/work-orders", label: "Zakázky", icon: ClipboardList, color: "text-emerald-600", bg: "hover:bg-emerald-50" },
+  { href: "/po-terminu", label: "Po termínu", icon: AlertTriangle, color: "text-rose-600", bg: "hover:bg-rose-50" },
+  { href: "/kalendar", label: "Kalendář", icon: Calendar, color: "text-violet-600", bg: "hover:bg-violet-50" },
+  { href: "/sklad", label: "Sklad", icon: Package, color: "text-amber-600", bg: "hover:bg-amber-50" },
+  { href: "/nacteni-tp", label: "Načtení TP", icon: ScanLine, color: "text-teal-600", bg: "hover:bg-teal-50" },
+  { href: "/nastaveni", label: "Nastavení", icon: SettingsIcon, color: "text-slate-600", bg: "hover:bg-slate-100" },
 ];
 
 function hexToHslTriplet(hex: string): string | null {
@@ -70,22 +70,25 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   const NavLinks = () => (
     <div className="flex flex-col space-y-1">
-      {NAV_ITEMS.map((item) => (
-        <Link key={item.href} href={item.href}>
-          <div
-            className={cn(
-              "flex items-center px-3 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer",
-              location === item.href || (item.href !== "/" && location.startsWith(item.href))
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-secondary hover:text-secondary-foreground"
-            )}
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <item.icon className="h-4 w-4 mr-3" />
-            {item.label}
-          </div>
-        </Link>
-      ))}
+      {NAV_ITEMS.map((item) => {
+        const active = location === item.href || (item.href !== "/" && location.startsWith(item.href));
+        return (
+          <Link key={item.href} href={item.href}>
+            <div
+              className={cn(
+                "flex items-center px-3 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer",
+                active
+                  ? "bg-primary text-primary-foreground"
+                  : cn("text-foreground/80", item.bg)
+              )}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              <item.icon className={cn("h-4 w-4 mr-3", active ? "" : item.color)} />
+              {item.label}
+            </div>
+          </Link>
+        );
+      })}
     </div>
   );
 
