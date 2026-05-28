@@ -1,8 +1,9 @@
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout } from "@/components/layout";
+import { ErrorBoundary } from "@/components/error-boundary";
 import NotFound from "@/pages/not-found";
 
 import Dashboard from "@/pages/dashboard";
@@ -22,8 +23,10 @@ import StatisticsPage from "@/pages/statistics";
 const queryClient = new QueryClient();
 
 function Router() {
+  const [location] = useLocation();
   return (
     <Layout>
+      <ErrorBoundary key={location}>
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/vehicles" component={VehiclesList} />
@@ -40,6 +43,7 @@ function Router() {
         <Route path="/statistiky" component={StatisticsPage} />
         <Route component={NotFound} />
       </Switch>
+      </ErrorBoundary>
     </Layout>
   );
 }
@@ -48,9 +52,11 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-          <Router />
-        </WouterRouter>
+        <ErrorBoundary>
+          <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <Router />
+          </WouterRouter>
+        </ErrorBoundary>
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>

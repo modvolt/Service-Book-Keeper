@@ -1,1 +1,2 @@
 - [SPZ normalization](spz-normalization.md) — all license-plate writes must run through the server normalizer; never store user-typed SPZ as-is.
+- [Gray page in prod](gray-page-prod.md) — works in dev but blank/gray in production = uncaught React render error; dev's Vite overlay masks it, prod has no error boundary.
