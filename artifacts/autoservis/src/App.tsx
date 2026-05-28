@@ -15,6 +15,7 @@ import WorkOrderDetail from "@/pages/work-orders/detail";
 import MaterialsPage from "@/pages/materials/index";
 import CalendarPage from "@/pages/calendar";
 import SettingsPage from "@/pages/settings";
+import TpScanPage from "@/pages/tp-scan";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ function Router() {
         <Route path="/sklad" component={MaterialsPage} />
         <Route path="/kalendar" component={CalendarPage} />
         <Route path="/nastaveni" component={SettingsPage} />
+        <Route path="/nacteni-tp" component={TpScanPage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

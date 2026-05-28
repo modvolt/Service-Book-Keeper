@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar, Settings as SettingsIcon } from "lucide-react";
+import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar, Settings as SettingsIcon, ScanLine } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useGetSettings } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,7 @@ const NAV_ITEMS = [
   { href: "/work-orders", label: "Zakázky", icon: ClipboardList },
   { href: "/kalendar", label: "Kalendář", icon: Calendar },
   { href: "/sklad", label: "Sklad", icon: Package },
+  { href: "/nacteni-tp", label: "Načtení TP", icon: ScanLine },
   { href: "/nastaveni", label: "Nastavení", icon: SettingsIcon },
 ];
 

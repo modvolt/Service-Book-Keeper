@@ -1,5 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
+import { takeTpPrefill } from "@/pages/tp-scan";
 import { useCreateVehicle, useImportVehicleFromTp, useListVehicleMakes, useListVehicleModels, getListVehiclesQueryKey } from "@workspace/api-client-react";
 import { AutocompleteInput } from "@/components/autocomplete-input";
 import { AresButton } from "@/components/ares-button";
@@ -55,6 +56,19 @@ export default function NewVehicle() {
 
   const [importOpen, setImportOpen] = useState(false);
   const [importFiles, setImportFiles] = useState<File[]>([]);
+
+  useEffect(() => {
+    const pre = takeTpPrefill();
+    if (!pre) return;
+    setForm((f) => ({
+      ...f,
+      licensePlate: pre.licensePlate ?? f.licensePlate,
+      vin: pre.vin ?? f.vin,
+      year: pre.registrationYear != null ? String(pre.registrationYear) : f.year,
+      engineDisplacement: pre.engineDisplacement != null ? String(pre.engineDisplacement) : f.engineDisplacement,
+    }));
+    toast({ title: "Údaje z TP předvyplněny", description: "Doplňte výrobce, model a další chybějící údaje." });
+  }, [toast]);
 
   const { data: makeOptions = [] } = useListVehicleMakes();
   const { data: modelOptions = [] } = useListVehicleModels(
