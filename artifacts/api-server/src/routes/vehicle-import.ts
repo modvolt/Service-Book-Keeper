@@ -8,7 +8,7 @@ const SYSTEM_PROMPT = `Jsi asistent pro autoservis. Z fotografií malého techni
 
 Schéma odpovědi:
 {
-  "licensePlate": string|null,        // SPZ vozidla, např. "5L1 1642" (zachovej mezery)
+  "licensePlate": string|null,        // SPZ vozidla ve formátu "XXX XXXX" (3 znaky, mezera, 4 znaky), např. "5L1 1642"
   "vin": string|null,                 // VIN / číslo karoserie (přesně 17 znaků, písmena a čísla)
   "registrationYear": number|null,    // ROK první registrace (jen číslo, např. 2018)
   "engineDisplacement": number|null   // objem motoru v cm³ (kubických cm)
@@ -60,8 +60,16 @@ router.post("/vehicles/import-tp", async (req, res): Promise<void> => {
       return;
     }
 
+    // Normalize SPZ to "XXX XXXX" format (3 chars + space + 4 chars)
+    function formatSpz(raw: unknown): string | null {
+      if (typeof raw !== "string") return null;
+      const cleaned = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
+      if (cleaned.length !== 7) return raw.trim() || null;
+      return `${cleaned.slice(0, 3)} ${cleaned.slice(3)}`;
+    }
+
     res.json({
-      licensePlate: typeof extracted.licensePlate === "string" ? extracted.licensePlate : null,
+      licensePlate: formatSpz(extracted.licensePlate),
       vin: typeof extracted.vin === "string" && extracted.vin.length === 17 ? extracted.vin : null,
       registrationYear: typeof extracted.registrationYear === "number" ? extracted.registrationYear : null,
       engineDisplacement: typeof extracted.engineDisplacement === "number" ? extracted.engineDisplacement : null,
