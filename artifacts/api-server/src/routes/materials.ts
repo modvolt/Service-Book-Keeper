@@ -144,10 +144,24 @@ router.post("/work-orders/:id/import-invoice", async (req, res): Promise<void> =
   const [order] = await db.select().from(workOrdersTable).where(eq(workOrdersTable.id, id));
   if (!order) { res.status(404).json({ error: "Zakázka nenalezena" }); return; }
 
+  const images = parsed.data.images ?? [];
+  const pdfs = parsed.data.pdfs ?? [];
+  if (images.length === 0 && pdfs.length === 0) {
+    res.status(400).json({ error: "Nahrajte alespoň jeden obrázek nebo PDF." });
+    return;
+  }
+
   try {
-    const imageContents = parsed.data.images.map((b64) => ({
+    const imageContents = images.map((b64) => ({
       type: "image_url" as const,
       image_url: { url: `data:image/jpeg;base64,${b64}` },
+    }));
+    const pdfContents = pdfs.map((p, i) => ({
+      type: "file" as const,
+      file: {
+        filename: p.filename ?? `faktura-${i + 1}.pdf`,
+        file_data: `data:application/pdf;base64,${p.data}`,
+      },
     }));
 
     const response = await getOpenAI().chat.completions.create({
@@ -160,6 +174,7 @@ router.post("/work-orders/:id/import-invoice", async (req, res): Promise<void> =
           role: "user",
           content: [
             { type: "text", text: "Extrahuj položky materiálu z této faktury / dodacího listu:" },
+            ...pdfContents,
             ...imageContents,
           ],
         },

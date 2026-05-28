@@ -220,10 +220,16 @@ export const ImportInvoiceForWorkOrderParams = zod.object({
 
 export const importInvoiceForWorkOrderBodyImagesMax = 4;
 
+export const importInvoiceForWorkOrderBodyPdfsMax = 4;
+
 
 
 export const ImportInvoiceForWorkOrderBody = zod.object({
-  "images": zod.array(zod.string()).min(1).max(importInvoiceForWorkOrderBodyImagesMax)
+  "images": zod.array(zod.string()).max(importInvoiceForWorkOrderBodyImagesMax).optional(),
+  "pdfs": zod.array(zod.object({
+  "data": zod.string().describe('Base64-encoded PDF content'),
+  "filename": zod.string().nullish()
+})).max(importInvoiceForWorkOrderBodyPdfsMax).optional()
 })
 
 export const ImportInvoiceForWorkOrderResponse = zod.object({

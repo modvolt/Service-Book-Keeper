@@ -1367,14 +1367,24 @@ components:
 
     InvoiceImportInput:
       type: object
-      required: [images]
       properties:
         images:
           type: array
-          minItems: 1
           maxItems: 4
           items:
             type: string
+        pdfs:
+          type: array
+          maxItems: 4
+          items:
+            type: object
+            required: [data]
+            properties:
+              data:
+                type: string
+                description: Base64-encoded PDF content
+              filename:
+                type: ["string", "null"]
 
     InvoiceImportResult:
       type: object

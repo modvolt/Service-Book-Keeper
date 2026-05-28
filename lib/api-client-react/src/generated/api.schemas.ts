@@ -629,12 +629,18 @@ export interface WorkOrderMaterialInput {
   unitPrice?: number | null;
 }
 
+export type InvoiceImportInputPdfsItem = {
+  /** Base64-encoded PDF content */
+  data: string;
+  /** @nullable */
+  filename?: string | null;
+};
+
 export interface InvoiceImportInput {
-  /**
-     * @minItems 1
-     * @maxItems 4
-     */
-  images: string[];
+  /** @maxItems 4 */
+  images?: string[];
+  /** @maxItems 4 */
+  pdfs?: InvoiceImportInputPdfsItem[];
 }
 
 export type InvoiceImportResultItemsItem = {

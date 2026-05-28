@@ -318,9 +318,9 @@ export default function WorkOrderDetail() {
   }
 
   function addInvoiceFiles(list: File[]) {
-    const imgs = list.filter((f) => f.type.startsWith("image/"));
-    if (imgs.length === 0) return;
-    setInvoiceFiles((prev) => [...prev, ...imgs].slice(0, 4));
+    const accepted = list.filter((f) => f.type.startsWith("image/") || f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"));
+    if (accepted.length === 0) return;
+    setInvoiceFiles((prev) => [...prev, ...accepted].slice(0, 4));
   }
   function handleInvoiceFiles(files: FileList | null) {
     if (!files) return;
@@ -336,8 +336,11 @@ export default function WorkOrderDetail() {
   async function handleRunInvoiceImport() {
     if (invoiceFiles.length === 0) return;
     try {
-      const images = await Promise.all(invoiceFiles.map(fileToBase64));
-      importInvoice.mutate({ id, data: { images } }, {
+      const imageFiles = invoiceFiles.filter((f) => f.type.startsWith("image/"));
+      const pdfFiles = invoiceFiles.filter((f) => !f.type.startsWith("image/"));
+      const images = await Promise.all(imageFiles.map(fileToBase64));
+      const pdfs = await Promise.all(pdfFiles.map(async (f) => ({ data: await fileToBase64(f), filename: f.name })));
+      importInvoice.mutate({ id, data: { images, pdfs } }, {
         onSuccess: (res) => {
           setSuggestions(res.items as Suggestion[]);
           if (res.items.length === 0) {
@@ -923,7 +926,7 @@ export default function WorkOrderDetail() {
 
           <div className="space-y-3">
             <input
-              ref={invoiceInputRef} type="file" accept="image/*" multiple className="hidden"
+              ref={invoiceInputRef} type="file" accept="image/*,application/pdf" multiple className="hidden"
               onChange={(e) => { handleInvoiceFiles(e.target.files); e.target.value = ""; }}
             />
 
@@ -938,7 +941,7 @@ export default function WorkOrderDetail() {
               )}
             >
               <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-              <p className="text-sm font-medium">Přetáhněte obrázky sem</p>
+              <p className="text-sm font-medium">Přetáhněte obrázky nebo PDF sem</p>
               <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-1">
                 <ClipboardPaste className="h-3 w-3" />
                 nebo vložte snímek klávesovou zkratkou <kbd className="px-1.5 py-0.5 bg-muted rounded border text-[10px] font-mono">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-muted rounded border text-[10px] font-mono">V</kbd>
@@ -966,7 +969,14 @@ export default function WorkOrderDetail() {
               <div className="grid grid-cols-2 gap-2">
                 {invoiceFiles.map((f, i) => (
                   <div key={i} className="relative aspect-video rounded-lg border bg-muted overflow-hidden">
-                    <img src={URL.createObjectURL(f)} alt={f.name} className="w-full h-full object-cover" />
+                    {f.type.startsWith("image/") ? (
+                      <img src={URL.createObjectURL(f)} alt={f.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-center p-2 gap-2">
+                        <FileText className="h-8 w-8 text-amber-500" />
+                        <span className="text-xs text-muted-foreground truncate max-w-full" title={f.name}>{f.name}</span>
+                      </div>
+                    )}
                     <Button
                       type="button" variant="destructive" size="icon"
                       className="absolute top-1 right-1 h-6 w-6"

@@ -5,11 +5,11 @@
  * AutoServis API
  * OpenAPI spec version: 0.1.0
  */
+import type { InvoiceImportInputPdfsItem } from './invoiceImportInputPdfsItem';
 
 export interface InvoiceImportInput {
-  /**
-     * @minItems 1
-     * @maxItems 4
-     */
-  images: string[];
+  /** @maxItems 4 */
+  images?: string[];
+  /** @maxItems 4 */
+  pdfs?: InvoiceImportInputPdfsItem[];
 }

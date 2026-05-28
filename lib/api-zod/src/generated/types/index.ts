@@ -18,6 +18,7 @@ export * from './healthStatus';
 export * from './importTpInput';
 export * from './importTpResult';
 export * from './invoiceImportInput';
+export * from './invoiceImportInputPdfsItem';
 export * from './invoiceImportResult';
 export * from './invoiceImportResultItemsItem';
 export * from './listAppointmentsParams';
