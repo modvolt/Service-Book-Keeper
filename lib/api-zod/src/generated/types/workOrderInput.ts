@@ -22,5 +22,9 @@ export interface WorkOrderInput {
   /** @nullable */
   otherServices?: string | null;
   /** @nullable */
+  laborHours?: string | null;
+  /** @nullable */
+  laborPrice?: number | null;
+  /** @nullable */
   notes?: string | null;
 }

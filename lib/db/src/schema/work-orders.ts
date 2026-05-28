@@ -16,6 +16,8 @@ export const workOrdersTable = pgTable("work_orders", {
   stk: boolean("stk").notNull().default(false),
   otherWork: text("other_work"),
   otherServices: text("other_services"),
+  laborHours: text("labor_hours"),
+  laborPrice: integer("labor_price"),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   completedAt: timestamp("completed_at", { withTimezone: true }),

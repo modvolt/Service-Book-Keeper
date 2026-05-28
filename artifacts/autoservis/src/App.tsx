@@ -12,6 +12,7 @@ import VehicleNew from "@/pages/vehicles/new";
 import WorkOrdersList from "@/pages/work-orders/index";
 import WorkOrderNew from "@/pages/work-orders/new";
 import WorkOrderDetail from "@/pages/work-orders/detail";
+import MaterialsPage from "@/pages/materials/index";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ function Router() {
         <Route path="/work-orders" component={WorkOrdersList} />
         <Route path="/work-orders/new" component={WorkOrderNew} />
         <Route path="/work-orders/:id" component={WorkOrderDetail} />
+        <Route path="/sklad" component={MaterialsPage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

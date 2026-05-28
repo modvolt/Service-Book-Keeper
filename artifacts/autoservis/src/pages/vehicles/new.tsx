@@ -92,19 +92,13 @@ export default function NewVehicle() {
           setForm((f) => ({
             ...f,
             licensePlate: result.licensePlate ?? f.licensePlate,
-            make: result.make ?? f.make,
-            model: result.model ?? f.model,
-            year: result.year != null ? String(result.year) : f.year,
-            color: result.color ?? f.color,
             vin: result.vin ?? f.vin,
+            year: result.registrationYear != null ? String(result.registrationYear) : f.year,
             engineDisplacement: result.engineDisplacement != null ? String(result.engineDisplacement) : f.engineDisplacement,
-            registrationDate: result.registrationDate ?? f.registrationDate,
-            ownerName: result.ownerName ?? f.ownerName,
-            ownerAddress: result.ownerAddress ?? f.ownerAddress,
           }));
           setImportOpen(false);
           setImportFiles([]);
-          toast({ title: "Údaje načteny", description: "Zkontrolujte prosím vyplněné údaje." });
+          toast({ title: "Údaje načteny", description: "Vyplnili jsme SPZ, VIN, rok a objem motoru. Ostatní pole prosím vyplňte ručně." });
         },
         onError: () => {
           toast({ title: "Import selhal", description: "Zkuste znovu nebo vyplňte ručně.", variant: "destructive" });
@@ -240,7 +234,7 @@ export default function NewVehicle() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-amber-500" />Import z technického průkazu</DialogTitle>
             <DialogDescription>
-              Nahrajte fotografie malého technického průkazu (obě strany). Údaje se automaticky vyplní do formuláře.
+              Nahrajte fotografie malého technického průkazu (obě strany). Načteme pouze spolehlivé údaje: SPZ, VIN, rok první registrace a objem motoru. Značku, model a další údaje prosím doplňte ručně.
             </DialogDescription>
           </DialogHeader>
 

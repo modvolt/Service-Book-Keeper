@@ -19,6 +19,8 @@ tags:
     description: Photo management
   - name: dashboard
     description: Dashboard summary
+  - name: materials
+    description: Material catalog and work order materials
 paths:
   /healthz:
     get:
@@ -69,6 +71,142 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Vehicle"
+
+  /materials:
+    get:
+      operationId: listMaterials
+      tags: [materials]
+      summary: List catalog materials
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of catalog materials
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MaterialCatalogItem"
+    post:
+      operationId: createMaterial
+      tags: [materials]
+      summary: Add a material to the catalog
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MaterialCatalogInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaterialCatalogItem"
+
+  /materials/{id}:
+    delete:
+      operationId: deleteMaterial
+      tags: [materials]
+      summary: Remove a catalog material
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /work-orders/{id}/materials:
+    get:
+      operationId: listWorkOrderMaterials
+      tags: [materials]
+      summary: List materials on a work order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Materials list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkOrderMaterial"
+    post:
+      operationId: addWorkOrderMaterial
+      tags: [materials]
+      summary: Add a material to a work order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkOrderMaterialInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkOrderMaterial"
+
+  /work-order-materials/{id}:
+    delete:
+      operationId: deleteWorkOrderMaterial
+      tags: [materials]
+      summary: Remove a material from a work order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /work-orders/{id}/import-invoice:
+    post:
+      operationId: importInvoiceForWorkOrder
+      tags: [materials]
+      summary: Extract materials from a photo of a delivery note or invoice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceImportInput"
+      responses:
+        "200":
+          description: Extracted materials (suggestions, not persisted)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceImportResult"
 
   /vehicles/import-tp:
     post:
@@ -657,6 +795,12 @@ components:
           type: ["string", "null"]
         otherServices:
           type: ["string", "null"]
+        laborHours:
+          type: ["string", "null"]
+          description: Number of labor hours (decimal as string, e.g. "2.5")
+        laborPrice:
+          type: ["integer", "null"]
+          description: Labor price in CZK
         notes:
           type: ["string", "null"]
         photos:
@@ -693,6 +837,10 @@ components:
           type: ["string", "null"]
         otherServices:
           type: ["string", "null"]
+        laborHours:
+          type: ["string", "null"]
+        laborPrice:
+          type: ["integer", "null"]
         notes:
           type: ["string", "null"]
 
@@ -718,6 +866,10 @@ components:
           type: ["string", "null"]
         otherServices:
           type: ["string", "null"]
+        laborHours:
+          type: ["string", "null"]
+        laborPrice:
+          type: ["integer", "null"]
         notes:
           type: ["string", "null"]
 
@@ -738,24 +890,104 @@ components:
       properties:
         licensePlate:
           type: ["string", "null"]
-        make:
-          type: ["string", "null"]
-        model:
-          type: ["string", "null"]
-        year:
-          type: ["integer", "null"]
-        color:
-          type: ["string", "null"]
         vin:
           type: ["string", "null"]
+        registrationYear:
+          type: ["integer", "null"]
         engineDisplacement:
           type: ["integer", "null"]
-        registrationDate:
+
+    MaterialCatalogItem:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        unit:
           type: ["string", "null"]
-        ownerName:
+        defaultPrice:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    MaterialCatalogInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        unit:
           type: ["string", "null"]
-        ownerAddress:
+        defaultPrice:
+          type: ["integer", "null"]
+
+    WorkOrderMaterial:
+      type: object
+      required: [id, workOrderId, name, quantity, createdAt]
+      properties:
+        id:
+          type: integer
+        workOrderId:
+          type: integer
+        name:
+          type: string
+        quantity:
+          type: string
+        unit:
           type: ["string", "null"]
+        unitPrice:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    WorkOrderMaterialInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        quantity:
+          type: string
+        unit:
+          type: ["string", "null"]
+        unitPrice:
+          type: ["integer", "null"]
+
+    InvoiceImportInput:
+      type: object
+      required: [images]
+      properties:
+        images:
+          type: array
+          minItems: 1
+          maxItems: 4
+          items:
+            type: string
+
+    InvoiceImportResult:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            required: [name, quantity]
+            properties:
+              name:
+                type: string
+              quantity:
+                type: string
+              unit:
+                type: ["string", "null"]
+              unitPrice:
+                type: ["integer", "null"]
 
     Photo:
       type: object

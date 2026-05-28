@@ -30,7 +30,8 @@ export default function NewWorkOrder() {
 
   const [form, setForm] = useState({
     km: "", description: "", oilChange: false, brakes: false,
-    timing: false, stk: false, otherWork: "", otherServices: "", notes: ""
+    timing: false, stk: false, otherWork: "", otherServices: "", notes: "",
+    laborHours: "", laborPrice: ""
   });
 
   function handleSpzChange(value: string) {
@@ -57,6 +58,8 @@ export default function NewWorkOrder() {
         otherWork: form.otherWork || null,
         otherServices: form.otherServices || null,
         notes: form.notes || null,
+        laborHours: form.laborHours.trim() || null,
+        laborPrice: form.laborPrice ? parseInt(form.laborPrice, 10) : null,
       }
     }, {
       onSuccess: (order) => {
@@ -146,6 +149,30 @@ export default function NewWorkOrder() {
             <div className="space-y-1">
               <Label>Ostatní práce</Label>
               <Input placeholder="Výměna žárovky, korekce geometrie..." value={form.otherWork} onChange={e => setForm(f => ({ ...f, otherWork: e.target.value }))} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle>Práce a cena</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label>Počet hodin práce</Label>
+                <Input
+                  type="text" inputMode="decimal" placeholder="2.5"
+                  value={form.laborHours}
+                  onChange={e => setForm(f => ({ ...f, laborHours: e.target.value.replace(",", ".") }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Cena za práci (Kč)</Label>
+                <Input
+                  type="number" placeholder="1500"
+                  value={form.laborPrice}
+                  onChange={e => setForm(f => ({ ...f, laborPrice: e.target.value }))}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Wrench, Car, ClipboardList, Settings, Menu, X, LayoutDashboard } from "lucide-react";
+import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: "/", label: "Přehled", icon: LayoutDashboard },
   { href: "/vehicles", label: "Vozidla", icon: Car },
   { href: "/work-orders", label: "Zakázky", icon: ClipboardList },
+  { href: "/sklad", label: "Sklad", icon: Package },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -39,7 +40,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-muted/30">
-      {/* Mobile Header */}
       <header className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-card">
         <div className="flex items-center gap-2 font-semibold text-lg">
           <Wrench className="h-5 w-5 text-primary" />
@@ -63,7 +63,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </Sheet>
       </header>
 
-      {/* Desktop Sidebar */}
       <aside className="hidden md:flex w-64 flex-col border-r bg-card h-screen sticky top-0">
         <div className="px-6 py-6 border-b flex items-center gap-2 font-semibold text-xl">
           <Wrench className="h-6 w-6 text-primary" />
@@ -77,7 +76,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Main Content */}
       <main className="flex-1 overflow-auto">
         <div className="max-w-6xl mx-auto p-4 md:p-8">
           {children}

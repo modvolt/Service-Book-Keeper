@@ -1,12 +1,14 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo } from "react";
 import { useRoute, Link } from "wouter";
 import {
   useGetWorkOrder, useUpdateWorkOrder, useListWorkOrderPhotos, useDeletePhoto, useDeleteWorkOrder,
-  getGetWorkOrderQueryKey, getListWorkOrderPhotosQueryKey, getListWorkOrdersQueryKey
+  useListWorkOrderMaterials, useAddWorkOrderMaterial, useDeleteWorkOrderMaterial,
+  useListMaterials, useImportInvoiceForWorkOrder,
+  getGetWorkOrderQueryKey, getListWorkOrderPhotosQueryKey, getListWorkOrdersQueryKey,
+  getListWorkOrderMaterialsQueryKey, getListMaterialsQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,12 +16,27 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Camera, Upload, Trash2, CheckCircle2, X, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { ArrowLeft, Camera, Upload, Trash2, CheckCircle2, X, Loader2, Plus, Package, Sparkles, FileText } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { WorkOrderStatusBadge, WORK_ORDER_STATUSES, type WorkOrderStatus } from "@/lib/work-order-status";
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const comma = result.indexOf(",");
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+type Suggestion = { name: string; quantity: string; unit: string | null; unitPrice: number | null };
 
 export default function WorkOrderDetail() {
   const [, params] = useRoute("/work-orders/:id");
@@ -27,35 +44,72 @@ export default function WorkOrderDetail() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const invoiceInputRef = useRef<HTMLInputElement>(null);
 
   const { data: order, isLoading } = useGetWorkOrder(id, { query: { enabled: !isNaN(id) } as any });
   const { data: photos, isLoading: photosLoading } = useListWorkOrderPhotos(id, { query: { enabled: !isNaN(id) } as any });
+  const { data: materials = [] } = useListWorkOrderMaterials(id, { query: { enabled: !isNaN(id) } as any });
+  const { data: catalog = [] } = useListMaterials();
   const updateOrder = useUpdateWorkOrder();
   const deletePhoto = useDeletePhoto();
   const deleteOrder = useDeleteWorkOrder();
+  const addMaterial = useAddWorkOrderMaterial();
+  const deleteMaterial = useDeleteWorkOrderMaterial();
+  const importInvoice = useImportInvoiceForWorkOrder();
 
   const [uploading, setUploading] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({
-    status: "open", km: "", description: "", oilChange: false, brakes: false,
-    timing: false, stk: false, otherWork: "", otherServices: "", notes: ""
+    km: "", description: "", oilChange: false, brakes: false,
+    timing: false, stk: false, otherWork: "", otherServices: "", notes: "",
+    laborHours: "", laborPrice: "",
   });
+
+  // Material add form
+  const [matName, setMatName] = useState("");
+  const [matQty, setMatQty] = useState("1");
+  const [matUnit, setMatUnit] = useState("");
+  const [matPrice, setMatPrice] = useState("");
+  const [showSuggest, setShowSuggest] = useState(false);
+
+  // Invoice import dialog
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [invoiceFiles, setInvoiceFiles] = useState<File[]>([]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+
+  const matchedCatalog = useMemo(() => {
+    const q = matName.trim().toLowerCase();
+    if (q.length < 1) return [];
+    return catalog.filter(c => c.name.toLowerCase().includes(q)).slice(0, 6);
+  }, [matName, catalog]);
 
   function openEdit() {
     if (!order) return;
     setEditForm({
-      status: order.status, km: order.km?.toString() ?? "", description: order.description ?? "",
+      km: order.km?.toString() ?? "", description: order.description ?? "",
       oilChange: order.oilChange ?? false, brakes: order.brakes ?? false, timing: order.timing ?? false, stk: order.stk ?? false,
-      otherWork: order.otherWork ?? "", otherServices: order.otherServices ?? "", notes: order.notes ?? ""
+      otherWork: order.otherWork ?? "", otherServices: order.otherServices ?? "", notes: order.notes ?? "",
+      laborHours: order.laborHours ?? "", laborPrice: order.laborPrice != null ? String(order.laborPrice) : "",
     });
     setEditMode(true);
   }
 
-  async function handleSave() {
+  function invalidateOrder() {
+    queryClient.invalidateQueries({ queryKey: getGetWorkOrderQueryKey(id) });
+    queryClient.invalidateQueries({ queryKey: getListWorkOrdersQueryKey() });
+  }
+
+  function handleQuickStatus(value: string) {
+    updateOrder.mutate({ id, data: { status: value as WorkOrderStatus } }, {
+      onSuccess: () => { invalidateOrder(); toast({ title: "Stav změněn" }); },
+      onError: () => toast({ title: "Chyba", description: "Stav se nepodařilo změnit.", variant: "destructive" }),
+    });
+  }
+
+  function handleSave() {
     updateOrder.mutate({
       id,
       data: {
-        status: editForm.status as WorkOrderStatus,
         km: editForm.km ? parseInt(editForm.km) : null,
         description: editForm.description || null,
         oilChange: editForm.oilChange,
@@ -65,14 +119,12 @@ export default function WorkOrderDetail() {
         otherWork: editForm.otherWork || null,
         otherServices: editForm.otherServices || null,
         notes: editForm.notes || null,
+        laborHours: editForm.laborHours.trim() || null,
+        laborPrice: editForm.laborPrice ? parseInt(editForm.laborPrice, 10) : null,
       }
     }, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getGetWorkOrderQueryKey(id) });
-        queryClient.invalidateQueries({ queryKey: getListWorkOrdersQueryKey() });
-        setEditMode(false);
-        toast({ title: "Zakázka aktualizována" });
-      }
+      onSuccess: () => { invalidateOrder(); setEditMode(false); toast({ title: "Zakázka aktualizována" }); },
+      onError: () => toast({ title: "Chyba", description: "Změny se nepodařilo uložit.", variant: "destructive" }),
     });
   }
 
@@ -98,10 +150,125 @@ export default function WorkOrderDetail() {
     e.target.value = "";
   }
 
+  function invalidateMaterials() {
+    queryClient.invalidateQueries({ queryKey: getListWorkOrderMaterialsQueryKey(id) });
+    queryClient.invalidateQueries({ queryKey: getListMaterialsQueryKey() });
+  }
+
+  function handleAddMaterial(e?: React.FormEvent) {
+    e?.preventDefault();
+    if (!matName.trim()) return;
+    addMaterial.mutate({
+      id,
+      data: {
+        name: matName.trim(),
+        quantity: matQty.trim() || "1",
+        unit: matUnit.trim() || null,
+        unitPrice: matPrice ? parseInt(matPrice, 10) : null,
+      }
+    }, {
+      onSuccess: () => {
+        setMatName(""); setMatQty("1"); setMatUnit(""); setMatPrice("");
+        setShowSuggest(false);
+        invalidateMaterials();
+      },
+      onError: () => toast({ title: "Chyba", description: "Materiál se nepodařilo přidat.", variant: "destructive" }),
+    });
+  }
+
+  function pickSuggestion(name: string, unit: string | null, defaultPrice: number | null) {
+    setMatName(name);
+    if (unit) setMatUnit(unit);
+    if (defaultPrice != null && !matPrice) setMatPrice(String(defaultPrice));
+    setShowSuggest(false);
+  }
+
+  function handleDeleteMaterial(matId: number) {
+    deleteMaterial.mutate({ id: matId }, {
+      onSuccess: invalidateMaterials,
+      onError: () => toast({ title: "Chyba", variant: "destructive" }),
+    });
+  }
+
+  function handleInvoiceFiles(files: FileList | null) {
+    if (!files) return;
+    const list = Array.from(files).slice(0, 4 - invoiceFiles.length);
+    setInvoiceFiles((prev) => [...prev, ...list].slice(0, 4));
+  }
+
+  async function handleRunInvoiceImport() {
+    if (invoiceFiles.length === 0) return;
+    try {
+      const images = await Promise.all(invoiceFiles.map(fileToBase64));
+      importInvoice.mutate({ id, data: { images } }, {
+        onSuccess: (res) => {
+          setSuggestions(res.items as Suggestion[]);
+          if (res.items.length === 0) {
+            toast({ title: "Žádné položky", description: "Z fotografie se nepodařilo rozeznat materiál." });
+          }
+        },
+        onError: () => toast({ title: "Import selhal", variant: "destructive" }),
+      });
+    } catch {
+      toast({ title: "Chyba", description: "Soubor se nepodařilo načíst.", variant: "destructive" });
+    }
+  }
+
+  async function addAllSuggestions() {
+    const failed: Suggestion[] = [];
+    for (const s of suggestions) {
+      const ok = await new Promise<boolean>((resolve) => {
+        addMaterial.mutate({
+          id,
+          data: { name: s.name, quantity: s.quantity, unit: s.unit, unitPrice: s.unitPrice }
+        }, {
+          onSuccess: () => resolve(true),
+          onError: () => resolve(false),
+        });
+      });
+      if (!ok) failed.push(s);
+    }
+    invalidateMaterials();
+    const succeeded = suggestions.length - failed.length;
+    if (failed.length === 0) {
+      setSuggestions([]);
+      setInvoiceFiles([]);
+      setInvoiceOpen(false);
+      toast({ title: "Materiály přidány", description: `Přidáno ${succeeded} položek.` });
+    } else {
+      setSuggestions(failed);
+      toast({
+        title: "Část položek selhala",
+        description: `Přidáno ${succeeded} z ${succeeded + failed.length}. Zbývající můžete zkusit znovu.`,
+        variant: "destructive",
+      });
+    }
+  }
+
+  function addOneSuggestion(idx: number) {
+    const s = suggestions[idx];
+    addMaterial.mutate({
+      id,
+      data: { name: s.name, quantity: s.quantity, unit: s.unit, unitPrice: s.unitPrice }
+    }, {
+      onSuccess: () => {
+        invalidateMaterials();
+        setSuggestions(prev => prev.filter((_, i) => i !== idx));
+      }
+    });
+  }
+
   const dateStr = (d?: string | null) => {
     if (!d) return "-";
     try { return format(parseISO(d), 'd. M. yyyy HH:mm', { locale: cs }); } catch { return d; }
   };
+
+  const materialsTotal = useMemo(() => materials.reduce((sum, m) => {
+    const q = parseFloat(m.quantity) || 0;
+    return sum + (m.unitPrice ?? 0) * q;
+  }, 0), [materials]);
+
+  const grandTotal = materialsTotal + (order?.laborPrice ?? 0);
 
   if (isLoading) return (
     <div className="space-y-4">
@@ -116,18 +283,29 @@ export default function WorkOrderDetail() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="flex items-start gap-4 flex-wrap">
         <Link href="/work-orders">
           <Button variant="ghost" size="icon"><ArrowLeft className="h-4 w-4" /></Button>
         </Link>
-        <div className="flex-1">
+        <div className="flex-1 min-w-[200px]">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-3xl font-bold font-mono uppercase tracking-wider">{order.licensePlate}</h1>
             <WorkOrderStatusBadge status={order.status} />
           </div>
           <p className="text-muted-foreground text-sm mt-1">Zakázka #{order.id} — vytvořena {dateStr(order.createdAt)}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
+            <Label className="text-xs text-muted-foreground">Stav</Label>
+            <Select value={order.status} onValueChange={handleQuickStatus}>
+              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {WORK_ORDER_STATUSES.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           {!editMode ? (
             <Button variant="outline" onClick={openEdit}>Upravit</Button>
           ) : (
@@ -143,7 +321,7 @@ export default function WorkOrderDetail() {
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Smazat zakázku?</AlertDialogTitle>
-                <AlertDialogDescription>Tato akce je nevratná. Budou smazány i všechny fotky.</AlertDialogDescription>
+                <AlertDialogDescription>Tato akce je nevratná. Budou smazány i všechny fotky a materiály.</AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Zrušit</AlertDialogCancel>
@@ -163,17 +341,6 @@ export default function WorkOrderDetail() {
           <CardContent className="space-y-4">
             {editMode ? (
               <div className="space-y-4">
-                <div className="space-y-1">
-                  <Label>Stav</Label>
-                  <Select value={editForm.status} onValueChange={v => setEditForm(f => ({ ...f, status: v }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {WORK_ORDER_STATUSES.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
                 <div className="space-y-1">
                   <Label>Km</Label>
                   <Input type="number" value={editForm.km} onChange={e => setEditForm(f => ({ ...f, km: e.target.value }))} />
@@ -277,6 +444,149 @@ export default function WorkOrderDetail() {
         </Card>
       </div>
 
+      {/* Práce a cena */}
+      <Card>
+        <CardHeader><CardTitle>Práce a cena</CardTitle></CardHeader>
+        <CardContent>
+          {editMode ? (
+            <div className="grid grid-cols-2 gap-4 max-w-md">
+              <div className="space-y-1">
+                <Label>Počet hodin práce</Label>
+                <Input
+                  type="text" inputMode="decimal" placeholder="2.5"
+                  value={editForm.laborHours}
+                  onChange={e => setEditForm(f => ({ ...f, laborHours: e.target.value.replace(",", ".") }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <Label>Cena za práci (Kč)</Label>
+                <Input
+                  type="number" placeholder="1500"
+                  value={editForm.laborPrice}
+                  onChange={e => setEditForm(f => ({ ...f, laborPrice: e.target.value }))}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Práce</p>
+                <p className="font-semibold">{order.laborHours ? `${order.laborHours} h` : "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Cena práce</p>
+                <p className="font-semibold">{order.laborPrice != null ? `${order.laborPrice.toLocaleString("cs-CZ")} Kč` : "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Materiál</p>
+                <p className="font-semibold">{materialsTotal.toLocaleString("cs-CZ")} Kč</p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Celkem</p>
+                <p className="font-bold text-lg text-primary">{grandTotal.toLocaleString("cs-CZ")} Kč</p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Materials */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="flex items-center gap-2"><Package className="h-5 w-5" />Materiál ({materials.length})</CardTitle>
+            <Button variant="outline" size="sm" onClick={() => setInvoiceOpen(true)}>
+              <Sparkles className="h-4 w-4 mr-2" />Načíst z faktury
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Add form */}
+          <form onSubmit={handleAddMaterial} className="grid gap-3 md:grid-cols-[2fr_1fr_1fr_1fr_auto]">
+            <div className="relative">
+              <Input
+                placeholder="Název dílu / materiálu"
+                value={matName}
+                onChange={(e) => { setMatName(e.target.value); setShowSuggest(true); }}
+                onFocus={() => setShowSuggest(true)}
+                onBlur={() => setTimeout(() => setShowSuggest(false), 150)}
+              />
+              {showSuggest && matchedCatalog.length > 0 && (
+                <div className="absolute z-20 mt-1 w-full bg-popover border rounded-md shadow-md max-h-56 overflow-auto">
+                  {matchedCatalog.map(c => (
+                    <button
+                      type="button"
+                      key={c.id}
+                      onMouseDown={(e) => { e.preventDefault(); pickSuggestion(c.name, c.unit ?? null, c.defaultPrice ?? null); }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center justify-between gap-3"
+                    >
+                      <span className="truncate">{c.name}</span>
+                      <span className="text-xs text-muted-foreground shrink-0">
+                        {c.unit ?? ""}{c.defaultPrice != null ? ` · ${c.defaultPrice} Kč` : ""}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <Input
+              type="text" inputMode="decimal" placeholder="Množství" value={matQty}
+              onChange={e => setMatQty(e.target.value.replace(",", "."))}
+            />
+            <Input placeholder="ks / l / kg" value={matUnit} onChange={e => setMatUnit(e.target.value)} />
+            <Input type="number" placeholder="Cena/ks (Kč)" value={matPrice} onChange={e => setMatPrice(e.target.value)} />
+            <Button type="submit" disabled={addMaterial.isPending || !matName.trim()}>
+              <Plus className="h-4 w-4 mr-2" />Přidat
+            </Button>
+          </form>
+
+          {materials.length === 0 ? (
+            <div className="text-center py-8 border-2 border-dashed rounded-lg text-muted-foreground">
+              <Package className="h-8 w-8 mx-auto mb-2 opacity-30" />
+              <p className="text-sm">Žádný materiál na zakázce.</p>
+            </div>
+          ) : (
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40">
+                  <tr className="text-left text-xs uppercase text-muted-foreground">
+                    <th className="px-3 py-2 font-medium">Název</th>
+                    <th className="px-3 py-2 font-medium text-right">Množství</th>
+                    <th className="px-3 py-2 font-medium text-right">Cena/ks</th>
+                    <th className="px-3 py-2 font-medium text-right">Celkem</th>
+                    <th className="px-3 py-2 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {materials.map(m => {
+                    const q = parseFloat(m.quantity) || 0;
+                    const total = (m.unitPrice ?? 0) * q;
+                    return (
+                      <tr key={m.id}>
+                        <td className="px-3 py-2 font-medium">{m.name}</td>
+                        <td className="px-3 py-2 text-right">{m.quantity}{m.unit ? ` ${m.unit}` : ""}</td>
+                        <td className="px-3 py-2 text-right">{m.unitPrice != null ? `${m.unitPrice.toLocaleString("cs-CZ")} Kč` : "-"}</td>
+                        <td className="px-3 py-2 text-right font-semibold">{m.unitPrice != null ? `${total.toLocaleString("cs-CZ")} Kč` : "-"}</td>
+                        <td className="px-3 py-2">
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteMaterial(m.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="bg-muted/30">
+                    <td className="px-3 py-2 font-semibold" colSpan={3}>Materiál celkem</td>
+                    <td className="px-3 py-2 text-right font-bold">{materialsTotal.toLocaleString("cs-CZ")} Kč</td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Photos */}
       <Card>
         <CardHeader>
@@ -284,12 +594,8 @@ export default function WorkOrderDetail() {
             <CardTitle>Fotky ({photos?.length ?? 0})</CardTitle>
             <div className="flex gap-2">
               <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="hidden"
-                onChange={handleFileChange}
+                ref={fileInputRef} type="file" accept="image/*" capture="environment"
+                className="hidden" onChange={handleFileChange}
               />
               <Button variant="outline" size="sm" onClick={() => { if (fileInputRef.current) { fileInputRef.current.removeAttribute("capture"); fileInputRef.current.click(); } }} disabled={uploading}>
                 <Upload className="h-4 w-4 mr-2" />Nahrát
@@ -319,8 +625,7 @@ export default function WorkOrderDetail() {
                   <Dialog>
                     <DialogTrigger asChild>
                       <img
-                        src={`/api/storage${photo.url}`}
-                        alt="Fotka zakázky"
+                        src={`/api/storage${photo.url}`} alt="Fotka zakázky"
                         className="w-full h-full object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity border"
                         onError={e => { (e.target as HTMLImageElement).src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect width='100' height='100' fill='%23f0f0f0'/%3E%3Ctext x='50' y='55' text-anchor='middle' fill='%23999' font-size='12'%3EFotka%3C/text%3E%3C/svg%3E"; }}
                       />
@@ -331,11 +636,7 @@ export default function WorkOrderDetail() {
                   </Dialog>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
+                      <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </AlertDialogTrigger>
@@ -359,6 +660,99 @@ export default function WorkOrderDetail() {
           )}
         </CardContent>
       </Card>
+
+      {/* Invoice import dialog */}
+      <Dialog open={invoiceOpen} onOpenChange={(open) => { setInvoiceOpen(open); if (!open) { setInvoiceFiles([]); setSuggestions([]); } }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-amber-500" />Načíst materiál z faktury / dodacího listu</DialogTitle>
+            <DialogDescription>
+              Vyfoťte nebo nahrajte fotografie dokladu. Rozpoznáme jednotlivé položky a před přidáním je můžete zkontrolovat.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <input
+              ref={invoiceInputRef} type="file" accept="image/*" multiple className="hidden"
+              onChange={(e) => { handleInvoiceFiles(e.target.files); e.target.value = ""; }}
+            />
+            <div className="flex gap-2">
+              <Button
+                type="button" variant="outline" className="flex-1"
+                onClick={() => { if (invoiceInputRef.current) { invoiceInputRef.current.removeAttribute("capture"); invoiceInputRef.current.click(); } }}
+                disabled={invoiceFiles.length >= 4 || importInvoice.isPending}
+              >
+                <Upload className="h-4 w-4 mr-2" />Vybrat soubor
+              </Button>
+              <Button
+                type="button" variant="outline" className="flex-1"
+                onClick={() => { if (invoiceInputRef.current) { invoiceInputRef.current.setAttribute("capture", "environment"); invoiceInputRef.current.click(); } }}
+                disabled={invoiceFiles.length >= 4 || importInvoice.isPending}
+              >
+                <Camera className="h-4 w-4 mr-2" />Fotit
+              </Button>
+            </div>
+
+            {invoiceFiles.length > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                {invoiceFiles.map((f, i) => (
+                  <div key={i} className="relative aspect-video rounded-lg border bg-muted overflow-hidden">
+                    <img src={URL.createObjectURL(f)} alt={f.name} className="w-full h-full object-cover" />
+                    <Button
+                      type="button" variant="destructive" size="icon"
+                      className="absolute top-1 right-1 h-6 w-6"
+                      onClick={() => setInvoiceFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                      disabled={importInvoice.isPending}
+                    ><X className="h-3 w-3" /></Button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {suggestions.length > 0 && (
+              <div className="border rounded-lg max-h-80 overflow-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-muted/50 sticky top-0">
+                    <tr className="text-left text-xs uppercase text-muted-foreground">
+                      <th className="px-3 py-2 font-medium">Název</th>
+                      <th className="px-3 py-2 font-medium text-right">Množ.</th>
+                      <th className="px-3 py-2 font-medium text-right">Cena/ks</th>
+                      <th className="px-3 py-2 w-12"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {suggestions.map((s, i) => (
+                      <tr key={i}>
+                        <td className="px-3 py-2">{s.name}</td>
+                        <td className="px-3 py-2 text-right">{s.quantity}{s.unit ? ` ${s.unit}` : ""}</td>
+                        <td className="px-3 py-2 text-right">{s.unitPrice != null ? `${s.unitPrice} Kč` : "-"}</td>
+                        <td className="px-3 py-2">
+                          <Button variant="ghost" size="icon" onClick={() => addOneSuggestion(i)} title="Přidat">
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" onClick={() => setInvoiceOpen(false)} disabled={importInvoice.isPending}>Zavřít</Button>
+            {suggestions.length === 0 ? (
+              <Button type="button" onClick={handleRunInvoiceImport} disabled={invoiceFiles.length === 0 || importInvoice.isPending}>
+                {importInvoice.isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Zpracovávám...</> : <><Sparkles className="h-4 w-4 mr-2" />Rozpoznat položky</>}
+              </Button>
+            ) : (
+              <Button type="button" onClick={addAllSuggestions} disabled={addMaterial.isPending}>
+                <Plus className="h-4 w-4 mr-2" />Přidat všechny ({suggestions.length})
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

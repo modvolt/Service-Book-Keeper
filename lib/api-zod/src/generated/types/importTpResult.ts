@@ -10,21 +10,9 @@ export interface ImportTpResult {
   /** @nullable */
   licensePlate?: string | null;
   /** @nullable */
-  make?: string | null;
-  /** @nullable */
-  model?: string | null;
-  /** @nullable */
-  year?: number | null;
-  /** @nullable */
-  color?: string | null;
-  /** @nullable */
   vin?: string | null;
   /** @nullable */
+  registrationYear?: number | null;
+  /** @nullable */
   engineDisplacement?: number | null;
-  /** @nullable */
-  registrationDate?: string | null;
-  /** @nullable */
-  ownerName?: string | null;
-  /** @nullable */
-  ownerAddress?: string | null;
 }

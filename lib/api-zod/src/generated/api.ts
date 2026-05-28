@@ -77,6 +77,114 @@ export const CreateVehicleBody = zod.object({
 
 
 /**
+ * @summary List catalog materials
+ */
+export const ListMaterialsQueryParams = zod.object({
+  "search": zod.coerce.string().optional()
+})
+
+export const ListMaterialsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "unit": zod.string().nullish(),
+  "defaultPrice": zod.number().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListMaterialsResponse = zod.array(ListMaterialsResponseItem)
+
+
+/**
+ * @summary Add a material to the catalog
+ */
+
+
+
+export const CreateMaterialBody = zod.object({
+  "name": zod.string().min(1),
+  "unit": zod.string().nullish(),
+  "defaultPrice": zod.number().nullish()
+})
+
+
+/**
+ * @summary Remove a catalog material
+ */
+export const DeleteMaterialParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List materials on a work order
+ */
+export const ListWorkOrderMaterialsParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListWorkOrderMaterialsResponseItem = zod.object({
+  "id": zod.number(),
+  "workOrderId": zod.number(),
+  "name": zod.string(),
+  "quantity": zod.string(),
+  "unit": zod.string().nullish(),
+  "unitPrice": zod.number().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListWorkOrderMaterialsResponse = zod.array(ListWorkOrderMaterialsResponseItem)
+
+
+/**
+ * @summary Add a material to a work order
+ */
+export const AddWorkOrderMaterialParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const AddWorkOrderMaterialBody = zod.object({
+  "name": zod.string().min(1),
+  "quantity": zod.string().optional(),
+  "unit": zod.string().nullish(),
+  "unitPrice": zod.number().nullish()
+})
+
+
+/**
+ * @summary Remove a material from a work order
+ */
+export const DeleteWorkOrderMaterialParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary Extract materials from a photo of a delivery note or invoice
+ */
+export const ImportInvoiceForWorkOrderParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const importInvoiceForWorkOrderBodyImagesMax = 4;
+
+
+
+export const ImportInvoiceForWorkOrderBody = zod.object({
+  "images": zod.array(zod.string()).min(1).max(importInvoiceForWorkOrderBodyImagesMax)
+})
+
+export const ImportInvoiceForWorkOrderResponse = zod.object({
+  "items": zod.array(zod.object({
+  "name": zod.string(),
+  "quantity": zod.string(),
+  "unit": zod.string().nullish(),
+  "unitPrice": zod.number().nullish()
+}))
+})
+
+
+/**
  * @summary Extract vehicle data from a photo of a Czech technical license (TP)
  */
 export const importVehicleFromTpBodyImagesMax = 4;
@@ -89,15 +197,9 @@ export const ImportVehicleFromTpBody = zod.object({
 
 export const ImportVehicleFromTpResponse = zod.object({
   "licensePlate": zod.string().nullish(),
-  "make": zod.string().nullish(),
-  "model": zod.string().nullish(),
-  "year": zod.number().nullish(),
-  "color": zod.string().nullish(),
   "vin": zod.string().nullish(),
-  "engineDisplacement": zod.number().nullish(),
-  "registrationDate": zod.string().nullish(),
-  "ownerName": zod.string().nullish(),
-  "ownerAddress": zod.string().nullish()
+  "registrationYear": zod.number().nullish(),
+  "engineDisplacement": zod.number().nullish()
 })
 
 
@@ -185,6 +287,8 @@ export const GetVehicleResponse = zod.object({
   "stk": zod.boolean().optional(),
   "otherWork": zod.string().nullish(),
   "otherServices": zod.string().nullish(),
+  "laborHours": zod.string().nullish().describe('Number of labor hours (decimal as string, e.g. \"2.5\")'),
+  "laborPrice": zod.number().nullish().describe('Labor price in CZK'),
   "notes": zod.string().nullish(),
   "photos": zod.array(zod.object({
   "id": zod.number(),
@@ -353,6 +457,8 @@ export const ListWorkOrdersResponseItem = zod.object({
   "stk": zod.boolean().optional(),
   "otherWork": zod.string().nullish(),
   "otherServices": zod.string().nullish(),
+  "laborHours": zod.string().nullish().describe('Number of labor hours (decimal as string, e.g. \"2.5\")'),
+  "laborPrice": zod.number().nullish().describe('Labor price in CZK'),
   "notes": zod.string().nullish(),
   "photos": zod.array(zod.object({
   "id": zod.number(),
@@ -383,6 +489,8 @@ export const CreateWorkOrderBody = zod.object({
   "stk": zod.boolean().optional(),
   "otherWork": zod.string().nullish(),
   "otherServices": zod.string().nullish(),
+  "laborHours": zod.string().nullish(),
+  "laborPrice": zod.number().nullish(),
   "notes": zod.string().nullish()
 })
 
@@ -407,6 +515,8 @@ export const GetWorkOrderResponse = zod.object({
   "stk": zod.boolean().optional(),
   "otherWork": zod.string().nullish(),
   "otherServices": zod.string().nullish(),
+  "laborHours": zod.string().nullish().describe('Number of labor hours (decimal as string, e.g. \"2.5\")'),
+  "laborPrice": zod.number().nullish().describe('Labor price in CZK'),
   "notes": zod.string().nullish(),
   "photos": zod.array(zod.object({
   "id": zod.number(),
@@ -437,6 +547,8 @@ export const UpdateWorkOrderBody = zod.object({
   "stk": zod.boolean().optional(),
   "otherWork": zod.string().nullish(),
   "otherServices": zod.string().nullish(),
+  "laborHours": zod.string().nullish(),
+  "laborPrice": zod.number().nullish(),
   "notes": zod.string().nullish()
 })
 
@@ -453,6 +565,8 @@ export const UpdateWorkOrderResponse = zod.object({
   "stk": zod.boolean().optional(),
   "otherWork": zod.string().nullish(),
   "otherServices": zod.string().nullish(),
+  "laborHours": zod.string().nullish().describe('Number of labor hours (decimal as string, e.g. \"2.5\")'),
+  "laborPrice": zod.number().nullish().describe('Labor price in CZK'),
   "notes": zod.string().nullish(),
   "photos": zod.array(zod.object({
   "id": zod.number(),
@@ -521,6 +635,8 @@ export const GetDashboardSummaryResponse = zod.object({
   "stk": zod.boolean().optional(),
   "otherWork": zod.string().nullish(),
   "otherServices": zod.string().nullish(),
+  "laborHours": zod.string().nullish().describe('Number of labor hours (decimal as string, e.g. \"2.5\")'),
+  "laborPrice": zod.number().nullish().describe('Labor price in CZK'),
   "notes": zod.string().nullish(),
   "photos": zod.array(zod.object({
   "id": zod.number(),

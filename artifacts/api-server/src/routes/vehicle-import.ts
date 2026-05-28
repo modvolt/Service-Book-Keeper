@@ -4,28 +4,22 @@ import { ImportVehicleFromTpBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
-const SYSTEM_PROMPT = `Jsi asistent pro autoservis. Z fotografií malého technického průkazu (osvědčení o registraci vozidla část I, Česká republika) extrahuj následující údaje. Vrať POUZE platné JSON bez markdown bloku, bez vysvětlení.
+const SYSTEM_PROMPT = `Jsi asistent pro autoservis. Z fotografií malého technického průkazu (osvědčení o registraci vozidla část I, Česká republika) extrahuj POUZE následující jasně čitelné údaje. Vrať POUZE platné JSON bez markdown bloku, bez vysvětlení.
 
 Schéma odpovědi:
 {
   "licensePlate": string|null,        // SPZ vozidla, např. "5L1 1642" (zachovej mezery)
-  "make": string|null,                // tovární značka, např. "PEUGEOT"
-  "model": string|null,               // obchodní označení / typ / varianta / verze
-  "year": number|null,                // rok první registrace (jen pokud je jasně uvedeno)
-  "color": string|null,               // barva vozidla česky, např. "BÍLÁ", "ČERNÁ"
-  "vin": string|null,                 // VIN / číslo karoserie (17 znaků)
-  "engineDisplacement": number|null,  // objem motoru v cm³ (kubických cm)
-  "registrationDate": string|null,    // datum první registrace ve formátu YYYY-MM-DD
-  "ownerName": string|null,           // jméno a příjmení vlastníka nebo provozovatele
-  "ownerAddress": string|null         // adresa vlastníka (ulice, čp, město, PSČ)
+  "vin": string|null,                 // VIN / číslo karoserie (přesně 17 znaků, písmena a čísla)
+  "registrationYear": number|null,    // ROK první registrace (jen číslo, např. 2018)
+  "engineDisplacement": number|null   // objem motoru v cm³ (kubických cm)
 }
 
 Pravidla:
-- Pokud údaj na fotografii nevidíš nebo si nejsi jistý, použij null.
-- Datum vyplňuj přesně ve formátu YYYY-MM-DD.
-- VIN musí mít 17 znaků (písmena/čísla), jinak null.
+- Vrať pouze údaje, které jsou na fotografii jednoznačně čitelné. Jinak null.
+- VIN musí mít přesně 17 znaků, jinak null.
 - Engine displacement: pokud vidíš objem v litrech (např. 2.0), převeď na cm³ (2000).
-- Obojí strany TP mohou obsahovat různé údaje, zkombinuj je.`;
+- registrationYear extrahuj POUZE rok (čtyřciferné číslo) z data první registrace.
+- Žádné další údaje (jméno, adresa, barva, značka, model) nevracej.`;
 
 router.post("/vehicles/import-tp", async (req, res): Promise<void> => {
   const parsed = ImportVehicleFromTpBody.safeParse(req.body);
@@ -42,7 +36,7 @@ router.post("/vehicles/import-tp", async (req, res): Promise<void> => {
 
     const response = await getOpenAI().chat.completions.create({
       model: "gpt-5.4",
-      max_completion_tokens: 8192,
+      max_completion_tokens: 4096,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
@@ -68,15 +62,9 @@ router.post("/vehicles/import-tp", async (req, res): Promise<void> => {
 
     res.json({
       licensePlate: typeof extracted.licensePlate === "string" ? extracted.licensePlate : null,
-      make: typeof extracted.make === "string" ? extracted.make : null,
-      model: typeof extracted.model === "string" ? extracted.model : null,
-      year: typeof extracted.year === "number" ? extracted.year : null,
-      color: typeof extracted.color === "string" ? extracted.color : null,
-      vin: typeof extracted.vin === "string" ? extracted.vin : null,
+      vin: typeof extracted.vin === "string" && extracted.vin.length === 17 ? extracted.vin : null,
+      registrationYear: typeof extracted.registrationYear === "number" ? extracted.registrationYear : null,
       engineDisplacement: typeof extracted.engineDisplacement === "number" ? extracted.engineDisplacement : null,
-      registrationDate: typeof extracted.registrationDate === "string" ? extracted.registrationDate : null,
-      ownerName: typeof extracted.ownerName === "string" ? extracted.ownerName : null,
-      ownerAddress: typeof extracted.ownerAddress === "string" ? extracted.ownerAddress : null,
     });
   } catch (err) {
     req.log.error({ err }, "TP import failed");

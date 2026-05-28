@@ -101,6 +101,16 @@ export interface WorkOrder {
   otherWork?: string | null;
   /** @nullable */
   otherServices?: string | null;
+  /**
+     * Number of labor hours (decimal as string, e.g. "2.5")
+     * @nullable
+     */
+  laborHours?: string | null;
+  /**
+     * Labor price in CZK
+     * @nullable
+     */
+  laborPrice?: number | null;
   /** @nullable */
   notes?: string | null;
   photos?: Photo[];
@@ -250,6 +260,10 @@ export interface WorkOrderInput {
   /** @nullable */
   otherServices?: string | null;
   /** @nullable */
+  laborHours?: string | null;
+  /** @nullable */
+  laborPrice?: number | null;
+  /** @nullable */
   notes?: string | null;
 }
 
@@ -279,6 +293,10 @@ export interface WorkOrderUpdate {
   /** @nullable */
   otherServices?: string | null;
   /** @nullable */
+  laborHours?: string | null;
+  /** @nullable */
+  laborPrice?: number | null;
+  /** @nullable */
   notes?: string | null;
 }
 
@@ -294,23 +312,73 @@ export interface ImportTpResult {
   /** @nullable */
   licensePlate?: string | null;
   /** @nullable */
-  make?: string | null;
-  /** @nullable */
-  model?: string | null;
-  /** @nullable */
-  year?: number | null;
-  /** @nullable */
-  color?: string | null;
-  /** @nullable */
   vin?: string | null;
   /** @nullable */
+  registrationYear?: number | null;
+  /** @nullable */
   engineDisplacement?: number | null;
+}
+
+export interface MaterialCatalogItem {
+  id: number;
+  name: string;
   /** @nullable */
-  registrationDate?: string | null;
+  unit?: string | null;
   /** @nullable */
-  ownerName?: string | null;
+  defaultPrice?: number | null;
+  createdAt: string;
+}
+
+export interface MaterialCatalogInput {
+  /** @minLength 1 */
+  name: string;
   /** @nullable */
-  ownerAddress?: string | null;
+  unit?: string | null;
+  /** @nullable */
+  defaultPrice?: number | null;
+}
+
+export interface WorkOrderMaterial {
+  id: number;
+  workOrderId: number;
+  name: string;
+  quantity: string;
+  /** @nullable */
+  unit?: string | null;
+  /** @nullable */
+  unitPrice?: number | null;
+  createdAt: string;
+}
+
+export interface WorkOrderMaterialInput {
+  /** @minLength 1 */
+  name: string;
+  quantity?: string;
+  /** @nullable */
+  unit?: string | null;
+  /** @nullable */
+  unitPrice?: number | null;
+}
+
+export interface InvoiceImportInput {
+  /**
+     * @minItems 1
+     * @maxItems 4
+     */
+  images: string[];
+}
+
+export type InvoiceImportResultItemsItem = {
+  name: string;
+  quantity: string;
+  /** @nullable */
+  unit?: string | null;
+  /** @nullable */
+  unitPrice?: number | null;
+};
+
+export interface InvoiceImportResult {
+  items: InvoiceImportResultItemsItem[];
 }
 
 export interface DashboardSummary {
@@ -323,6 +391,10 @@ export interface DashboardSummary {
 }
 
 export type ListVehiclesParams = {
+search?: string;
+};
+
+export type ListMaterialsParams = {
 search?: string;
 };
 

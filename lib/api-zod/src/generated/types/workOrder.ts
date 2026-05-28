@@ -26,6 +26,16 @@ export interface WorkOrder {
   otherWork?: string | null;
   /** @nullable */
   otherServices?: string | null;
+  /**
+     * Number of labor hours (decimal as string, e.g. "2.5")
+     * @nullable
+     */
+  laborHours?: string | null;
+  /**
+     * Labor price in CZK
+     * @nullable
+     */
+  laborPrice?: number | null;
   /** @nullable */
   notes?: string | null;
   photos?: Photo[];
