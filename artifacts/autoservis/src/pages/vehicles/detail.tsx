@@ -49,14 +49,33 @@ function ServiceRow({
   intervalMonths?: number | null;
 }) {
   const r = computeServiceStatus({ lastDate, lastKm, currentKm, intervalKm, intervalMonths });
+  const rowBg =
+    r.status === "overdue"
+      ? "bg-destructive/10 border-l-4 border-l-destructive pl-2"
+      : r.status === "due-soon"
+      ? "bg-amber-50 border-l-4 border-l-amber-500 pl-2"
+      : "";
+  const agoCls =
+    r.status === "overdue"
+      ? "text-destructive font-medium"
+      : r.status === "due-soon"
+      ? "text-amber-700"
+      : "text-muted-foreground";
+  const intervalLabel = [
+    intervalKm ? `${intervalKm.toLocaleString("cs-CZ")} km` : null,
+    intervalMonths ? `${intervalMonths} měs.` : null,
+  ].filter(Boolean).join(" / ");
   return (
-    <div className="flex items-start justify-between py-2 border-b last:border-b-0 gap-3">
+    <div className={`flex items-start justify-between py-2 border-b last:border-b-0 gap-3 rounded-sm ${rowBg}`}>
       <div className="min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-muted-foreground">{label}</span>
           <StatusPill status={r.status} />
         </div>
-        {r.agoLabel && <p className="text-xs text-muted-foreground mt-0.5">{r.agoLabel}</p>}
+        {r.agoLabel && <p className={`text-xs mt-0.5 ${agoCls}`}>{r.agoLabel}</p>}
+        {intervalLabel && (
+          <p className="text-[11px] text-muted-foreground mt-0.5">Interval: {intervalLabel}</p>
+        )}
       </div>
       <div className="text-right shrink-0">
         {lastDate ? (
@@ -65,7 +84,7 @@ function ServiceRow({
           <span className="text-sm text-muted-foreground">nezadáno</span>
         )}
         {r.dueLabel && (
-          <p className={`text-xs mt-0.5 ${r.status === "overdue" ? "text-destructive" : r.status === "due-soon" ? "text-amber-600" : "text-muted-foreground"}`}>{r.dueLabel}</p>
+          <p className={`text-xs mt-0.5 ${r.status === "overdue" ? "text-destructive font-medium" : r.status === "due-soon" ? "text-amber-700" : "text-muted-foreground"}`}>{r.dueLabel}</p>
         )}
       </div>
     </div>
