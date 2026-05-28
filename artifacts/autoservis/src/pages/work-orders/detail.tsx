@@ -18,7 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Camera, Upload, Trash2, CheckCircle2, X, Loader2, Plus, Package, Sparkles, FileText, Pencil, Check } from "lucide-react";
+import { ArrowLeft, Camera, Upload, Trash2, CheckCircle2, X, Loader2, Plus, Minus, Package, Sparkles, FileText, Pencil, Check } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -65,7 +65,7 @@ export default function WorkOrderDetail() {
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({
     km: "", description: "", oilChange: false, transmissionOil: false, brakes: false,
-    timing: false, stk: false, otherWork: "", otherServices: "", notes: "",
+    timing: false, airFilter: false, cabinFilter: false, stk: false, otherWork: "", otherServices: "", notes: "",
     laborHours: "", laborPrice: "", serviceDate: "",
   });
 
@@ -100,9 +100,17 @@ export default function WorkOrderDetail() {
 
   // Material add form
   const [matName, setMatName] = useState("");
-  const [matQty, setMatQty] = useState("1");
+  const [matQty, setMatQty] = useState("");
   const [matUnit, setMatUnit] = useState("");
   const [matPrice, setMatPrice] = useState("");
+
+  function adjustMatQty(delta: number) {
+    setMatQty(prev => {
+      const current = parseFloat((prev || "0").replace(",", ".")) || 0;
+      const next = Math.max(0, current + delta);
+      return Number.isInteger(next) ? String(next) : next.toFixed(2).replace(/\.?0+$/, "");
+    });
+  }
   const [showSuggest, setShowSuggest] = useState(false);
 
   // Invoice import dialog
@@ -121,7 +129,9 @@ export default function WorkOrderDetail() {
     setEditForm({
       km: order.km?.toString() ?? "", description: order.description ?? "",
       oilChange: order.oilChange ?? false, transmissionOil: order.transmissionOil ?? false,
-      brakes: order.brakes ?? false, timing: order.timing ?? false, stk: order.stk ?? false,
+      brakes: order.brakes ?? false, timing: order.timing ?? false,
+      airFilter: order.airFilter ?? false, cabinFilter: order.cabinFilter ?? false,
+      stk: order.stk ?? false,
       otherWork: order.otherWork ?? "", otherServices: order.otherServices ?? "", notes: order.notes ?? "",
       laborHours: order.laborHours ?? "", laborPrice: order.laborPrice != null ? String(order.laborPrice) : "",
       serviceDate: order.serviceDate ?? "",
@@ -173,6 +183,8 @@ export default function WorkOrderDetail() {
         transmissionOil: editForm.transmissionOil,
         brakes: editForm.brakes,
         timing: editForm.timing,
+        airFilter: editForm.airFilter,
+        cabinFilter: editForm.cabinFilter,
         stk: editForm.stk,
         serviceDate: editForm.serviceDate || null,
         otherWork: editForm.otherWork || null,
@@ -227,7 +239,7 @@ export default function WorkOrderDetail() {
       }
     }, {
       onSuccess: () => {
-        setMatName(""); setMatQty("1"); setMatUnit(""); setMatPrice("");
+        setMatName(""); setMatQty(""); setMatUnit(""); setMatPrice("");
         setShowSuggest(false);
         invalidateMaterials();
       },
@@ -461,6 +473,8 @@ export default function WorkOrderDetail() {
                   ...(isAutomatic || editForm.transmissionOil ? [{ key: "transmissionOil", label: "Olej v převodovce" }] : []),
                   { key: "brakes", label: "Servis brzd" },
                   { key: "timing", label: "Rozvody" },
+                  { key: "airFilter", label: "Filtr vzduchový" },
+                  { key: "cabinFilter", label: "Filtr kabinový" },
                   { key: "stk", label: "STK" },
                 ].map(item => (
                   <div key={item.key} className="flex items-center space-x-2">
@@ -488,6 +502,8 @@ export default function WorkOrderDetail() {
                   ...(order.transmissionOil ? [{ checked: true, label: "Olej v převodovce" }] : []),
                   { checked: order.brakes, label: "Servis brzd" },
                   { checked: order.timing, label: "Rozvody" },
+                  { checked: order.airFilter, label: "Filtr vzduchový" },
+                  { checked: order.cabinFilter, label: "Filtr kabinový" },
                   { checked: order.stk, label: "STK" },
                 ].map(item => (
                   <div key={item.label} className="flex items-center gap-3 py-2">
@@ -627,7 +643,7 @@ export default function WorkOrderDetail() {
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Add form */}
-          <form onSubmit={handleAddMaterial} className="grid gap-3 md:grid-cols-[2fr_1fr_1fr_1fr_auto]">
+          <form onSubmit={handleAddMaterial} className="grid gap-3 md:grid-cols-[2fr_1fr_1.4fr_1fr_auto]">
             <div className="relative">
               <Input
                 placeholder="Název dílu / materiálu"
@@ -654,12 +670,21 @@ export default function WorkOrderDetail() {
                 </div>
               )}
             </div>
-            <Input
-              type="text" inputMode="decimal" placeholder="Množství" value={matQty}
-              onChange={e => setMatQty(e.target.value.replace(",", "."))}
-            />
-            <Input placeholder="ks / l / kg" value={matUnit} onChange={e => setMatUnit(e.target.value)} />
             <Input type="number" placeholder="Cena/ks (Kč)" value={matPrice} onChange={e => setMatPrice(e.target.value)} />
+            <div className="flex items-center gap-1">
+              <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => adjustMatQty(-1)} aria-label="Snížit množství">
+                <Minus className="h-4 w-4" />
+              </Button>
+              <Input
+                type="text" inputMode="decimal" placeholder="Množství" value={matQty}
+                onChange={e => setMatQty(e.target.value.replace(",", "."))}
+                className="text-center"
+              />
+              <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" onClick={() => adjustMatQty(1)} aria-label="Zvýšit množství">
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+            <Input placeholder="ks / l / kg" value={matUnit} onChange={e => setMatUnit(e.target.value)} />
             <Button type="submit" disabled={addMaterial.isPending || !matName.trim()}>
               <Plus className="h-4 w-4 mr-2" />Přidat
             </Button>

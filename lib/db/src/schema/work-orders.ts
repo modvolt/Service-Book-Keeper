@@ -14,6 +14,8 @@ export const workOrdersTable = pgTable("work_orders", {
   transmissionOil: boolean("transmission_oil").notNull().default(false),
   brakes: boolean("brakes").notNull().default(false),
   timing: boolean("timing").notNull().default(false),
+  airFilter: boolean("air_filter").notNull().default(false),
+  cabinFilter: boolean("cabin_filter").notNull().default(false),
   stk: boolean("stk").notNull().default(false),
   serviceDate: date("service_date", { mode: "string" }),
   otherWork: text("other_work"),

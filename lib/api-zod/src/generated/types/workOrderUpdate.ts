@@ -17,6 +17,8 @@ export interface WorkOrderUpdate {
   transmissionOil?: boolean;
   brakes?: boolean;
   timing?: boolean;
+  airFilter?: boolean;
+  cabinFilter?: boolean;
   stk?: boolean;
   /** @nullable */
   serviceDate?: string | null;

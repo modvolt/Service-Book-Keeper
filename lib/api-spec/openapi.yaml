@@ -1092,6 +1092,10 @@ components:
           type: boolean
         timing:
           type: boolean
+        airFilter:
+          type: boolean
+        cabinFilter:
+          type: boolean
         stk:
           type: boolean
         serviceDate:
@@ -1139,6 +1143,10 @@ components:
           type: boolean
         timing:
           type: boolean
+        airFilter:
+          type: boolean
+        cabinFilter:
+          type: boolean
         stk:
           type: boolean
         serviceDate:
@@ -1171,6 +1179,10 @@ components:
         brakes:
           type: boolean
         timing:
+          type: boolean
+        airFilter:
+          type: boolean
+        cabinFilter:
           type: boolean
         stk:
           type: boolean

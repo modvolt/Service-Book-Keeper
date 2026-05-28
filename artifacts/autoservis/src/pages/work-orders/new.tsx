@@ -48,7 +48,7 @@ export default function NewWorkOrder() {
   const [form, setForm] = useState({
     km: "", description: "",
     oilChange: false, transmissionOil: false, brakes: false,
-    timing: false, stk: false, otherWork: "", otherServices: "", notes: "",
+    timing: false, airFilter: false, cabinFilter: false, stk: false, otherWork: "", otherServices: "", notes: "",
     laborHours: "", laborPrice: "",
     serviceDate: today,
   });
@@ -96,6 +96,8 @@ export default function NewWorkOrder() {
         transmissionOil: form.transmissionOil,
         brakes: form.brakes,
         timing: form.timing,
+        airFilter: form.airFilter,
+        cabinFilter: form.cabinFilter,
         stk: form.stk,
         serviceDate: form.serviceDate || null,
         otherWork: form.otherWork || null,
@@ -202,6 +204,8 @@ export default function NewWorkOrder() {
                 ...(foundVehicle?.transmission === "automatic" ? [{ key: "transmissionOil", label: "Olej v převodovce" }] : []),
                 { key: "brakes", label: "Servis brzd" },
                 { key: "timing", label: "Rozvody" },
+                { key: "airFilter", label: "Filtr vzduchový" },
+                { key: "cabinFilter", label: "Filtr kabinový" },
                 { key: "stk", label: "STK" },
               ].map(item => (
                 <Label

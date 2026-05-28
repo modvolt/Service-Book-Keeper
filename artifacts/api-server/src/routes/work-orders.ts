@@ -115,6 +115,8 @@ router.post("/work-orders", async (req, res): Promise<void> => {
     oilChange: parsed.data.oilChange ?? false,
     brakes: parsed.data.brakes ?? false,
     timing: parsed.data.timing ?? false,
+    airFilter: parsed.data.airFilter ?? false,
+    cabinFilter: parsed.data.cabinFilter ?? false,
     stk: parsed.data.stk ?? false,
   }).returning();
 

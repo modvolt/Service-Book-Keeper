@@ -165,6 +165,8 @@ export interface WorkOrder {
   transmissionOil?: boolean;
   brakes?: boolean;
   timing?: boolean;
+  airFilter?: boolean;
+  cabinFilter?: boolean;
   stk?: boolean;
   /**
      * Date when service was performed (for backdated/historical orders)
@@ -464,6 +466,8 @@ export interface WorkOrderInput {
   transmissionOil?: boolean;
   brakes?: boolean;
   timing?: boolean;
+  airFilter?: boolean;
+  cabinFilter?: boolean;
   stk?: boolean;
   /** @nullable */
   serviceDate?: string | null;
@@ -500,6 +504,8 @@ export interface WorkOrderUpdate {
   transmissionOil?: boolean;
   brakes?: boolean;
   timing?: boolean;
+  airFilter?: boolean;
+  cabinFilter?: boolean;
   stk?: boolean;
   /** @nullable */
   serviceDate?: string | null;
