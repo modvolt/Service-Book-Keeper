@@ -64,6 +64,14 @@ async function propagateWorkOrderToVehicle(orderId: number): Promise<void> {
   if (order.brakeFluid && isNewer(vehicle.lastBrakeFluidDate)) {
     updates.lastBrakeFluidDate = serviceDate;
   }
+  if (order.stk && order.status === "completed") {
+    const d = new Date(serviceDate + "T00:00:00Z");
+    d.setUTCMonth(d.getUTCMonth() + 24);
+    const newStk = d.toISOString().slice(0, 10);
+    if (!vehicle.stkValidUntil || newStk > vehicle.stkValidUntil) {
+      updates.stkValidUntil = newStk;
+    }
+  }
 
   if (Object.keys(updates).length === 0) return;
   await db.update(vehiclesTable).set(updates).where(eq(vehiclesTable.id, vehicle.id));
