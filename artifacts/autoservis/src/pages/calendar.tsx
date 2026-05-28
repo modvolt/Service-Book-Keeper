@@ -33,6 +33,28 @@ function toISO(d: Date): string {
 function startOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth(), 1); }
 function endOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth() + 1, 0); }
 function addMonths(d: Date, n: number) { return new Date(d.getFullYear(), d.getMonth() + n, 1); }
+function startOfWeek(d: Date) {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const offset = (x.getDay() + 6) % 7;
+  x.setDate(x.getDate() - offset);
+  return x;
+}
+function addDays(d: Date, n: number) {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  x.setDate(x.getDate() + n);
+  return x;
+}
+const MONTH_GENITIVE = [
+  "ledna", "února", "března", "dubna", "května", "června",
+  "července", "srpna", "září", "října", "listopadu", "prosince",
+];
+function fmtRange(start: Date, end: Date): string {
+  const sameYear = start.getFullYear() === end.getFullYear();
+  const sameMonth = sameYear && start.getMonth() === end.getMonth();
+  if (sameMonth) return `${start.getDate()}. – ${end.getDate()}. ${MONTH_GENITIVE[end.getMonth()]} ${end.getFullYear()}`;
+  if (sameYear) return `${start.getDate()}. ${MONTH_GENITIVE[start.getMonth()]} – ${end.getDate()}. ${MONTH_GENITIVE[end.getMonth()]} ${end.getFullYear()}`;
+  return `${start.getDate()}. ${MONTH_GENITIVE[start.getMonth()]} ${start.getFullYear()} – ${end.getDate()}. ${MONTH_GENITIVE[end.getMonth()]} ${end.getFullYear()}`;
+}
 
 type FormState = {
   scheduledDate: string;
@@ -71,13 +93,17 @@ const STATUS_BADGE: Record<string, string> = {
 export default function CalendarPage() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [cursor, setCursor] = useState(() => startOfMonth(new Date()));
+  // cursor = Monday of the "current" week (the middle of the 5-week strip)
+  const [cursor, setCursor] = useState(() => startOfWeek(new Date()));
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Appointment | null>(null);
   const [form, setForm] = useState<FormState>(emptyForm(toISO(new Date())));
 
-  const from = toISO(startOfMonth(cursor));
-  const to = toISO(endOfMonth(cursor));
+  // Show 5 weeks: 2 back, current, 2 forward
+  const gridStart = useMemo(() => addDays(cursor, -14), [cursor]);
+  const gridEnd = useMemo(() => addDays(cursor, 14 + 6), [cursor]); // last day of week+2
+  const from = toISO(gridStart);
+  const to = toISO(gridEnd);
 
   const { data: appointments = [] } = useListAppointments({ from, to });
   const { data: linkedVehicle } = useGetVehicleByPlate(form.licensePlate.trim().toUpperCase().replace(/\s+/g, ""), {
@@ -102,26 +128,14 @@ export default function CalendarPage() {
   }, [appointments]);
 
   const grid = useMemo(() => {
-    const first = startOfMonth(cursor);
-    const last = endOfMonth(cursor);
-    // Monday-first offset: getDay() Sun=0..Sat=6 → Mon=0..Sun=6
-    const startOffset = (first.getDay() + 6) % 7;
-    const days: { date: Date; inMonth: boolean }[] = [];
-    for (let i = 0; i < startOffset; i++) {
-      const d = new Date(first);
-      d.setDate(first.getDate() - (startOffset - i));
-      days.push({ date: d, inMonth: false });
-    }
-    for (let i = 1; i <= last.getDate(); i++) {
-      days.push({ date: new Date(cursor.getFullYear(), cursor.getMonth(), i), inMonth: true });
-    }
-    while (days.length % 7 !== 0) {
-      const next = new Date(days[days.length - 1].date);
-      next.setDate(next.getDate() + 1);
-      days.push({ date: next, inMonth: false });
+    const days: { date: Date; inCurrentWeek: boolean }[] = [];
+    for (let i = 0; i < 35; i++) {
+      const d = addDays(gridStart, i);
+      const inCurrentWeek = i >= 14 && i < 21;
+      days.push({ date: d, inCurrentWeek });
     }
     return days;
-  }, [cursor]);
+  }, [gridStart]);
 
   function openCreate(date: string) {
     setEditing(null);
@@ -215,16 +229,16 @@ export default function CalendarPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle className="text-xl">
-            {MONTH_LABELS[cursor.getMonth()]} {cursor.getFullYear()}
+            {fmtRange(gridStart, gridEnd)}
           </CardTitle>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={() => setCursor(addMonths(cursor, -1))}>
+            <Button variant="outline" size="icon" onClick={() => setCursor(addDays(cursor, -7))}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setCursor(startOfMonth(new Date()))}>
-              Dnes
+            <Button variant="outline" size="sm" onClick={() => setCursor(startOfWeek(new Date()))}>
+              Tento týden
             </Button>
-            <Button variant="outline" size="icon" onClick={() => setCursor(addMonths(cursor, 1))}>
+            <Button variant="outline" size="icon" onClick={() => setCursor(addDays(cursor, 7))}>
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -245,7 +259,7 @@ export default function CalendarPage() {
                   key={idx}
                   type="button"
                   onClick={() => openCreate(iso)}
-                  className={`bg-card text-left min-h-[110px] p-2 hover:bg-accent/40 transition-colors flex flex-col gap-1 ${cell.inMonth ? "" : "opacity-40"}`}
+                  className={`text-left min-h-[110px] p-2 hover:bg-accent/40 transition-colors flex flex-col gap-1 ${cell.inCurrentWeek ? "bg-primary/5" : "bg-card"}`}
                 >
                   <div className="flex items-center justify-between">
                     <span className={`text-sm font-medium ${isToday ? "bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center" : ""}`}>
