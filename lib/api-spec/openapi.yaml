@@ -780,7 +780,7 @@ components:
 
     VehicleDetail:
       type: object
-      required: [id, licensePlate, make, model, ownerType, createdAt, serviceRecords, openWorkOrders]
+      required: [id, licensePlate, make, model, ownerType, createdAt, serviceRecords, openWorkOrders, completedWorkOrders]
       properties:
         id:
           type: integer
@@ -858,6 +858,10 @@ components:
           items:
             $ref: "#/components/schemas/ServiceRecord"
         openWorkOrders:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkOrder"
+        completedWorkOrders:
           type: array
           items:
             $ref: "#/components/schemas/WorkOrder"

@@ -110,12 +110,16 @@ router.get("/vehicles/:id", async (req, res): Promise<void> => {
     .where(eq(serviceRecordsTable.vehicleId, params.data.id))
     .orderBy(desc(serviceRecordsTable.date), desc(serviceRecordsTable.id));
 
-  const openWorkOrders = await db
+  const allWorkOrders = await db
     .select()
     .from(workOrdersTable)
-    .where(eq(workOrdersTable.vehicleId, params.data.id));
+    .where(eq(workOrdersTable.vehicleId, params.data.id))
+    .orderBy(desc(workOrdersTable.serviceDate), desc(workOrdersTable.createdAt));
 
-  res.json({ ...vehicle, serviceRecords, openWorkOrders });
+  const openWorkOrders = allWorkOrders.filter(wo => wo.status !== "completed");
+  const completedWorkOrders = allWorkOrders.filter(wo => wo.status === "completed");
+
+  res.json({ ...vehicle, serviceRecords, openWorkOrders, completedWorkOrders });
 });
 
 router.patch("/vehicles/:id", async (req, res): Promise<void> => {

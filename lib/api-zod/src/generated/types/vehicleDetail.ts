@@ -75,4 +75,5 @@ export interface VehicleDetail {
   createdAt: Date;
   serviceRecords: ServiceRecord[];
   openWorkOrders: WorkOrder[];
+  completedWorkOrders: WorkOrder[];
 }

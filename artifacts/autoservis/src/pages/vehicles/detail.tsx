@@ -478,11 +478,33 @@ export default function VehicleDetail() {
           </div>
         </CardHeader>
         <CardContent>
-          {!vehicle.serviceRecords || vehicle.serviceRecords.length === 0 ? (
+          {(!vehicle.serviceRecords || vehicle.serviceRecords.length === 0) &&
+           (!vehicle.completedWorkOrders || vehicle.completedWorkOrders.length === 0) ? (
             <p className="text-sm text-muted-foreground text-center py-8">Žádné servisní záznamy.</p>
           ) : (
             <div className="space-y-3">
-              {vehicle.serviceRecords.map(record => (
+              {(vehicle.completedWorkOrders ?? []).map(wo => (
+                <Link key={`wo-${wo.id}`} href={`/work-orders/${wo.id}`}>
+                  <div className="flex items-start gap-4 p-4 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer">
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold">{dateStr(wo.serviceDate ?? wo.createdAt)}</span>
+                        {wo.km != null && <span className="text-sm text-muted-foreground">{wo.km.toLocaleString('cs-CZ')} km</span>}
+                        <Badge variant="secondary" className="text-xs">Zakázka #{wo.id}</Badge>
+                        {wo.oilChange && <Badge variant="outline" className="text-xs">Olej</Badge>}
+                        {wo.transmissionOil && <Badge variant="outline" className="text-xs">Olej převodovky</Badge>}
+                        {wo.brakes && <Badge variant="outline" className="text-xs">Brzdy</Badge>}
+                        {wo.timing && <Badge variant="outline" className="text-xs">Rozvody</Badge>}
+                        {wo.stk && <Badge variant="outline" className="text-xs">STK</Badge>}
+                      </div>
+                      {wo.description && <p className="text-sm text-muted-foreground">{wo.description}</p>}
+                      {wo.otherServices && <p className="text-sm text-muted-foreground">{wo.otherServices}</p>}
+                      {wo.otherWork && <p className="text-sm text-muted-foreground">{wo.otherWork}</p>}
+                    </div>
+                  </div>
+                </Link>
+              ))}
+              {(vehicle.serviceRecords ?? []).map(record => (
                 <div key={record.id} className="flex items-start gap-4 p-4 rounded-lg border">
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">

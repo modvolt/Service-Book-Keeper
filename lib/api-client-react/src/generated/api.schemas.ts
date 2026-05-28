@@ -258,6 +258,7 @@ export interface VehicleDetail {
   createdAt: string;
   serviceRecords: ServiceRecord[];
   openWorkOrders: WorkOrder[];
+  completedWorkOrders: WorkOrder[];
 }
 
 /**

@@ -380,6 +380,34 @@ export const GetVehicleResponse = zod.object({
 })).optional(),
   "createdAt": zod.coerce.date(),
   "completedAt": zod.coerce.date().nullish()
+})),
+  "completedWorkOrders": zod.array(zod.object({
+  "id": zod.number(),
+  "vehicleId": zod.number().nullish(),
+  "licensePlate": zod.string(),
+  "status": zod.enum(['open', 'in_progress', 'waiting_parts', 'needs_return', 'completed']),
+  "km": zod.number().nullish(),
+  "description": zod.string().nullish(),
+  "oilChange": zod.boolean().optional(),
+  "transmissionOil": zod.boolean().optional(),
+  "brakes": zod.boolean().optional(),
+  "timing": zod.boolean().optional(),
+  "stk": zod.boolean().optional(),
+  "serviceDate": zod.string().nullish().describe('Date when service was performed (for backdated\/historical orders)'),
+  "otherWork": zod.string().nullish(),
+  "otherServices": zod.string().nullish(),
+  "laborHours": zod.string().nullish().describe('Number of labor hours (decimal as string, e.g. \"2.5\")'),
+  "laborPrice": zod.number().nullish().describe('Labor price in CZK'),
+  "notes": zod.string().nullish(),
+  "photos": zod.array(zod.object({
+  "id": zod.number(),
+  "workOrderId": zod.number(),
+  "url": zod.string(),
+  "filename": zod.string().optional(),
+  "createdAt": zod.coerce.date()
+})).optional(),
+  "createdAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullish()
 }))
 })
 
