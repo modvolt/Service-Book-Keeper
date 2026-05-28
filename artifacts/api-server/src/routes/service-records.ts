@@ -65,18 +65,27 @@ router.post("/vehicles/:id/service-records", async (req, res): Promise<void> => 
     .values({ ...parsed.data, vehicleId: params.data.id })
     .returning();
 
-  // Update vehicle service fields based on what was done
+  // Update vehicle service fields. Only overwrite when the new date is
+  // strictly newer (so a backdated record can't clobber a newer service),
+  // and only bump currentKm when the new km is higher than what we have.
   const updates: Partial<typeof vehiclesTable.$inferInsert> = {};
-  if (parsed.data.km) updates.currentKm = parsed.data.km;
-  if (parsed.data.oilChanged) {
-    updates.lastOilChangeDate = parsed.data.date;
-    if (parsed.data.km) updates.lastOilChangeKm = parsed.data.km;
+  const isNewer = (existing: string | null) => !existing || parsed.data.date >= existing;
+  if (parsed.data.km != null && (vehicle.currentKm == null || parsed.data.km > vehicle.currentKm)) {
+    updates.currentKm = parsed.data.km;
   }
-  if (parsed.data.brakesServiced) updates.lastBrakesDate = parsed.data.date;
-  if (parsed.data.timingServiced) updates.lastTimingDate = parsed.data.date;
-  if (parsed.data.transmissionOilChanged) {
+  if (parsed.data.oilChanged && isNewer(vehicle.lastOilChangeDate)) {
+    updates.lastOilChangeDate = parsed.data.date;
+    if (parsed.data.km != null) updates.lastOilChangeKm = parsed.data.km;
+  }
+  if (parsed.data.brakesServiced && isNewer(vehicle.lastBrakesDate)) {
+    updates.lastBrakesDate = parsed.data.date;
+  }
+  if (parsed.data.timingServiced && isNewer(vehicle.lastTimingDate)) {
+    updates.lastTimingDate = parsed.data.date;
+  }
+  if (parsed.data.transmissionOilChanged && isNewer(vehicle.lastTransmissionOilDate)) {
     updates.lastTransmissionOilDate = parsed.data.date;
-    if (parsed.data.km) updates.lastTransmissionOilKm = parsed.data.km;
+    if (parsed.data.km != null) updates.lastTransmissionOilKm = parsed.data.km;
   }
 
   if (Object.keys(updates).length > 0) {
