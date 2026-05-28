@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Camera, Upload, Trash2, CheckCircle2, X, Loader2, Plus, Package, Sparkles, FileText } from "lucide-react";
+import { ArrowLeft, Camera, Upload, Trash2, CheckCircle2, X, Loader2, Plus, Package, Sparkles, FileText, Pencil, Check } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -65,6 +65,11 @@ export default function WorkOrderDetail() {
     laborHours: "", laborPrice: "",
   });
 
+  // Inline labor edit
+  const [laborEditing, setLaborEditing] = useState(false);
+  const [laborHoursInput, setLaborHoursInput] = useState("");
+  const [laborPriceInput, setLaborPriceInput] = useState("");
+
   // Material add form
   const [matName, setMatName] = useState("");
   const [matQty, setMatQty] = useState("1");
@@ -97,6 +102,26 @@ export default function WorkOrderDetail() {
   function invalidateOrder() {
     queryClient.invalidateQueries({ queryKey: getGetWorkOrderQueryKey(id) });
     queryClient.invalidateQueries({ queryKey: getListWorkOrdersQueryKey() });
+  }
+
+  function startLaborEdit() {
+    if (!order) return;
+    setLaborHoursInput(order.laborHours ?? "");
+    setLaborPriceInput(order.laborPrice != null ? String(order.laborPrice) : "");
+    setLaborEditing(true);
+  }
+
+  function saveLabor() {
+    updateOrder.mutate({
+      id,
+      data: {
+        laborHours: laborHoursInput.trim() || null,
+        laborPrice: laborPriceInput ? parseInt(laborPriceInput, 10) : null,
+      }
+    }, {
+      onSuccess: () => { invalidateOrder(); setLaborEditing(false); toast({ title: "Práce uložena" }); },
+      onError: () => toast({ title: "Chyba", description: "Práci se nepodařilo uložit.", variant: "destructive" }),
+    });
   }
 
   function handleQuickStatus(value: string) {
@@ -446,7 +471,29 @@ export default function WorkOrderDetail() {
 
       {/* Práce a cena */}
       <Card>
-        <CardHeader><CardTitle>Práce a cena</CardTitle></CardHeader>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Práce a cena</CardTitle>
+            {!editMode && !laborEditing && (
+              <Button variant="ghost" size="sm" onClick={startLaborEdit}>
+                <Pencil className="h-3.5 w-3.5 mr-1.5" />Upravit práci
+              </Button>
+            )}
+            {!editMode && laborEditing && (
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setLaborEditing(false)} disabled={updateOrder.isPending}>
+                  <X className="h-3.5 w-3.5 mr-1.5" />Zrušit
+                </Button>
+                <Button size="sm" onClick={saveLabor} disabled={updateOrder.isPending}>
+                  {updateOrder.isPending
+                    ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                    : <Check className="h-3.5 w-3.5 mr-1.5" />}
+                  Uložit
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardHeader>
         <CardContent>
           {editMode ? (
             <div className="grid grid-cols-2 gap-4 max-w-md">
@@ -465,6 +512,38 @@ export default function WorkOrderDetail() {
                   value={editForm.laborPrice}
                   onChange={e => setEditForm(f => ({ ...f, laborPrice: e.target.value }))}
                 />
+              </div>
+            </div>
+          ) : laborEditing ? (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Práce (h)</Label>
+                <Input
+                  type="text" inputMode="decimal" placeholder="2.5"
+                  value={laborHoursInput}
+                  onChange={e => setLaborHoursInput(e.target.value.replace(",", "."))}
+                  onKeyDown={e => { if (e.key === "Enter") saveLabor(); if (e.key === "Escape") setLaborEditing(false); }}
+                  autoFocus
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Cena práce (Kč)</Label>
+                <Input
+                  type="number" placeholder="1500"
+                  value={laborPriceInput}
+                  onChange={e => setLaborPriceInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") saveLabor(); if (e.key === "Escape") setLaborEditing(false); }}
+                />
+              </div>
+              <div className="flex flex-col justify-end">
+                <p className="text-xs text-muted-foreground mb-1">Materiál</p>
+                <p className="font-semibold">{materialsTotal.toLocaleString("cs-CZ")} Kč</p>
+              </div>
+              <div className="flex flex-col justify-end">
+                <p className="text-xs text-muted-foreground mb-1">Celkem (po uložení)</p>
+                <p className="font-bold text-lg text-primary">
+                  {(materialsTotal + (laborPriceInput ? parseInt(laborPriceInput, 10) || 0 : 0)).toLocaleString("cs-CZ")} Kč
+                </p>
               </div>
             </div>
           ) : (
