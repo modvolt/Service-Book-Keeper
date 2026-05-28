@@ -359,8 +359,8 @@ export default function VehicleDetail() {
               lastDate={vehicle.lastOilChangeDate}
               lastKm={vehicle.lastOilChangeKm}
               currentKm={vehicle.currentKm}
-              intervalKm={vehicle.oilChangeIntervalKm}
-              intervalMonths={vehicle.oilChangeIntervalMonths}
+              intervalKm={vehicle.oilChangeIntervalKm ?? 15000}
+              intervalMonths={vehicle.oilChangeIntervalMonths ?? 12}
             />
             {isAutomatic && (
               <ServiceRow
@@ -368,21 +368,21 @@ export default function VehicleDetail() {
                 lastDate={vehicle.lastTransmissionOilDate}
                 lastKm={vehicle.lastTransmissionOilKm}
                 currentKm={vehicle.currentKm}
-                intervalKm={vehicle.transmissionOilIntervalKm}
-                intervalMonths={vehicle.transmissionOilIntervalMonths}
+                intervalKm={vehicle.transmissionOilIntervalKm ?? 60000}
+                intervalMonths={vehicle.transmissionOilIntervalMonths ?? 60}
               />
             )}
             <ServiceRow
               label="Brzdy"
               lastDate={vehicle.lastBrakesDate}
-              intervalMonths={vehicle.brakesIntervalMonths}
+              intervalMonths={vehicle.brakesIntervalMonths ?? 24}
             />
             <ServiceRow
               label="Rozvody"
               lastDate={vehicle.lastTimingDate}
               currentKm={vehicle.currentKm}
-              intervalKm={vehicle.timingIntervalKm}
-              intervalMonths={vehicle.timingIntervalMonths}
+              intervalKm={vehicle.timingIntervalKm ?? 120000}
+              intervalMonths={vehicle.timingIntervalMonths ?? 120}
             />
           </CardContent>
         </Card>
