@@ -1,9 +1,10 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useImportVehicleFromTp } from "@workspace/api-client-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Camera, Upload, X, Loader2, Sparkles, ScanLine } from "lucide-react";
+import { Camera, Upload, X, Loader2, Sparkles, ScanLine, ClipboardPaste } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 export type TpExtractedData = {
   licensePlate: string | null;
@@ -36,11 +37,62 @@ export function TpScanDialog({
   const importFromTp = useImportVehicleFromTp();
   const inputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
+  const [previews, setPreviews] = useState<string[]>([]);
+  const [dragActive, setDragActive] = useState(false);
+
+  useEffect(() => {
+    const urls = files.map((f) => URL.createObjectURL(f));
+    setPreviews(urls);
+    return () => { urls.forEach((u) => URL.revokeObjectURL(u)); };
+  }, [files]);
+
+  function addImages(list: File[]) {
+    const imgs = list.filter((f) => f.type.startsWith("image/"));
+    if (imgs.length === 0) return;
+    setFiles((p) => [...p, ...imgs].slice(0, 4));
+  }
 
   function handleAdd(list: FileList | null) {
     if (!list) return;
-    const next = Array.from(list).slice(0, 4 - files.length);
-    setFiles((p) => [...p, ...next].slice(0, 4));
+    addImages(Array.from(list));
+  }
+
+  // Paste screenshot from clipboard (Ctrl+V) while dialog is open
+  useEffect(() => {
+    if (!open) return;
+    function onPaste(e: ClipboardEvent) {
+      if (!e.clipboardData) return;
+      const items = Array.from(e.clipboardData.items);
+      const imageFiles: File[] = [];
+      for (const it of items) {
+        if (it.kind === "file" && it.type.startsWith("image/")) {
+          const f = it.getAsFile();
+          if (f) {
+            const ext = f.type.split("/")[1] ?? "png";
+            const named = f.name && f.name !== "image.png"
+              ? f
+              : new File([f], `snimek-${Date.now()}.${ext}`, { type: f.type });
+            imageFiles.push(named);
+          }
+        }
+      }
+      if (imageFiles.length > 0) {
+        e.preventDefault();
+        addImages(imageFiles);
+        toast({ title: "Snímek vložen", description: `Přidáno ${imageFiles.length} ze schránky.` });
+      }
+    }
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [open, toast]);
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragActive(false);
+    const dropped = e.dataTransfer?.files;
+    if (dropped && dropped.length > 0) {
+      addImages(Array.from(dropped));
+    }
   }
 
   async function handleRun() {
@@ -65,13 +117,15 @@ export function TpScanDialog({
     onOpenChange(v);
   }
 
+  const canAddMore = files.length < 4 && !importFromTp.isPending;
+
   return (
     <Dialog open={open} onOpenChange={close}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><ScanLine className="h-5 w-5 text-primary" />Načtení technického průkazu</DialogTitle>
           <DialogDescription>
-            Vyfoťte malý technický průkaz (osvědčení o registraci, část I). Můžete přidat až 4 fotografie (přední i zadní stranu).
+            Vyfoťte malý technický průkaz (osvědčení o registraci, část I), nahrajte snímek nebo vložte print screen ze schránky. Můžete přidat až 4 obrázky.
             Automaticky se rozpozná SPZ, VIN, rok registrace a objem motoru.
           </DialogDescription>
         </DialogHeader>
@@ -81,28 +135,51 @@ export function TpScanDialog({
             ref={inputRef} type="file" accept="image/*" multiple className="hidden"
             onChange={(e) => { handleAdd(e.target.files); e.target.value = ""; }}
           />
+
+          {/* Drop / paste zone */}
+          <div
+            onDragOver={(e) => { e.preventDefault(); if (canAddMore) setDragActive(true); }}
+            onDragLeave={() => setDragActive(false)}
+            onDrop={onDrop}
+            className={cn(
+              "border-2 border-dashed rounded-lg p-6 text-center transition-colors",
+              dragActive ? "border-primary bg-primary/5" : "border-muted-foreground/30 bg-muted/20",
+              !canAddMore && "opacity-60",
+            )}
+          >
+            <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+            <p className="text-sm font-medium">Přetáhněte obrázky sem</p>
+            <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-1">
+              <ClipboardPaste className="h-3 w-3" />
+              nebo vložte snímek klávesovou zkratkou <kbd className="px-1.5 py-0.5 bg-muted rounded border text-[10px] font-mono">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-muted rounded border text-[10px] font-mono">V</kbd>
+            </p>
+          </div>
+
           <div className="flex gap-2">
             <Button type="button" variant="outline" className="flex-1"
               onClick={() => { if (inputRef.current) { inputRef.current.removeAttribute("capture"); inputRef.current.click(); } }}
-              disabled={files.length >= 4 || importFromTp.isPending}>
-              <Upload className="h-4 w-4 mr-2" />Nahrát fotografii
+              disabled={!canAddMore}>
+              <Upload className="h-4 w-4 mr-2" />Nahrát soubor
             </Button>
             <Button type="button" variant="outline" className="flex-1"
               onClick={() => { if (inputRef.current) { inputRef.current.setAttribute("capture", "environment"); inputRef.current.click(); } }}
-              disabled={files.length >= 4 || importFromTp.isPending}>
+              disabled={!canAddMore}>
               <Camera className="h-4 w-4 mr-2" />Vyfotit z telefonu
             </Button>
           </div>
 
           {files.length > 0 && (
-            <div className="space-y-2">
+            <div className="grid grid-cols-4 gap-2">
               {files.map((f, i) => (
-                <div key={i} className="flex items-center justify-between bg-muted/40 rounded px-3 py-2 text-sm">
-                  <span className="truncate">{f.name}</span>
-                  <Button type="button" variant="ghost" size="sm"
+                <div key={i} className="relative group aspect-square rounded border overflow-hidden bg-muted">
+                  {previews[i] && (
+                    <img src={previews[i]} alt={f.name} className="w-full h-full object-cover" />
+                  )}
+                  <Button type="button" variant="secondary" size="icon"
+                    className="absolute top-1 right-1 h-6 w-6 opacity-90"
                     onClick={() => setFiles((p) => p.filter((_, idx) => idx !== i))}
                     disabled={importFromTp.isPending}>
-                    <X className="h-4 w-4" />
+                    <X className="h-3 w-3" />
                   </Button>
                 </div>
               ))}
