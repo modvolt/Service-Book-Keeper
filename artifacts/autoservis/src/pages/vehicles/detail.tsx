@@ -317,25 +317,25 @@ export default function VehicleDetail() {
       <div className="grid gap-4 md:grid-cols-2">
         {/* Basic info */}
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><Car className="h-4 w-4" />Základní informace</CardTitle></CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="grid grid-cols-2 gap-2">
-              <span className="text-muted-foreground">SPZ</span><LicensePlate plate={vehicle.licensePlate} size="sm" />
-              <span className="text-muted-foreground">Výrobce</span><span>{vehicle.make}</span>
-              <span className="text-muted-foreground">Model</span><span>{vehicle.model}</span>
-              <span className="text-muted-foreground">Rok</span><span>{vehicle.year ?? "-"}</span>
-              <span className="text-muted-foreground">Barva</span><span>{vehicle.color ?? "-"}</span>
-              <span className="text-muted-foreground">VIN</span><span className="font-mono text-xs break-all">{vehicle.vin ?? "-"}</span>
+          <CardHeader><CardTitle className="flex items-center gap-2 text-xl"><Car className="h-5 w-5" />Základní informace</CardTitle></CardHeader>
+          <CardContent className="space-y-4 text-base">
+            <div className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 items-center">
+              <span className="text-muted-foreground">SPZ</span><div><LicensePlate plate={vehicle.licensePlate} size="md" /></div>
+              <span className="text-muted-foreground">Výrobce</span><span className="font-medium">{vehicle.make}</span>
+              <span className="text-muted-foreground">Model</span><span className="font-medium">{vehicle.model}</span>
+              <span className="text-muted-foreground">Rok</span><span className="font-medium">{vehicle.year ?? "-"}</span>
+              <span className="text-muted-foreground">Barva</span><span className="font-medium">{vehicle.color ?? "-"}</span>
+              <span className="text-muted-foreground">VIN</span><span className="font-mono text-sm break-all">{vehicle.vin ?? "-"}</span>
               <span className="text-muted-foreground">Objem motoru</span>
-              <span>{vehicle.engineDisplacement ? `${vehicle.engineDisplacement.toLocaleString('cs-CZ')} cm³` : "-"}</span>
+              <span className="font-medium">{vehicle.engineDisplacement ? `${vehicle.engineDisplacement.toLocaleString('cs-CZ')} cm³` : "-"}</span>
               <span className="text-muted-foreground">Převodovka</span>
-              <span>{transmissionLabel ?? "-"}</span>
+              <span className="font-medium">{transmissionLabel ?? "-"}</span>
               <span className="text-muted-foreground">První registrace</span>
-              <span>{dateStr(vehicle.registrationDate)}</span>
+              <span className="font-medium">{dateStr(vehicle.registrationDate)}</span>
               <span className="text-muted-foreground">Najeté km</span>
-              <span className="font-semibold">{vehicle.currentKm ? `${vehicle.currentKm.toLocaleString('cs-CZ')} km` : "-"}</span>
+              <span className="font-semibold text-lg">{vehicle.currentKm ? `${vehicle.currentKm.toLocaleString('cs-CZ')} km` : "-"}</span>
             </div>
-            {vehicle.notes && <p className="text-muted-foreground border-t pt-2 mt-2">{vehicle.notes}</p>}
+            {vehicle.notes && <p className="text-muted-foreground border-t pt-3 mt-3">{vehicle.notes}</p>}
           </CardContent>
         </Card>
 
