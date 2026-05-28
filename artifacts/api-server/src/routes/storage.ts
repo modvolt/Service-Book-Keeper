@@ -30,7 +30,7 @@ const objectStorageService = new ObjectStorageService();
  * The client sends JSON metadata (name, size, contentType) — NOT the file.
  * Then uploads the file directly to the returned presigned URL.
  */
-router.post("/storage/uploads/request-url", async (req: Request, res: Response) => {
+router.post("/uploads/request-url", async (req: Request, res: Response) => {
   const parsed = RequestUploadUrlBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Missing or invalid required fields" });
@@ -63,7 +63,7 @@ router.post("/storage/uploads/request-url", async (req: Request, res: Response) 
  * These are unconditionally public — no authentication or ACL checks.
  * IMPORTANT: Always provide this endpoint when object storage is set up.
  */
-router.get("/storage/public-objects/*filePath", async (req: Request, res: Response) => {
+router.get("/public-objects/*filePath", async (req: Request, res: Response) => {
   try {
     const raw = req.params.filePath;
     const filePath = Array.isArray(raw) ? raw.join("/") : raw;
@@ -97,7 +97,7 @@ router.get("/storage/public-objects/*filePath", async (req: Request, res: Respon
  * These are served from a separate path from /public-objects and can optionally
  * be protected with authentication or ACL checks based on the use case.
  */
-router.get("/storage/objects/*path", async (req: Request, res: Response) => {
+router.get("/objects/*path", async (req: Request, res: Response) => {
   try {
     const raw = req.params.path;
     const wildcardPath = Array.isArray(raw) ? raw.join("/") : raw;
