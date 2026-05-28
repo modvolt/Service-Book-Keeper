@@ -1,20 +1,36 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useListVehicles } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { LicensePlate } from "@/components/license-plate";
-import { Search, Plus, AlertCircle } from "lucide-react";
-import { Link } from "wouter";
+import { Search, Plus, AlertCircle, X } from "lucide-react";
+import { Link, useSearch } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { differenceInDays, parseISO, format } from "date-fns";
 import { cs } from "date-fns/locale";
 
 export default function VehiclesList() {
   const [search, setSearch] = useState("");
+  const searchString = useSearch();
+  const filter = new URLSearchParams(searchString).get("filter");
+  const stkFilter = filter === "stk";
+
   const { data: vehicles, isLoading } = useListVehicles(
     search.length > 2 ? { search } : {}
   );
+
+  const filteredVehicles = useMemo(() => {
+    if (!vehicles) return vehicles;
+    if (!stkFilter) return vehicles;
+    return vehicles
+      .filter((v) => {
+        if (!v.stkValidUntil) return false;
+        const diff = differenceInDays(parseISO(v.stkValidUntil), new Date());
+        return diff <= 30;
+      })
+      .sort((a, b) => (a.stkValidUntil ?? "").localeCompare(b.stkValidUntil ?? ""));
+  }, [vehicles, stkFilter]);
 
   const getStkStatus = (dateString?: string | null) => {
     if (!dateString) return null;
@@ -31,8 +47,12 @@ export default function VehiclesList() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Vozidla</h1>
-          <p className="text-muted-foreground mt-1">Seznam všech evidovaných vozidel.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            {stkFilter ? "Vozidla s blížící se STK" : "Vozidla"}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            {stkFilter ? "Propadlá STK nebo do 30 dnů od expirace." : "Seznam všech evidovaných vozidel."}
+          </p>
         </div>
         <Link href="/vehicles/new">
           <Button>
@@ -43,21 +63,30 @@ export default function VehiclesList() {
 
       <Card>
         <CardContent className="p-4">
-          <div className="relative mb-6">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Hledat podle SPZ, značky, modelu nebo vlastníka..."
-              className="pl-9"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+          <div className="flex items-center gap-2 mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Hledat podle SPZ, značky, modelu nebo vlastníka..."
+                className="pl-9"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            {stkFilter && (
+              <Link href="/vehicles">
+                <Button variant="outline"><X className="h-4 w-4 mr-1" /> Zrušit filtr STK</Button>
+              </Link>
+            )}
           </div>
 
           <div className="rounded-md border">
             {isLoading ? (
               <div className="p-8 text-center text-muted-foreground">Načítání...</div>
-            ) : !vehicles || vehicles.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">Žádná vozidla nebyla nalezena.</div>
+            ) : !filteredVehicles || filteredVehicles.length === 0 ? (
+              <div className="p-8 text-center text-muted-foreground">
+                {stkFilter ? "Žádná vozidla s blížící se nebo propadlou STK." : "Žádná vozidla nebyla nalezena."}
+              </div>
             ) : (
               <div className="w-full overflow-auto">
                 <table className="w-full text-sm text-left">
@@ -72,7 +101,7 @@ export default function VehiclesList() {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {vehicles.map((v) => (
+                    {filteredVehicles.map((v) => (
                       <tr key={v.id} className="hover:bg-accent/50 transition-colors group">
                         <td className="px-4 py-3">
                           <Link href={`/vehicles/${v.id}`}>
