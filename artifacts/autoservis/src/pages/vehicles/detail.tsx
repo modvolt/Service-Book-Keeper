@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useRoute, Link, useLocation } from "wouter";
 import { LicensePlate } from "@/components/license-plate";
-import { useGetVehicle, useUpdateVehicle, useDeleteVehicle, useCreateServiceRecord, useDeleteServiceRecord, useListVehicleMakes, useListVehicleModels, getGetVehicleQueryKey, getListServiceRecordsQueryKey, getListVehiclesQueryKey } from "@workspace/api-client-react";
+import { useGetVehicle, useUpdateVehicle, useDeleteVehicle, useCreateServiceRecord, useDeleteServiceRecord, useListVehicleMakes, useListVehicleModels, useGetSettings, getGetVehicleQueryKey, getListServiceRecordsQueryKey, getListVehiclesQueryKey } from "@workspace/api-client-react";
+import { VehicleHistoryExportDialog } from "@/components/vehicle-history-export-dialog";
 import { AutocompleteInput } from "@/components/autocomplete-input";
 import { AresButton } from "@/components/ares-button";
 import { useQueryClient } from "@tanstack/react-query";
@@ -15,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Car, Wrench, Plus, Trash2, ClipboardList, Edit, User } from "lucide-react";
+import { ArrowLeft, Car, Wrench, Plus, Trash2, ClipboardList, Edit, User, FileDown } from "lucide-react";
 import { WorkOrderStatusBadge } from "@/lib/work-order-status";
 import { format, differenceInDays, parseISO, isValid } from "date-fns";
 import { cs } from "date-fns/locale";
@@ -100,6 +101,7 @@ export default function VehicleDetail() {
   const { toast } = useToast();
 
   const { data: vehicle, isLoading, isError } = useGetVehicle(id, { query: { enabled: !isNaN(id) } as any });
+  const { data: settings } = useGetSettings();
 
   const [editOpen, setEditOpen] = useState(false);
   const [addServiceOpen, setAddServiceOpen] = useState(false);
@@ -273,7 +275,16 @@ export default function VehicleDetail() {
           <LicensePlate plate={vehicle.licensePlate} size="xl" />
           <p className="text-muted-foreground">{vehicle.make} {vehicle.model} {vehicle.year ? `(${vehicle.year})` : ""}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <VehicleHistoryExportDialog
+            vehicle={vehicle}
+            settings={settings}
+            trigger={
+              <Button variant="outline">
+                <FileDown className="h-4 w-4 mr-2" />Export historie
+              </Button>
+            }
+          />
           <Button variant="outline" onClick={openEdit}><Edit className="h-4 w-4 mr-2" />Upravit</Button>
           <Link href={`/work-orders/new?spz=${vehicle.licensePlate}`}>
             <Button><Plus className="h-4 w-4 mr-2" />Nová zakázka</Button>
