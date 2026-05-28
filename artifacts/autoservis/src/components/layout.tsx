@@ -1,21 +1,22 @@
 import { Link, useLocation } from "wouter";
-import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar, Settings as SettingsIcon, ScanLine, AlertTriangle } from "lucide-react";
+import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar, Settings as SettingsIcon, ScanLine, AlertTriangle, Sun, Moon } from "lucide-react";
 import { useState, useMemo } from "react";
 import { useGetSettings } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useTheme } from "@/hooks/use-theme";
 
 const NAV_ITEMS = [
-  { href: "/", label: "Přehled", icon: LayoutDashboard, color: "text-sky-600", bg: "hover:bg-sky-50" },
-  { href: "/vehicles", label: "Vozidla", icon: Car, color: "text-indigo-600", bg: "hover:bg-indigo-50" },
-  { href: "/work-orders", label: "Zakázky", icon: ClipboardList, color: "text-emerald-600", bg: "hover:bg-emerald-50" },
-  { href: "/po-terminu", label: "Po termínu", icon: AlertTriangle, color: "text-rose-600", bg: "hover:bg-rose-50" },
-  { href: "/kalendar", label: "Kalendář", icon: Calendar, color: "text-violet-600", bg: "hover:bg-violet-50" },
-  { href: "/sklad", label: "Sklad", icon: Package, color: "text-amber-600", bg: "hover:bg-amber-50" },
-  { href: "/nacteni-tp", label: "Načtení TP", icon: ScanLine, color: "text-teal-600", bg: "hover:bg-teal-50" },
-  { href: "/nastaveni", label: "Nastavení", icon: SettingsIcon, color: "text-slate-600", bg: "hover:bg-slate-100" },
+  { href: "/", label: "Přehled", icon: LayoutDashboard, color: "text-sky-600 dark:text-sky-400", bg: "hover:bg-sky-50 dark:hover:bg-sky-950/40" },
+  { href: "/vehicles", label: "Vozidla", icon: Car, color: "text-indigo-600 dark:text-indigo-400", bg: "hover:bg-indigo-50 dark:hover:bg-indigo-950/40" },
+  { href: "/work-orders", label: "Zakázky", icon: ClipboardList, color: "text-emerald-600 dark:text-emerald-400", bg: "hover:bg-emerald-50 dark:hover:bg-emerald-950/40" },
+  { href: "/po-terminu", label: "Po termínu", icon: AlertTriangle, color: "text-rose-600 dark:text-rose-400", bg: "hover:bg-rose-50 dark:hover:bg-rose-950/40" },
+  { href: "/kalendar", label: "Kalendář", icon: Calendar, color: "text-violet-600 dark:text-violet-400", bg: "hover:bg-violet-50 dark:hover:bg-violet-950/40" },
+  { href: "/sklad", label: "Sklad", icon: Package, color: "text-amber-600 dark:text-amber-400", bg: "hover:bg-amber-50 dark:hover:bg-amber-950/40" },
+  { href: "/nacteni-tp", label: "Načtení TP", icon: ScanLine, color: "text-teal-600 dark:text-teal-400", bg: "hover:bg-teal-50 dark:hover:bg-teal-950/40" },
+  { href: "/nastaveni", label: "Nastavení", icon: SettingsIcon, color: "text-slate-600 dark:text-slate-400", bg: "hover:bg-slate-100 dark:hover:bg-slate-800/50" },
 ];
 
 function hexToHslTriplet(hex: string): string | null {
@@ -45,6 +46,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { data: settings } = useGetSettings();
+  const { theme, toggleTheme } = useTheme();
 
   const themeStyle = useMemo(() => {
     if (!settings?.primaryColor) return undefined;
@@ -96,6 +98,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex flex-col md:flex-row bg-muted/30" style={themeStyle}>
       <header className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-card">
         <Brand />
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Přepnout tmavý režim">
+            {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </Button>
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -111,6 +117,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </ScrollArea>
           </SheetContent>
         </Sheet>
+        </div>
       </header>
 
       <aside className="hidden md:flex w-64 flex-col border-r bg-card h-screen sticky top-0">
@@ -120,8 +127,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <ScrollArea className="flex-1 px-4 py-4">
           <NavLinks />
         </ScrollArea>
-        <div className="p-4 border-t text-xs text-muted-foreground">
-          AutoServis v1.0
+        <div className="p-4 border-t flex items-center justify-between gap-2">
+          <span className="text-xs text-muted-foreground">AutoServis v1.0</span>
+          <Button variant="ghost" size="sm" onClick={toggleTheme} className="h-8 px-2" aria-label="Přepnout tmavý režim">
+            {theme === "dark" ? <Sun className="h-4 w-4 mr-1.5" /> : <Moon className="h-4 w-4 mr-1.5" />}
+            <span className="text-xs">{theme === "dark" ? "Světlý" : "Tmavý"}</span>
+          </Button>
         </div>
       </aside>
 
