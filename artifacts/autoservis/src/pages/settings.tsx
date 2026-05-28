@@ -217,7 +217,7 @@ export default function SettingsPage() {
           <div className="flex items-center gap-4">
             <div className="w-24 h-24 border rounded-md bg-muted/40 flex items-center justify-center overflow-hidden">
               {settings?.logoUrl ? (
-                <img src={`/api${settings.logoUrl}`} alt="Logo" className="max-w-full max-h-full object-contain" />
+                <img src={`/api/storage${settings.logoUrl}`} alt="Logo" className="max-w-full max-h-full object-contain" />
               ) : (
                 <ImageIcon className="h-8 w-8 text-muted-foreground" />
               )}
@@ -254,7 +254,7 @@ export default function SettingsPage() {
           <div className="flex items-center gap-4">
             <div className="w-40 h-20 border rounded-md bg-muted/40 flex items-center justify-center overflow-hidden">
               {settings?.signatureImageUrl ? (
-                <img src={`/api${settings.signatureImageUrl}`} alt="Podpis" className="max-w-full max-h-full object-contain" />
+                <img src={`/api/storage${settings.signatureImageUrl}`} alt="Podpis" className="max-w-full max-h-full object-contain" />
               ) : (
                 <PenLine className="h-8 w-8 text-muted-foreground" />
               )}

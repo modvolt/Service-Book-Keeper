@@ -65,7 +65,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   }, [settings?.primaryColor]);
 
   const companyName = settings?.companyName?.trim() || "AutoServis";
-  const logoUrl = settings?.logoUrl ? `/api${settings.logoUrl}` : null;
+  const logoUrl = settings?.logoUrl ? `/api/storage${settings.logoUrl}` : null;
 
   const Brand = ({ large }: { large?: boolean }) => (
     <div className="flex items-center gap-2 font-semibold min-w-0">
