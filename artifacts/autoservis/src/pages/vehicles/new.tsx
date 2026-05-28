@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { useCreateVehicle, useImportVehicleFromTp, useListVehicleMakes, useListVehicleModels, getListVehiclesQueryKey } from "@workspace/api-client-react";
 import { AutocompleteInput } from "@/components/autocomplete-input";
+import { AresButton } from "@/components/ares-button";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -199,14 +200,24 @@ export default function NewVehicle() {
                   />
                 </div>
                 {isCompany && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                      <Label>IČO</Label>
-                      <Input placeholder="12345678" value={form.ownerIco} onChange={e => setForm(f => ({ ...f, ownerIco: e.target.value }))} />
-                    </div>
-                    <div className="space-y-1">
-                      <Label>DIČ</Label>
-                      <Input placeholder="CZ12345678" value={form.ownerDic} onChange={e => setForm(f => ({ ...f, ownerDic: e.target.value }))} />
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <Label>IČO</Label>
+                        <div className="flex gap-2">
+                          <Input placeholder="12345678" value={form.ownerIco} onChange={e => setForm(f => ({ ...f, ownerIco: e.target.value }))} />
+                          <AresButton ico={form.ownerIco} onLoaded={(d) => setForm(f => ({
+                            ...f,
+                            ownerName: d.name || f.ownerName,
+                            ownerAddress: d.address || f.ownerAddress,
+                            ownerDic: d.dic || f.ownerDic,
+                          }))} />
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label>DIČ</Label>
+                        <Input placeholder="CZ12345678" value={form.ownerDic} onChange={e => setForm(f => ({ ...f, ownerDic: e.target.value }))} />
+                      </div>
                     </div>
                   </div>
                 )}

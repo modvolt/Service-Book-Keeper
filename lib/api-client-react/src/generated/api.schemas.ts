@@ -671,6 +671,15 @@ export interface AppointmentUpdate {
   notes?: string | null;
 }
 
+export interface AresResult {
+  ico: string;
+  /** @nullable */
+  dic?: string | null;
+  name: string;
+  /** @nullable */
+  address?: string | null;
+}
+
 export interface Settings {
   /** @nullable */
   companyName?: string | null;

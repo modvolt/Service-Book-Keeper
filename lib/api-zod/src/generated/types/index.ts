@@ -12,6 +12,7 @@ export * from './appointmentInputStatus';
 export * from './appointmentStatus';
 export * from './appointmentUpdate';
 export * from './appointmentUpdateStatus';
+export * from './aresResult';
 export * from './dashboardSummary';
 export * from './healthStatus';
 export * from './importTpInput';

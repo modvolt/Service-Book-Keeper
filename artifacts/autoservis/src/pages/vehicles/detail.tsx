@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRoute, Link, useLocation } from "wouter";
 import { useGetVehicle, useUpdateVehicle, useDeleteVehicle, useCreateServiceRecord, useDeleteServiceRecord, useListVehicleMakes, useListVehicleModels, getGetVehicleQueryKey, getListServiceRecordsQueryKey, getListVehiclesQueryKey } from "@workspace/api-client-react";
 import { AutocompleteInput } from "@/components/autocomplete-input";
+import { AresButton } from "@/components/ares-button";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -523,7 +524,18 @@ export default function VehicleDetail() {
                 <div className="space-y-1"><Label>{editForm.ownerType === "company" ? "Sídlo" : "Adresa"}</Label><Input value={editForm.ownerAddress} onChange={e => setEditForm(f => ({ ...f, ownerAddress: e.target.value }))} /></div>
                 {editForm.ownerType === "company" && (
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1"><Label>IČO</Label><Input value={editForm.ownerIco} onChange={e => setEditForm(f => ({ ...f, ownerIco: e.target.value }))} /></div>
+                    <div className="space-y-1">
+                      <Label>IČO</Label>
+                      <div className="flex gap-2">
+                        <Input value={editForm.ownerIco} onChange={e => setEditForm(f => ({ ...f, ownerIco: e.target.value }))} />
+                        <AresButton ico={editForm.ownerIco} onLoaded={(d) => setEditForm(f => ({
+                          ...f,
+                          ownerName: d.name || f.ownerName,
+                          ownerAddress: d.address || f.ownerAddress,
+                          ownerDic: d.dic || f.ownerDic,
+                        }))} />
+                      </div>
+                    </div>
                     <div className="space-y-1"><Label>DIČ</Label><Input value={editForm.ownerDic} onChange={e => setEditForm(f => ({ ...f, ownerDic: e.target.value }))} /></div>
                   </div>
                 )}

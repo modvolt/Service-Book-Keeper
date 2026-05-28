@@ -23,6 +23,7 @@ import type {
   Appointment,
   AppointmentInput,
   AppointmentUpdate,
+  AresResult,
   DashboardSummary,
   HealthStatus,
   ImportTpInput,
@@ -2453,6 +2454,83 @@ export const useDeleteAppointment = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getDeleteAppointmentMutationOptions(options));
     }
+
+export const getLookupAresUrl = (ico: string,) => {
+
+
+
+
+  return `/api/ares/${ico}`
+}
+
+/**
+ * @summary Look up company info by IČO in ARES registry
+ */
+export const lookupAres = async (ico: string, options?: RequestInit): Promise<AresResult> => {
+
+  return customFetch<AresResult>(getLookupAresUrl(ico),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getLookupAresQueryKey = (ico: string,) => {
+    return [
+    `/api/ares/${ico}`
+    ] as const;
+    }
+
+
+export const getLookupAresQueryOptions = <TData = Awaited<ReturnType<typeof lookupAres>>, TError = ErrorType<void>>(ico: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof lookupAres>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getLookupAresQueryKey(ico);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof lookupAres>>> = ({ signal }) => lookupAres(ico, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(ico), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof lookupAres>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type LookupAresQueryResult = NonNullable<Awaited<ReturnType<typeof lookupAres>>>
+export type LookupAresQueryError = ErrorType<void>
+
+
+/**
+ * @summary Look up company info by IČO in ARES registry
+ */
+
+export function useLookupAres<TData = Awaited<ReturnType<typeof lookupAres>>, TError = ErrorType<void>>(
+ ico: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof lookupAres>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getLookupAresQueryOptions(ico,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetSettingsUrl = () => {
 

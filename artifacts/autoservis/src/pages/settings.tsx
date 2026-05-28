@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Upload, Image as ImageIcon, Mail, Palette, Building2, Trash2 } from "lucide-react";
+import { AresButton } from "@/components/ares-button";
 import { useToast } from "@/hooks/use-toast";
 
 type Form = {
@@ -150,8 +151,16 @@ export default function SettingsPage() {
             </div>
             <div>
               <Label htmlFor="company-ico">IČO</Label>
-              <Input id="company-ico" value={form.companyIco}
-                onChange={(e) => setForm({ ...form, companyIco: e.target.value })} />
+              <div className="flex gap-2">
+                <Input id="company-ico" value={form.companyIco}
+                  onChange={(e) => setForm({ ...form, companyIco: e.target.value })} />
+                <AresButton ico={form.companyIco} onLoaded={(d) => setForm(f => ({
+                  ...f,
+                  companyName: d.name || f.companyName,
+                  companyAddress: d.address || f.companyAddress,
+                  companyDic: d.dic || f.companyDic,
+                }))} />
+              </div>
             </div>
             <div>
               <Label htmlFor="company-dic">DIČ</Label>

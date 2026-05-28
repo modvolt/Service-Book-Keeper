@@ -809,6 +809,21 @@ export const DeleteAppointmentParams = zod.object({
 
 
 /**
+ * @summary Look up company info by IČO in ARES registry
+ */
+export const LookupAresParams = zod.object({
+  "ico": zod.coerce.string()
+})
+
+export const LookupAresResponse = zod.object({
+  "ico": zod.string(),
+  "dic": zod.string().nullish(),
+  "name": zod.string(),
+  "address": zod.string().nullish()
+})
+
+
+/**
  * @summary Get application settings
  */
 export const GetSettingsResponse = zod.object({

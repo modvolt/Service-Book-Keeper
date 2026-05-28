@@ -628,6 +628,27 @@ paths:
         "204":
           description: Deleted
 
+  /ares/{ico}:
+    get:
+      operationId: lookupAres
+      tags: [ares]
+      summary: Look up company info by IČO in ARES registry
+      parameters:
+        - name: ico
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Company info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AresResult"
+        "404":
+          description: Not found
+
   /settings:
     get:
       operationId: getSettings
@@ -1349,6 +1370,19 @@ components:
           type: ["string", "null"]
           enum: [planned, done, cancelled, null]
         notes:
+          type: ["string", "null"]
+
+    AresResult:
+      type: object
+      required: [ico, name]
+      properties:
+        ico:
+          type: string
+        dic:
+          type: ["string", "null"]
+        name:
+          type: string
+        address:
           type: ["string", "null"]
 
     Settings:
