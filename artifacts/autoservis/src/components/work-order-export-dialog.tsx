@@ -54,6 +54,23 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+function plateHtml(plate: string, size: "md" | "lg" = "md"): string {
+  const cleaned = (plate ?? "").replace(/\s+/g, "").toUpperCase();
+  const formatted = cleaned.length === 7
+    ? cleaned.slice(0, 3) + " " + cleaned.slice(3)
+    : cleaned.length === 8
+      ? cleaned.slice(0, 4) + " " + cleaned.slice(4)
+      : cleaned;
+  const stars = Array.from({ length: 12 }, (_, i) => {
+    const a = (i / 12) * 2 * Math.PI - Math.PI / 2;
+    const r = 5;
+    const cx = 6 + Math.cos(a) * r;
+    const cy = 6 + Math.sin(a) * r;
+    return `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="0.8" fill="#FFCC00"/>`;
+  }).join("");
+  return `<span class="lp lp-${size}"><span class="lp-eu"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">${stars}</svg><span class="lp-cz">CZ</span></span><span class="lp-num">${esc(formatted)}</span></span>`;
+}
+
 function buildHtml(opts: {
   order: WorkOrder;
   materials: WorkOrderMaterial[];
@@ -105,93 +122,135 @@ function buildHtml(opts: {
     .map((u) => (u!.startsWith("http") || u!.startsWith("/api/") ? u! : `/api/storage${u}`));
 
   const css = `
+    @page { size: A4 portrait; margin: 14mm 12mm 16mm; }
     * { box-sizing: border-box; }
-    body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #111; margin: 0; padding: 24px; font-size: 12pt; line-height: 1.45; }
-    h1 { font-size: 20pt; margin: 0 0 4px; }
-    h2 { font-size: 13pt; margin: 18px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #d4d4d8; }
-    .row { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; }
-    .muted { color: #6b7280; font-size: 10pt; }
-    .meta { text-align: right; }
-    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .box { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px; }
-    .box .label { font-size: 9pt; text-transform: uppercase; color: #6b7280; letter-spacing: 0.04em; margin-bottom: 2px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 4px; }
-    th, td { padding: 6px 8px; text-align: left; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
-    th { background: #f3f4f6; font-size: 10pt; }
-    td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-    .totals { margin-top: 8px; width: 320px; margin-left: auto; }
-    .totals td { border: none; padding: 4px 8px; }
-    .totals tr.grand td { border-top: 2px solid #111; font-weight: bold; font-size: 13pt; padding-top: 8px; }
-    ul.checks { list-style: none; padding: 0; margin: 0; columns: 2; column-gap: 24px; }
-    ul.checks li { padding: 3px 0; break-inside: avoid; }
-    ul.checks li::before { content: "✓ "; color: #16a34a; font-weight: bold; }
+    html, body { margin: 0; padding: 0; background: #f3f4f6; }
+    body { font-family: "Segoe UI", -apple-system, "Helvetica Neue", Roboto, Arial, sans-serif; color: #1f2937; font-size: 10.5pt; line-height: 1.5; }
+    .page { max-width: 210mm; margin: 0 auto; background: white; padding: 22px 26px 30px; box-shadow: 0 2px 18px rgba(15, 23, 42, 0.08); }
+
+    .toolbar { position: sticky; top: 0; z-index: 20; background: rgba(255,255,255,0.95); backdrop-filter: blur(6px); border-bottom: 1px solid #e5e7eb; padding: 10px 16px; margin: -22px -26px 18px; display: flex; gap: 8px; justify-content: flex-end; }
+    .btn { background: #b91c1c; color: white; border: 0; padding: 8px 16px; border-radius: 6px; font-size: 10.5pt; cursor: pointer; font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+    .btn.secondary { background: white; color: #1f2937; border: 1px solid #d1d5db; }
+
+    .brand { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; padding-bottom: 12px; border-bottom: 3px solid #b91c1c; margin-bottom: 16px; }
+    .brand .name { font-size: 18pt; font-weight: 700; color: #0f172a; letter-spacing: -0.01em; margin-bottom: 4px; }
+    .brand .lines { font-size: 9pt; color: #6b7280; line-height: 1.55; }
+    .brand .badge { text-align: right; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.08em; color: #b91c1c; font-weight: 600; padding-top: 4px; }
+    .brand .badge .date { display: block; margin-top: 6px; color: #6b7280; font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 9pt; }
+    .brand .badge .pill { display: inline-block; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; padding: 2px 10px; border-radius: 12px; font-size: 8.5pt; margin-top: 6px; }
+
+    .doc-title { text-align: center; margin: 18px 0 14px; }
+    .doc-title h1 { font-size: 17pt; font-weight: 700; margin: 0; color: #0f172a; letter-spacing: 0.02em; }
+    .doc-title .subtitle { font-size: 10pt; color: #6b7280; margin-top: 6px; display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap; }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0; }
+    .info-card { background: #f9fafb; border: 1px solid #e5e7eb; border-left: 3px solid #b91c1c; border-radius: 8px; padding: 12px 14px; }
+    .info-card .label { font-size: 8pt; text-transform: uppercase; color: #9ca3af; letter-spacing: 0.1em; margin-bottom: 6px; font-weight: 600; }
+    .info-card .primary { font-size: 12.5pt; font-weight: 700; color: #0f172a; margin-bottom: 3px; }
+    .info-card .secondary { font-size: 10pt; color: #374151; margin-bottom: 2px; }
+    .info-card .muted { font-size: 9pt; color: #6b7280; }
+
+    h2.section { font-size: 11pt; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.08em; margin: 22px 0 10px; padding-left: 10px; border-left: 3px solid #b91c1c; }
+
+    ul.checks { list-style: none; padding: 0; margin: 6px 0; }
+    ul.checks li { display: inline-block; margin: 2px 6px 2px 0; padding: 2px 9px 2px 7px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; border-radius: 12px; font-size: 9pt; font-weight: 500; }
+    ul.checks li::before { content: "✓ "; }
+
+    .desc-box { background: #fafafa; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px; font-size: 10pt; color: #1f2937; }
+    .desc-box p { margin: 4px 0; }
+    .desc-box .label { font-size: 8.5pt; color: #6b7280; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; margin-right: 4px; }
+
+    table.mat { width: 100%; border-collapse: collapse; margin: 8px 0 4px; border: 1px solid #e5e7eb; border-radius: 4px; overflow: hidden; }
+    table.mat th { background: #f3f4f6; padding: 6px 10px; text-align: left; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280; font-weight: 600; border-bottom: 1px solid #e5e7eb; }
+    table.mat td { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; font-size: 10pt; vertical-align: top; }
+    table.mat tbody tr:last-child td { border-bottom: none; }
+    table.mat tbody tr:nth-child(even) td { background: #fafafa; }
+    table.mat td.num, table.mat th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+    .labor-line { display: flex; justify-content: space-between; align-items: center; background: #fafafa; border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 14px; font-size: 10pt; }
+    .labor-line .right { font-variant-numeric: tabular-nums; font-weight: 600; color: #0f172a; }
+
+    .totals { margin: 18px 0 0 auto; width: 340px; background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 8px 14px; }
+    .totals table { width: 100%; border-collapse: collapse; }
+    .totals td { padding: 4px 0; font-size: 10pt; color: #78350f; }
+    .totals td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+    .totals tr.grand td { border-top: 2px solid #f59e0b; padding-top: 8px; font-size: 13pt; font-weight: 700; color: #78350f; }
+
+    .notes-box { background: #f9fafb; border-left: 3px solid #d1d5db; border-radius: 4px; padding: 10px 14px; font-size: 10pt; color: #374151; white-space: pre-wrap; }
+
     .photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .photos img { width: 100%; height: 140px; object-fit: cover; border: 1px solid #e5e7eb; border-radius: 4px; }
-    .sig { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-top: 32px; }
-    .sig .line { border-top: 1px solid #111; margin-top: 48px; padding-top: 4px; font-size: 10pt; color: #6b7280; }
+    .photos img { width: 100%; height: 150px; object-fit: cover; border: 1px solid #e5e7eb; border-radius: 6px; }
+
+    .footer-note { margin-top: 24px; padding: 10px 14px; background: #f9fafb; border-left: 3px solid #d1d5db; border-radius: 4px; font-size: 8.5pt; color: #6b7280; font-style: italic; }
+    .sig { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin-top: 34px; }
+    .sig .line { border-top: 1px solid #1f2937; margin-top: 42px; padding-top: 6px; font-size: 9pt; color: #6b7280; text-align: center; }
+
     @media print {
-      body { padding: 16mm; font-size: 11pt; }
-      .no-print { display: none; }
-      h2 { page-break-after: avoid; }
-      tr, .box, .sig { page-break-inside: avoid; }
+      html, body { background: white; }
+      .page { box-shadow: none; max-width: none; padding: 0; }
+      .no-print { display: none !important; }
+      h2.section { page-break-after: avoid; }
+      .totals, .sig, .info-card, table.mat tr { page-break-inside: avoid; }
     }
-    .toolbar { position: sticky; top: 0; background: #f9fafb; border-bottom: 1px solid #e5e7eb; padding: 10px 16px; margin: -24px -24px 16px; display: flex; gap: 8px; justify-content: flex-end; }
-    .btn { background: #111; color: white; border: 0; padding: 8px 14px; border-radius: 6px; font-size: 11pt; cursor: pointer; }
-    .btn.secondary { background: white; color: #111; border: 1px solid #d4d4d8; }
+    .lp { display:inline-flex; align-items:stretch; border:1px solid #d4d4d8; border-radius:3px; background:white; overflow:hidden; vertical-align:middle; line-height:1; box-shadow:0 1px 2px rgba(0,0,0,0.06); }
+    .lp-md { height:22pt; } .lp-lg { height:30pt; }
+    .lp-eu { display:flex; flex-direction:column; align-items:center; justify-content:center; background:#003399; color:white; gap:1px; padding:2px 0; }
+    .lp-md .lp-eu { width:16pt; } .lp-lg .lp-eu { width:22pt; }
+    .lp-cz { font-weight:700; letter-spacing:0.5px; font-family:Arial,sans-serif; }
+    .lp-md .lp-cz { font-size:7pt; } .lp-lg .lp-cz { font-size:9pt; }
+    .lp-num { display:flex; align-items:center; color:#000; font-weight:700; letter-spacing:0.05em; font-family:"Courier New", Consolas, monospace; }
+    .lp-md .lp-num { padding:0 8pt; font-size:13pt; }
+    .lp-lg .lp-num { padding:0 12pt; font-size:18pt; }
   `;
 
   const shopHeader = options.shopHeader && settings ? `
     <div>
-      ${settings.companyName ? `<div style="font-weight:600">${esc(settings.companyName)}</div>` : ""}
-      ${settings.companyAddress ? `<div class="muted">${esc(settings.companyAddress)}</div>` : ""}
-      <div class="muted">
-        ${[settings.companyPhone, settings.companyEmail].filter(Boolean).map(esc).join(" · ")}
+      ${settings.companyName ? `<div class="name">${esc(settings.companyName)}</div>` : ""}
+      <div class="lines">
+        ${settings.companyAddress ? `${esc(settings.companyAddress)}<br/>` : ""}
+        ${[settings.companyPhone, settings.companyEmail].filter(Boolean).map((v) => esc(v as string)).join(" · ")}
+        ${(settings.companyIco || settings.companyDic) ? `<br/>${[settings.companyIco ? `IČO: ${esc(settings.companyIco)}` : null, settings.companyDic ? `DIČ: ${esc(settings.companyDic)}` : null].filter(Boolean).join(" · ")}` : ""}
       </div>
-      <div class="muted">
-        ${[settings.companyIco ? `IČO: ${esc(settings.companyIco)}` : null, settings.companyDic ? `DIČ: ${esc(settings.companyDic)}` : null].filter(Boolean).join(" · ")}
-      </div>
-    </div>` : "<div></div>";
+    </div>` : `<div><div class="name">AutoServis</div></div>`;
 
   const vehicleBlock = options.vehicleInfo && vehicle ? `
-    <div class="box">
+    <div class="info-card">
       <div class="label">Vozidlo</div>
-      <div style="font-size:13pt;font-weight:600">${esc(vehicle.licensePlate)}</div>
-      <div>${esc(vehicle.make)} ${esc(vehicle.model)}${vehicle.year ? `, ${vehicle.year}` : ""}</div>
+      <div style="margin:2px 0 6px">${plateHtml(vehicle.licensePlate, "lg")}</div>
+      <div class="secondary">${esc(vehicle.make)} ${esc(vehicle.model)}${vehicle.year ? `, ${vehicle.year}` : ""}</div>
       ${vehicle.vin ? `<div class="muted">VIN: ${esc(vehicle.vin)}</div>` : ""}
       ${order.km != null ? `<div class="muted">Stav km: ${order.km.toLocaleString("cs-CZ")} km</div>` : ""}
     </div>` : "";
 
   const ownerBlock = options.ownerInfo && vehicle && (vehicle.ownerName || vehicle.ownerAddress) ? `
-    <div class="box">
+    <div class="info-card">
       <div class="label">Vlastník</div>
-      ${vehicle.ownerName ? `<div style="font-weight:600">${esc(vehicle.ownerName)}</div>` : ""}
-      ${vehicle.ownerAddress ? `<div class="muted">${esc(vehicle.ownerAddress)}</div>` : ""}
-      <div class="muted">
-        ${[vehicle.ownerPhone, vehicle.ownerEmail].filter(Boolean).map((v) => esc(v as string)).join(" · ")}
-      </div>
-      <div class="muted">
-        ${[vehicle.ownerIco ? `IČO: ${esc(vehicle.ownerIco)}` : null, vehicle.ownerDic ? `DIČ: ${esc(vehicle.ownerDic)}` : null].filter(Boolean).join(" · ")}
-      </div>
+      ${vehicle.ownerName ? `<div class="primary">${esc(vehicle.ownerName)}</div>` : ""}
+      ${vehicle.ownerAddress ? `<div class="secondary">${esc(vehicle.ownerAddress)}</div>` : ""}
+      ${(vehicle.ownerPhone || vehicle.ownerEmail) ? `<div class="muted">${[vehicle.ownerPhone, vehicle.ownerEmail].filter(Boolean).map((v) => esc(v as string)).join(" · ")}</div>` : ""}
+      ${(vehicle.ownerIco || vehicle.ownerDic) ? `<div class="muted">${[vehicle.ownerIco ? `IČO: ${esc(vehicle.ownerIco)}` : null, vehicle.ownerDic ? `DIČ: ${esc(vehicle.ownerDic)}` : null].filter(Boolean).join(" · ")}</div>` : ""}
     </div>` : "";
 
   const serviceItemsHtml = options.serviceItems && performedItems.length > 0 ? `
-    <h2>Provedené servisní úkony</h2>
+    <h2 class="section">Provedené servisní úkony</h2>
     <ul class="checks">${performedItems.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>
   ` : "";
 
   const otherWorkHtml = options.otherWork && (order.description || order.otherWork || order.otherServices) ? `
-    <h2>Popis práce</h2>
-    ${order.description ? `<p>${esc(order.description)}</p>` : ""}
-    ${order.otherServices ? `<p><strong>Další úkony:</strong> ${esc(order.otherServices)}</p>` : ""}
-    ${order.otherWork ? `<p><strong>Ostatní práce:</strong> ${esc(order.otherWork)}</p>` : ""}
+    <h2 class="section">Popis práce</h2>
+    <div class="desc-box">
+      ${order.description ? `<p>${esc(order.description)}</p>` : ""}
+      ${order.otherServices ? `<p><span class="label">Další úkony:</span> ${esc(order.otherServices)}</p>` : ""}
+      ${order.otherWork ? `<p><span class="label">Ostatní práce:</span> ${esc(order.otherWork)}</p>` : ""}
+    </div>
   ` : "";
 
   let materialsHtml = "";
   if (options.materials && matLines.length > 0) {
     const showPrices = options.materialPrices;
     materialsHtml = `
-      <h2>Materiál</h2>
-      <table>
+      <h2 class="section">Materiál</h2>
+      <table class="mat">
         <thead>
           <tr>
             <th>Položka</th>
@@ -204,7 +263,7 @@ function buildHtml(opts: {
             <tr>
               <td>${esc(m.name)}</td>
               <td class="num">${esc(m.qty)}${m.unit ? ` ${esc(m.unit)}` : ""}</td>
-              ${showPrices ? `<td class="num">${m.unitPrice != null ? fmtCzk(m.unitPrice) : "-"}</td><td class="num">${fmtCzk(m.total)}</td>` : ""}
+              ${showPrices ? `<td class="num">${m.unitPrice != null ? fmtCzk(m.unitPrice) : "—"}</td><td class="num">${fmtCzk(m.total)}</td>` : ""}
             </tr>`).join("")}
         </tbody>
       </table>
@@ -214,35 +273,31 @@ function buildHtml(opts: {
   let laborHtml = "";
   if (options.labor && (order.laborHours || laborPrice)) {
     laborHtml = `
-      <h2>Práce</h2>
-      <table>
-        <thead><tr><th>Popis</th><th class="num">Hodiny</th><th class="num">Cena</th></tr></thead>
-        <tbody>
-          <tr>
-            <td>Servisní práce</td>
-            <td class="num">${order.laborHours ?? "-"}</td>
-            <td class="num">${laborPrice ? fmtCzk(laborPrice) : "-"}</td>
-          </tr>
-        </tbody>
-      </table>
+      <h2 class="section">Práce</h2>
+      <div class="labor-line">
+        <span>Servisní práce${order.laborHours ? ` · ${esc(String(order.laborHours))} h` : ""}</span>
+        <span class="right">${laborPrice ? fmtCzk(laborPrice) : "—"}</span>
+      </div>
     `;
   }
 
   let totalsHtml = "";
   if (options.totals && (includedMaterialTotal > 0 || includedLaborTotal > 0)) {
     totalsHtml = `
-      <table class="totals">
-        ${options.materials && includedMaterialTotal > 0 ? `<tr><td>Materiál celkem</td><td class="num">${fmtCzk(includedMaterialTotal)}</td></tr>` : ""}
-        ${options.labor && includedLaborTotal > 0 ? `<tr><td>Práce celkem</td><td class="num">${fmtCzk(includedLaborTotal)}</td></tr>` : ""}
-        <tr class="grand"><td>Celkem k úhradě</td><td class="num">${fmtCzk(grandTotal)}</td></tr>
-      </table>
+      <div class="totals">
+        <table>
+          ${options.materials && includedMaterialTotal > 0 ? `<tr><td>Materiál celkem</td><td class="num">${fmtCzk(includedMaterialTotal)}</td></tr>` : ""}
+          ${options.labor && includedLaborTotal > 0 ? `<tr><td>Práce celkem</td><td class="num">${fmtCzk(includedLaborTotal)}</td></tr>` : ""}
+          <tr class="grand"><td>Celkem k úhradě</td><td class="num">${fmtCzk(grandTotal)}</td></tr>
+        </table>
+      </div>
     `;
   }
 
-  const notesHtml = options.notes && order.notes ? `<h2>Poznámky</h2><p style="white-space:pre-wrap">${esc(order.notes)}</p>` : "";
+  const notesHtml = options.notes && order.notes ? `<h2 class="section">Poznámky</h2><div class="notes-box">${esc(order.notes)}</div>` : "";
 
   const photosHtml = options.photos && photoUrls.length > 0 ? `
-    <h2>Fotografie (${photoUrls.length})</h2>
+    <h2 class="section">Fotografie (${photoUrls.length})</h2>
     <div class="photos">
       ${photoUrls.map((u) => `<img src="${esc(u)}" alt="" />`).join("")}
     </div>
@@ -255,35 +310,47 @@ function buildHtml(opts: {
     </div>
   ` : "";
 
+  const vehicleTitleLine = vehicle ? `
+        ${plateHtml(vehicle.licensePlate, "md")}
+        <span>${esc(vehicle.make)} ${esc(vehicle.model)}${vehicle.year ? `, ${vehicle.year}` : ""}</span>
+      ` : (order.licensePlate ? plateHtml(order.licensePlate, "md") : "");
+
   return `<!doctype html>
 <html lang="cs">
 <head>
   <meta charset="utf-8" />
-  <title>Zakázka #${order.id} — ${esc(order.licensePlate)}</title>
+  <title>Zakázkový list č. ${order.id} — ${esc(order.licensePlate)}</title>
   <style>${css}</style>
 </head>
 <body>
-  <div class="toolbar no-print">
-    <button class="btn secondary" onclick="window.close()">Zavřít</button>
-    <button class="btn" onclick="window.print()">Tisk / Uložit jako PDF</button>
-  </div>
-  <div class="row">
-    ${shopHeader}
-    <div class="meta">
-      <h1>Zakázkový list č. ${order.id}</h1>
-      <div class="muted">Datum: ${dateStr}</div>
-      <div class="muted">Stav: ${STATUS_LABEL[order.status] ?? order.status}</div>
+  <div class="page">
+    <div class="toolbar no-print">
+      <button class="btn secondary" onclick="window.close()">Zavřít</button>
+      <button class="btn" onclick="window.print()">Tisk / Uložit jako PDF</button>
     </div>
+    <div class="brand">
+      ${shopHeader}
+      <div class="badge">
+        Zakázkový list
+        <span class="date">${dateStr}</span>
+        <span class="pill">${STATUS_LABEL[order.status] ?? order.status}</span>
+      </div>
+    </div>
+    <div class="doc-title">
+      <h1>Zakázkový list č. ${order.id}</h1>
+      <div class="subtitle">${vehicleTitleLine}</div>
+    </div>
+    ${(vehicleBlock || ownerBlock) ? `<div class="grid2">${vehicleBlock}${ownerBlock}</div>` : ""}
+    ${serviceItemsHtml}
+    ${otherWorkHtml}
+    ${materialsHtml}
+    ${laborHtml}
+    ${totalsHtml}
+    ${notesHtml}
+    ${photosHtml}
+    <div class="footer-note">Zakázkový list slouží jako podklad k fakturaci servisních prací. Vydáno ${format(new Date(), "d. M. yyyy", { locale: cs })}.</div>
+    ${signatureHtml}
   </div>
-  ${(vehicleBlock || ownerBlock) ? `<div class="grid2" style="margin-top:16px">${vehicleBlock}${ownerBlock}</div>` : ""}
-  ${serviceItemsHtml}
-  ${otherWorkHtml}
-  ${materialsHtml}
-  ${laborHtml}
-  ${totalsHtml}
-  ${notesHtml}
-  ${photosHtml}
-  ${signatureHtml}
 </body>
 </html>`;
 }
@@ -339,7 +406,7 @@ export function WorkOrderExportDialog({ order, materials, vehicle, settings, pho
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><FileDown className="h-5 w-5" /> Export zakázky pro fakturaci</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><FileDown className="h-5 w-5" /> Zakázkový list</DialogTitle>
           <DialogDescription>
             Vyberte, co má být součástí dokumentu. Otevře se okno s tiskovou verzí — v dialogu prohlížeče zvolte „Uložit jako PDF" a přiložte k faktuře.
           </DialogDescription>

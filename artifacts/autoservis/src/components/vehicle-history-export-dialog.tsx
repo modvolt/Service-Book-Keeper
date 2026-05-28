@@ -57,6 +57,35 @@ function esc(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+function plateHtml(plate: string, size: "md" | "lg" = "md"): string {
+  const cleaned = (plate ?? "").replace(/\s+/g, "").toUpperCase();
+  const formatted = cleaned.length === 7
+    ? cleaned.slice(0, 3) + " " + cleaned.slice(3)
+    : cleaned.length === 8
+      ? cleaned.slice(0, 4) + " " + cleaned.slice(4)
+      : cleaned;
+  const stars = Array.from({ length: 12 }, (_, i) => {
+    const a = (i / 12) * 2 * Math.PI - Math.PI / 2;
+    const r = 5;
+    const cx = 6 + Math.cos(a) * r;
+    const cy = 6 + Math.sin(a) * r;
+    return `<circle cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="0.8" fill="#FFCC00"/>`;
+  }).join("");
+  return `<span class="lp lp-${size}"><span class="lp-eu"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">${stars}</svg><span class="lp-cz">CZ</span></span><span class="lp-num">${esc(formatted)}</span></span>`;
+}
+
+const PLATE_CSS = `
+  .lp { display:inline-flex; align-items:stretch; border:1px solid #d4d4d8; border-radius:3px; background:white; overflow:hidden; vertical-align:middle; line-height:1; box-shadow:0 1px 2px rgba(0,0,0,0.06); }
+  .lp-md { height:22pt; } .lp-lg { height:30pt; }
+  .lp-eu { display:flex; flex-direction:column; align-items:center; justify-content:center; background:#003399; color:white; gap:1px; padding:2px 0; }
+  .lp-md .lp-eu { width:16pt; } .lp-lg .lp-eu { width:22pt; }
+  .lp-cz { font-weight:700; letter-spacing:0.5px; font-family:Arial,sans-serif; }
+  .lp-md .lp-cz { font-size:7pt; } .lp-lg .lp-cz { font-size:9pt; }
+  .lp-num { display:flex; align-items:center; color:#000; font-weight:700; letter-spacing:0.05em; font-family:"Courier New", Consolas, monospace; }
+  .lp-md .lp-num { padding:0 8pt; font-size:13pt; }
+  .lp-lg .lp-num { padding:0 12pt; font-size:18pt; }
+`;
+
 const SERVICE_FLAGS: Array<[keyof WorkOrder, string]> = [
   ["oilChange", "Olej motor"],
   ["transmissionOil", "Olej převodovka"],
@@ -172,6 +201,7 @@ function buildHtml(opts: {
       .order { page-break-inside: avoid; box-shadow: none; }
       .totals { page-break-inside: avoid; }
     }
+    ${PLATE_CSS}
   `;
 
   const shopHeader = options.shopHeader && settings ? `
@@ -187,7 +217,7 @@ function buildHtml(opts: {
   const vehicleBlock = options.vehicleInfo ? `
     <div class="info-card">
       <div class="label">Vozidlo</div>
-      <div class="primary">${esc(vehicle.licensePlate)}</div>
+      <div style="margin:2px 0 6px">${plateHtml(vehicle.licensePlate, "lg")}</div>
       <div class="secondary">${esc(vehicle.make)} ${esc(vehicle.model)}${vehicle.year ? `, ${vehicle.year}` : ""}</div>
       ${vehicle.vin ? `<div class="muted">VIN: ${esc(vehicle.vin)}</div>` : ""}
       ${vehicle.engineDisplacement ? `<div class="muted">Objem: ${vehicle.engineDisplacement} cm³</div>` : ""}
@@ -336,7 +366,10 @@ function buildHtml(opts: {
     </div>
     <div class="doc-title">
       <h1>Servisní historie vozidla</h1>
-      <div class="subtitle">${esc(vehicle.licensePlate)} · ${esc(vehicle.make)} ${esc(vehicle.model)}${vehicle.year ? `, ${vehicle.year}` : ""}</div>
+      <div class="subtitle" style="display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap">
+        ${plateHtml(vehicle.licensePlate, "md")}
+        <span>${esc(vehicle.make)} ${esc(vehicle.model)}${vehicle.year ? `, ${vehicle.year}` : ""}</span>
+      </div>
     </div>
     ${(vehicleBlock || ownerBlock) ? `<div class="grid2">${vehicleBlock}${ownerBlock}</div>` : ""}
     ${statusHtml}
