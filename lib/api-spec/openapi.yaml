@@ -1546,6 +1546,10 @@ components:
           type: ["string", "null"]
         logoUrl:
           type: ["string", "null"]
+        signatureName:
+          type: ["string", "null"]
+        signatureImageUrl:
+          type: ["string", "null"]
         primaryColor:
           type: ["string", "null"]
         emailRemindersEnabled:
@@ -1571,6 +1575,10 @@ components:
         companyDic:
           type: ["string", "null"]
         logoUrl:
+          type: ["string", "null"]
+        signatureName:
+          type: ["string", "null"]
+        signatureImageUrl:
           type: ["string", "null"]
         primaryColor:
           type: ["string", "null"]

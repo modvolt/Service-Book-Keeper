@@ -11,6 +11,8 @@ export const settingsTable = pgTable("settings", {
   companyIco: text("company_ico"),
   companyDic: text("company_dic"),
   logoUrl: text("logo_url"),
+  signatureName: text("signature_name"),
+  signatureImageUrl: text("signature_image_url"),
   primaryColor: text("primary_color"),
   emailRemindersEnabled: boolean("email_reminders_enabled").notNull().default(false),
   reminderStkDays: integer("reminder_stk_days").notNull().default(30),

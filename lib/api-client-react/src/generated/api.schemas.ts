@@ -773,6 +773,10 @@ export interface Settings {
   /** @nullable */
   logoUrl?: string | null;
   /** @nullable */
+  signatureName?: string | null;
+  /** @nullable */
+  signatureImageUrl?: string | null;
+  /** @nullable */
   primaryColor?: string | null;
   emailRemindersEnabled: boolean;
   reminderStkDays: number;
@@ -794,6 +798,10 @@ export interface SettingsInput {
   companyDic?: string | null;
   /** @nullable */
   logoUrl?: string | null;
+  /** @nullable */
+  signatureName?: string | null;
+  /** @nullable */
+  signatureImageUrl?: string | null;
   /** @nullable */
   primaryColor?: string | null;
   /** @nullable */

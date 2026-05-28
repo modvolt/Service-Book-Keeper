@@ -31,7 +31,7 @@ router.put("/settings", async (req, res): Promise<void> => {
   const data: Partial<typeof settingsTable.$inferInsert> = {};
   for (const [k, v] of Object.entries(parsed.data)) {
     if (v !== undefined && v !== null) (data as any)[k] = v;
-    else if (v === null && ["companyName","companyAddress","companyPhone","companyEmail","companyIco","companyDic","logoUrl","primaryColor"].includes(k)) {
+    else if (v === null && ["companyName","companyAddress","companyPhone","companyEmail","companyIco","companyDic","logoUrl","signatureName","signatureImageUrl","primaryColor"].includes(k)) {
       (data as any)[k] = null;
     }
   }
@@ -41,7 +41,7 @@ router.put("/settings", async (req, res): Promise<void> => {
   res.json(row);
 });
 
-router.post("/settings/logo", upload.single("logo"), async (req, res): Promise<void> => {
+async function handleImageUpload(req: Express.Request & { file?: Express.Multer.File; log: any }, res: any, column: "logoUrl" | "signatureImageUrl", errLabel: string) {
   if (!req.file) { res.status(400).json({ error: "Žádný soubor" }); return; }
   try {
     const uploadUrl = await storage.getObjectEntityUploadURL();
@@ -57,13 +57,21 @@ router.post("/settings/logo", upload.single("logo"), async (req, res): Promise<v
 
     await getOrCreate();
     const [row] = await db.update(settingsTable)
-      .set({ logoUrl: objectPath, updatedAt: new Date() })
+      .set({ [column]: objectPath, updatedAt: new Date() } as any)
       .where(eq(settingsTable.id, 1)).returning();
     res.json(row);
   } catch (err) {
-    req.log.error({ err }, "Logo upload failed");
-    res.status(500).json({ error: "Nahrání loga selhalo" });
+    req.log.error({ err }, `${errLabel} upload failed`);
+    res.status(500).json({ error: `Nahrání ${errLabel} selhalo` });
   }
+}
+
+router.post("/settings/logo", upload.single("logo"), async (req, res): Promise<void> => {
+  await handleImageUpload(req as any, res, "logoUrl", "loga");
+});
+
+router.post("/settings/signature", upload.single("signature"), async (req, res): Promise<void> => {
+  await handleImageUpload(req as any, res, "signatureImageUrl", "podpisu");
 });
 
 export default router;

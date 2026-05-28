@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Upload, Image as ImageIcon, Mail, Palette, Building2, Trash2, Sun, Moon, Check, Monitor } from "lucide-react";
+import { Upload, Image as ImageIcon, Mail, Palette, Building2, Trash2, Sun, Moon, Check, Monitor, PenLine } from "lucide-react";
 import { AresButton } from "@/components/ares-button";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/use-theme";
@@ -23,6 +23,7 @@ type Form = {
   companyEmail: string;
   companyIco: string;
   companyDic: string;
+  signatureName: string;
   primaryColor: string;
   emailRemindersEnabled: boolean;
   reminderStkDays: string;
@@ -44,13 +45,15 @@ export default function SettingsPage() {
   const { data: settings, isLoading } = useGetSettings();
   const updateSettings = useUpdateSettings();
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const signatureInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadingSignature, setUploadingSignature] = useState(false);
   const { theme, setTheme } = useTheme();
   const { palette, setPalette, palettes } = usePalette();
 
   const [form, setForm] = useState<Form>({
     companyName: "", companyAddress: "", companyPhone: "", companyEmail: "",
-    companyIco: "", companyDic: "", primaryColor: "",
+    companyIco: "", companyDic: "", signatureName: "", primaryColor: "",
     emailRemindersEnabled: false, reminderStkDays: "30", reminderServiceDays: "14",
   });
 
@@ -63,6 +66,7 @@ export default function SettingsPage() {
       companyEmail: settings.companyEmail ?? "",
       companyIco: settings.companyIco ?? "",
       companyDic: settings.companyDic ?? "",
+      signatureName: settings.signatureName ?? "",
       primaryColor: settings.primaryColor ?? "",
       emailRemindersEnabled: settings.emailRemindersEnabled,
       reminderStkDays: String(settings.reminderStkDays),
@@ -79,6 +83,7 @@ export default function SettingsPage() {
         companyEmail: form.companyEmail.trim() || null,
         companyIco: form.companyIco.trim() || null,
         companyDic: form.companyDic.trim() || null,
+        signatureName: form.signatureName.trim() || null,
         primaryColor: form.primaryColor.trim() || null,
         emailRemindersEnabled: form.emailRemindersEnabled,
         reminderStkDays: parseInt(form.reminderStkDays, 10) || 30,
@@ -104,6 +109,33 @@ export default function SettingsPage() {
       toast({ title: "Chyba při nahrávání loga", variant: "destructive" });
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function handleSignatureUpload(file: File) {
+    setUploadingSignature(true);
+    try {
+      const fd = new FormData();
+      fd.append("signature", file);
+      const res = await fetch("/api/settings/signature", { method: "POST", body: fd });
+      if (!res.ok) throw new Error("Upload failed");
+      await queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+      toast({ title: "Podpis nahrán" });
+    } catch {
+      toast({ title: "Chyba při nahrávání podpisu", variant: "destructive" });
+    } finally {
+      setUploadingSignature(false);
+    }
+  }
+
+  async function handleSignatureRemove() {
+    if (!confirm("Odstranit obrázek podpisu?")) return;
+    try {
+      await updateSettings.mutateAsync({ data: { signatureImageUrl: null } });
+      await queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+      toast({ title: "Podpis odstraněn" });
+    } catch (e: any) {
+      toast({ title: "Chyba", description: String(e?.message ?? e), variant: "destructive" });
     }
   }
 
@@ -202,6 +234,43 @@ export default function SettingsPage() {
                 </Button>
               )}
               <p className="text-xs text-muted-foreground">PNG, JPG nebo SVG, max 5 MB</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><PenLine className="h-5 w-5" /> Podpis mechanika</CardTitle>
+          <CardDescription>Použije se všude, kde se podepisuje servis — na zakázkových listech a v servisní historii</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label htmlFor="signature-name">Jméno a příjmení (bude vytištěno pod podpisem)</Label>
+            <Input id="signature-name" value={form.signatureName}
+              placeholder="např. Jan Novák"
+              onChange={(e) => setForm({ ...form, signatureName: e.target.value })} />
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="w-40 h-20 border rounded-md bg-muted/40 flex items-center justify-center overflow-hidden">
+              {settings?.signatureImageUrl ? (
+                <img src={`/api${settings.signatureImageUrl}`} alt="Podpis" className="max-w-full max-h-full object-contain" />
+              ) : (
+                <PenLine className="h-8 w-8 text-muted-foreground" />
+              )}
+            </div>
+            <div className="space-y-2">
+              <input ref={signatureInputRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleSignatureUpload(f); e.target.value = ""; }} />
+              <Button onClick={() => signatureInputRef.current?.click()} disabled={uploadingSignature}>
+                <Upload className="h-4 w-4 mr-2" /> {uploadingSignature ? "Nahrávám…" : "Nahrát podpis"}
+              </Button>
+              {settings?.signatureImageUrl && (
+                <Button variant="outline" onClick={handleSignatureRemove}>
+                  <Trash2 className="h-4 w-4 mr-2" /> Odstranit
+                </Button>
+              )}
+              <p className="text-xs text-muted-foreground">Naskenovaný nebo vyfocený podpis (PNG s průhledným pozadím vypadá nejlépe)</p>
             </div>
           </div>
         </CardContent>
