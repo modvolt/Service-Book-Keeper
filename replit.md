@@ -1,10 +1,10 @@
-# [Project name]
+# AutoServis
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Czech-language auto service management app for a self-employed mechanic — tracks vehicles, service history, and work orders with photo capture.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — run the API server (port 8080, proxied at `/api`)
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
@@ -14,31 +14,48 @@ _Replace the heading above with the project's name, and this line with one sente
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
+- Frontend: React + Vite, Tailwind CSS, shadcn/ui, wouter router
+- API: Express 5, contract-first OpenAPI → codegen (Orval)
 - DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
-- API codegen: Orval (from OpenAPI spec)
+- Validation: Zod, `drizzle-zod`
+- Photo storage: Replit Object Storage (GCS)
 - Build: esbuild (CJS bundle)
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `lib/api-spec/openapi.yaml` — source of truth for all API contracts
+- `lib/db/src/schema/` — Drizzle table definitions (vehicles, service-records, work-orders, photos)
+- `artifacts/api-server/src/routes/` — Express route handlers
+- `artifacts/autoservis/src/pages/` — React pages (dashboard, vehicles, work-orders)
+- `artifacts/autoservis/src/components/` — Shared UI (layout, shadcn components)
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Contract-first API: OpenAPI spec → Orval codegen → React Query hooks + Zod schemas. Never hand-write API client code.
+- Object storage for photos: multer in-memory → direct GCS PUT via presigned URL → store path in DB.
+- Work order photos use direct `fetch` POST with FormData (not codegen) because multipart upload isn't in the OpenAPI spec.
+- Photos served via `/api/storage/objects/*` (objectStorage.ts helper reads from GCS).
+- Storage route inlines its Zod schemas (does not import from `@workspace/api-zod`) because the upload-url endpoint isn't in the OpenAPI contract.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- Dashboard: open work orders count, completions this month, STK expiry warnings, recent orders list
+- Vehicles: list by SPZ (license plate) with STK status indicators, search, add/edit vehicle
+- Vehicle detail: basic info, service status (STK, oil change, brakes, timing), service history log
+- Work orders: create with SPZ entry (auto-resolves vehicle), service item checkboxes, status tracking
+- Work order detail: edit status/items, add photos from mobile camera or file upload
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Czech UI language throughout (no English labels visible to users)
+- No emojis
+- Desktop-first, simple clean UI
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- `zod/v4` subpath import doesn't resolve in esbuild — always import from `"zod"` directly in api-server routes.
+- After any route changes, the API server must be restarted (it builds before starting).
+- `pnpm --filter @workspace/api-server add <pkg>` to add runtime deps to the server.
 
 ## Pointers
 

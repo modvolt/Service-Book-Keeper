@@ -1,22 +1,30 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: AutoServis API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: vehicles
+    description: Vehicle management
+  - name: service-records
+    description: Service record management
+  - name: work-orders
+    description: Work order management
+  - name: photos
+    description: Photo management
+  - name: dashboard
+    description: Dashboard summary
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,6 +32,344 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /vehicles:
+    get:
+      operationId: listVehicles
+      tags: [vehicles]
+      summary: List all vehicles
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of vehicles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Vehicle"
+    post:
+      operationId: createVehicle
+      tags: [vehicles]
+      summary: Create a new vehicle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VehicleInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vehicle"
+
+  /vehicles/by-plate/{plate}:
+    get:
+      operationId: getVehicleByPlate
+      tags: [vehicles]
+      summary: Get vehicle by license plate
+      parameters:
+        - name: plate
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Vehicle found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vehicle"
+        "404":
+          description: Not found
+
+  /vehicles/{id}:
+    get:
+      operationId: getVehicle
+      tags: [vehicles]
+      summary: Get vehicle by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Vehicle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VehicleDetail"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateVehicle
+      tags: [vehicles]
+      summary: Update vehicle
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VehicleUpdate"
+      responses:
+        "200":
+          description: Updated vehicle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vehicle"
+    delete:
+      operationId: deleteVehicle
+      tags: [vehicles]
+      summary: Delete vehicle
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /vehicles/{id}/service-records:
+    get:
+      operationId: listServiceRecords
+      tags: [service-records]
+      summary: List service records for a vehicle
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Service records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServiceRecord"
+    post:
+      operationId: createServiceRecord
+      tags: [service-records]
+      summary: Add a service record to a vehicle
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceRecordInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceRecord"
+
+  /service-records/{id}:
+    get:
+      operationId: getServiceRecord
+      tags: [service-records]
+      summary: Get service record by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Service record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceRecord"
+    delete:
+      operationId: deleteServiceRecord
+      tags: [service-records]
+      summary: Delete a service record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /work-orders:
+    get:
+      operationId: listWorkOrders
+      tags: [work-orders]
+      summary: List all work orders
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, in_progress, completed]
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Work orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkOrder"
+    post:
+      operationId: createWorkOrder
+      tags: [work-orders]
+      summary: Create a new work order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkOrderInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkOrder"
+
+  /work-orders/{id}:
+    get:
+      operationId: getWorkOrder
+      tags: [work-orders]
+      summary: Get work order by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Work order
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkOrder"
+    patch:
+      operationId: updateWorkOrder
+      tags: [work-orders]
+      summary: Update work order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkOrderUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkOrder"
+    delete:
+      operationId: deleteWorkOrder
+      tags: [work-orders]
+      summary: Delete work order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /work-orders/{id}/photos:
+    get:
+      operationId: listWorkOrderPhotos
+      tags: [photos]
+      summary: List photos for a work order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Photos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Photo"
+
+  /photos/{id}:
+    delete:
+      operationId: deletePhoto
+      tags: [photos]
+      summary: Delete a photo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Dashboard summary statistics
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +380,339 @@ components:
       required:
         - status
 
+    Vehicle:
+      type: object
+      required: [id, licensePlate, make, model, createdAt]
+      properties:
+        id:
+          type: integer
+        licensePlate:
+          type: string
+        make:
+          type: string
+        model:
+          type: string
+        year:
+          type: ["integer", "null"]
+        color:
+          type: ["string", "null"]
+        vin:
+          type: ["string", "null"]
+        currentKm:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        stkValidUntil:
+          type: ["string", "null"]
+          format: date
+        lastOilChangeKm:
+          type: ["integer", "null"]
+        lastOilChangeDate:
+          type: ["string", "null"]
+          format: date
+        lastBrakesDate:
+          type: ["string", "null"]
+          format: date
+        lastTimingDate:
+          type: ["string", "null"]
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+
+    VehicleDetail:
+      type: object
+      required: [id, licensePlate, make, model, createdAt, serviceRecords, openWorkOrders]
+      properties:
+        id:
+          type: integer
+        licensePlate:
+          type: string
+        make:
+          type: string
+        model:
+          type: string
+        year:
+          type: ["integer", "null"]
+        color:
+          type: ["string", "null"]
+        vin:
+          type: ["string", "null"]
+        currentKm:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        stkValidUntil:
+          type: ["string", "null"]
+          format: date
+        lastOilChangeKm:
+          type: ["integer", "null"]
+        lastOilChangeDate:
+          type: ["string", "null"]
+          format: date
+        lastBrakesDate:
+          type: ["string", "null"]
+          format: date
+        lastTimingDate:
+          type: ["string", "null"]
+          format: date
+        createdAt:
+          type: string
+          format: date-time
+        serviceRecords:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceRecord"
+        openWorkOrders:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkOrder"
+
+    VehicleInput:
+      type: object
+      required: [licensePlate, make, model]
+      properties:
+        licensePlate:
+          type: string
+          minLength: 1
+        make:
+          type: string
+          minLength: 1
+        model:
+          type: string
+          minLength: 1
+        year:
+          type: ["integer", "null"]
+        color:
+          type: ["string", "null"]
+        vin:
+          type: ["string", "null"]
+        currentKm:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        stkValidUntil:
+          type: ["string", "null"]
+          format: date
+        lastOilChangeKm:
+          type: ["integer", "null"]
+        lastOilChangeDate:
+          type: ["string", "null"]
+          format: date
+        lastBrakesDate:
+          type: ["string", "null"]
+          format: date
+        lastTimingDate:
+          type: ["string", "null"]
+          format: date
+
+    VehicleUpdate:
+      type: object
+      properties:
+        licensePlate:
+          type: string
+        make:
+          type: string
+        model:
+          type: string
+        year:
+          type: ["integer", "null"]
+        color:
+          type: ["string", "null"]
+        vin:
+          type: ["string", "null"]
+        currentKm:
+          type: ["integer", "null"]
+        notes:
+          type: ["string", "null"]
+        stkValidUntil:
+          type: ["string", "null"]
+          format: date
+        lastOilChangeKm:
+          type: ["integer", "null"]
+        lastOilChangeDate:
+          type: ["string", "null"]
+          format: date
+        lastBrakesDate:
+          type: ["string", "null"]
+          format: date
+        lastTimingDate:
+          type: ["string", "null"]
+          format: date
+
+    ServiceRecord:
+      type: object
+      required: [id, vehicleId, date, createdAt]
+      properties:
+        id:
+          type: integer
+        vehicleId:
+          type: integer
+        date:
+          type: string
+          format: date
+        km:
+          type: ["integer", "null"]
+        description:
+          type: ["string", "null"]
+        oilChanged:
+          type: boolean
+        brakesServiced:
+          type: boolean
+        timingServiced:
+          type: boolean
+        stkPassed:
+          type: boolean
+        otherWork:
+          type: ["string", "null"]
+        technician:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    ServiceRecordInput:
+      type: object
+      required: [date]
+      properties:
+        date:
+          type: string
+          format: date
+        km:
+          type: ["integer", "null"]
+        description:
+          type: ["string", "null"]
+        oilChanged:
+          type: boolean
+        brakesServiced:
+          type: boolean
+        timingServiced:
+          type: boolean
+        stkPassed:
+          type: boolean
+        otherWork:
+          type: ["string", "null"]
+        technician:
+          type: ["string", "null"]
+
+    WorkOrder:
+      type: object
+      required: [id, licensePlate, status, createdAt]
+      properties:
+        id:
+          type: integer
+        vehicleId:
+          type: ["integer", "null"]
+        licensePlate:
+          type: string
+        status:
+          type: string
+          enum: [open, in_progress, completed]
+        km:
+          type: ["integer", "null"]
+        description:
+          type: ["string", "null"]
+        oilChange:
+          type: boolean
+        brakes:
+          type: boolean
+        timing:
+          type: boolean
+        stk:
+          type: boolean
+        otherWork:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        photos:
+          type: array
+          items:
+            $ref: "#/components/schemas/Photo"
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: ["string", "null"]
+          format: date-time
+
+    WorkOrderInput:
+      type: object
+      required: [licensePlate]
+      properties:
+        licensePlate:
+          type: string
+          minLength: 1
+        km:
+          type: ["integer", "null"]
+        description:
+          type: ["string", "null"]
+        oilChange:
+          type: boolean
+        brakes:
+          type: boolean
+        timing:
+          type: boolean
+        stk:
+          type: boolean
+        otherWork:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+
+    WorkOrderUpdate:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [open, in_progress, completed]
+        km:
+          type: ["integer", "null"]
+        description:
+          type: ["string", "null"]
+        oilChange:
+          type: boolean
+        brakes:
+          type: boolean
+        timing:
+          type: boolean
+        stk:
+          type: boolean
+        otherWork:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+
+    Photo:
+      type: object
+      required: [id, workOrderId, url, createdAt]
+      properties:
+        id:
+          type: integer
+        workOrderId:
+          type: integer
+        url:
+          type: string
+        filename:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    DashboardSummary:
+      type: object
+      required: [totalVehicles, openWorkOrders, completedThisMonth, stkExpiringSoon]
+      properties:
+        totalVehicles:
+          type: integer
+        openWorkOrders:
+          type: integer
+        inProgressWorkOrders:
+          type: integer
+        completedThisMonth:
+          type: integer
+        stkExpiringSoon:
+          type: integer
+        recentWorkOrders:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkOrder"
