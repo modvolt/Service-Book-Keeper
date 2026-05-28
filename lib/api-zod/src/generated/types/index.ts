@@ -14,6 +14,7 @@ export * from './invoiceImportInput';
 export * from './invoiceImportResult';
 export * from './invoiceImportResultItemsItem';
 export * from './listMaterialsParams';
+export * from './listVehicleModelsParams';
 export * from './listVehiclesParams';
 export * from './listWorkOrdersParams';
 export * from './listWorkOrdersStatus';

@@ -35,6 +35,41 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
+  /vehicles/catalog/makes:
+    get:
+      operationId: listVehicleMakes
+      tags: [vehicles]
+      summary: List known vehicle makes (curated catalog + user history)
+      responses:
+        "200":
+          description: List of makes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /vehicles/catalog/models:
+    get:
+      operationId: listVehicleModels
+      tags: [vehicles]
+      summary: List models for a given make
+      parameters:
+        - name: make
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of models
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
   /vehicles:
     get:
       operationId: listVehicles

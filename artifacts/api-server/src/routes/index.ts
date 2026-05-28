@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import healthRouter from "./health";
 import vehiclesRouter from "./vehicles";
 import vehicleImportRouter from "./vehicle-import";
+import vehicleCatalogRouter from "./vehicle-catalog";
 import serviceRecordsRouter from "./service-records";
 import workOrdersRouter from "./work-orders";
 import materialsRouter from "./materials";
@@ -12,6 +13,7 @@ const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(vehicleImportRouter);
+router.use(vehicleCatalogRouter);
 router.use(vehiclesRouter);
 router.use(serviceRecordsRouter);
 router.use(workOrdersRouter);

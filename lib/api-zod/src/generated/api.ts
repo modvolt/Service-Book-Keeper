@@ -17,6 +17,24 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary List known vehicle makes (curated catalog + user history)
+ */
+export const ListVehicleMakesResponseItem = zod.string()
+export const ListVehicleMakesResponse = zod.array(ListVehicleMakesResponseItem)
+
+
+/**
+ * @summary List models for a given make
+ */
+export const ListVehicleModelsQueryParams = zod.object({
+  "make": zod.coerce.string().optional()
+})
+
+export const ListVehicleModelsResponseItem = zod.string()
+export const ListVehicleModelsResponse = zod.array(ListVehicleModelsResponseItem)
+
+
+/**
  * @summary List all vehicles
  */
 export const ListVehiclesQueryParams = zod.object({

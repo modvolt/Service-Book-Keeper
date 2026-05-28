@@ -390,6 +390,10 @@ export interface DashboardSummary {
   recentWorkOrders?: WorkOrder[];
 }
 
+export type ListVehicleModelsParams = {
+make?: string;
+};
+
 export type ListVehiclesParams = {
 search?: string;
 };

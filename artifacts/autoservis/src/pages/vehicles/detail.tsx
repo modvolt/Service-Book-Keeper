@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRoute, Link, useLocation } from "wouter";
-import { useGetVehicle, useUpdateVehicle, useDeleteVehicle, useCreateServiceRecord, useDeleteServiceRecord, getGetVehicleQueryKey, getListServiceRecordsQueryKey, getListVehiclesQueryKey } from "@workspace/api-client-react";
+import { useGetVehicle, useUpdateVehicle, useDeleteVehicle, useCreateServiceRecord, useDeleteServiceRecord, useListVehicleMakes, useListVehicleModels, getGetVehicleQueryKey, getListServiceRecordsQueryKey, getListVehiclesQueryKey } from "@workspace/api-client-react";
+import { AutocompleteInput } from "@/components/autocomplete-input";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +53,12 @@ export default function VehicleDetail() {
     ownerName: "", ownerAddress: "",
     lastOilChangeKm: "", lastOilChangeDate: "", lastBrakesDate: "", lastTimingDate: ""
   });
+
+  const { data: editMakeOptions = [] } = useListVehicleMakes();
+  const { data: editModelOptions = [] } = useListVehicleModels(
+    { make: editForm.make },
+    { query: { enabled: editForm.make.trim().length > 0 } as any }
+  );
 
   const [serviceForm, setServiceForm] = useState({
     date: new Date().toISOString().split("T")[0],
@@ -396,8 +403,8 @@ export default function VehicleDetail() {
           <DialogHeader><DialogTitle>Upravit vozidlo</DialogTitle></DialogHeader>
           <form onSubmit={handleEditSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1"><Label>Výrobce *</Label><Input value={editForm.make} onChange={e => setEditForm(f => ({ ...f, make: e.target.value }))} required /></div>
-              <div className="space-y-1"><Label>Model *</Label><Input value={editForm.model} onChange={e => setEditForm(f => ({ ...f, model: e.target.value }))} required /></div>
+              <div className="space-y-1"><Label>Výrobce *</Label><AutocompleteInput value={editForm.make} onChange={(v) => setEditForm(f => ({ ...f, make: v, model: f.make.trim().toLowerCase() === v.trim().toLowerCase() ? f.model : "" }))} options={editMakeOptions} required /></div>
+              <div className="space-y-1"><Label>Model *</Label><AutocompleteInput value={editForm.model} onChange={(v) => setEditForm(f => ({ ...f, model: v }))} options={editModelOptions} required /></div>
               <div className="space-y-1"><Label>Rok</Label><Input type="number" value={editForm.year} onChange={e => setEditForm(f => ({ ...f, year: e.target.value }))} /></div>
               <div className="space-y-1"><Label>Barva</Label><Input value={editForm.color} onChange={e => setEditForm(f => ({ ...f, color: e.target.value }))} /></div>
               <div className="space-y-1 col-span-2"><Label>VIN</Label><Input value={editForm.vin} onChange={e => setEditForm(f => ({ ...f, vin: e.target.value }))} /></div>

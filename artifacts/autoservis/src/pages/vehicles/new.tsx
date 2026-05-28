@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { Link, useLocation } from "wouter";
-import { useCreateVehicle, useImportVehicleFromTp, getListVehiclesQueryKey } from "@workspace/api-client-react";
+import { useCreateVehicle, useImportVehicleFromTp, useListVehicleMakes, useListVehicleModels, getListVehiclesQueryKey } from "@workspace/api-client-react";
+import { AutocompleteInput } from "@/components/autocomplete-input";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,12 @@ export default function NewVehicle() {
 
   const [importOpen, setImportOpen] = useState(false);
   const [importFiles, setImportFiles] = useState<File[]>([]);
+
+  const { data: makeOptions = [] } = useListVehicleMakes();
+  const { data: modelOptions = [] } = useListVehicleModels(
+    { make: form.make },
+    { query: { enabled: form.make.trim().length > 0 } as any }
+  );
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -157,11 +164,23 @@ export default function NewVehicle() {
                 </div>
                 <div className="space-y-1">
                   <Label>Výrobce *</Label>
-                  <Input placeholder="Škoda" value={form.make} onChange={e => setForm(f => ({ ...f, make: e.target.value }))} required />
+                  <AutocompleteInput
+                    placeholder="Škoda"
+                    value={form.make}
+                    onChange={(v) => setForm(f => ({ ...f, make: v, model: f.make.trim().toLowerCase() === v.trim().toLowerCase() ? f.model : "" }))}
+                    options={makeOptions}
+                    required
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label>Model / typ *</Label>
-                  <Input placeholder="Octavia" value={form.model} onChange={e => setForm(f => ({ ...f, model: e.target.value }))} required />
+                  <AutocompleteInput
+                    placeholder="Octavia"
+                    value={form.model}
+                    onChange={(v) => setForm(f => ({ ...f, model: v }))}
+                    options={modelOptions}
+                    required
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label>Rok výroby</Label>

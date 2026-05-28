@@ -27,6 +27,7 @@ import type {
   InvoiceImportInput,
   InvoiceImportResult,
   ListMaterialsParams,
+  ListVehicleModelsParams,
   ListVehiclesParams,
   ListWorkOrdersParams,
   MaterialCatalogInput,
@@ -122,6 +123,167 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getHealthCheckQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListVehicleMakesUrl = () => {
+
+
+
+
+  return `/api/vehicles/catalog/makes`
+}
+
+/**
+ * @summary List known vehicle makes (curated catalog + user history)
+ */
+export const listVehicleMakes = async ( options?: RequestInit): Promise<string[]> => {
+
+  return customFetch<string[]>(getListVehicleMakesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListVehicleMakesQueryKey = () => {
+    return [
+    `/api/vehicles/catalog/makes`
+    ] as const;
+    }
+
+
+export const getListVehicleMakesQueryOptions = <TData = Awaited<ReturnType<typeof listVehicleMakes>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVehicleMakes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListVehicleMakesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVehicleMakes>>> = ({ signal }) => listVehicleMakes({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVehicleMakes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListVehicleMakesQueryResult = NonNullable<Awaited<ReturnType<typeof listVehicleMakes>>>
+export type ListVehicleMakesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List known vehicle makes (curated catalog + user history)
+ */
+
+export function useListVehicleMakes<TData = Awaited<ReturnType<typeof listVehicleMakes>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVehicleMakes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListVehicleMakesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListVehicleModelsUrl = (params?: ListVehicleModelsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/vehicles/catalog/models?${stringifiedParams}` : `/api/vehicles/catalog/models`
+}
+
+/**
+ * @summary List models for a given make
+ */
+export const listVehicleModels = async (params?: ListVehicleModelsParams, options?: RequestInit): Promise<string[]> => {
+
+  return customFetch<string[]>(getListVehicleModelsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListVehicleModelsQueryKey = (params?: ListVehicleModelsParams,) => {
+    return [
+    `/api/vehicles/catalog/models`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListVehicleModelsQueryOptions = <TData = Awaited<ReturnType<typeof listVehicleModels>>, TError = ErrorType<unknown>>(params?: ListVehicleModelsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVehicleModels>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListVehicleModelsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVehicleModels>>> = ({ signal }) => listVehicleModels(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVehicleModels>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListVehicleModelsQueryResult = NonNullable<Awaited<ReturnType<typeof listVehicleModels>>>
+export type ListVehicleModelsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List models for a given make
+ */
+
+export function useListVehicleModels<TData = Awaited<ReturnType<typeof listVehicleModels>>, TError = ErrorType<unknown>>(
+ params?: ListVehicleModelsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVehicleModels>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListVehicleModelsQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
