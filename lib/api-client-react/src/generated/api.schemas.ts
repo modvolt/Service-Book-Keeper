@@ -179,6 +179,10 @@ export interface WorkOrder {
   brakeFluid?: boolean;
   frontAxleCheck?: boolean;
   rearAxleCheck?: boolean;
+  frontShocksCheck?: boolean;
+  rearShocksCheck?: boolean;
+  geometry?: boolean;
+  headlightAlignment?: boolean;
   /**
      * Date when service was performed (for backdated/historical orders)
      * @nullable
@@ -499,6 +503,10 @@ export interface WorkOrderInput {
   brakeFluid?: boolean;
   frontAxleCheck?: boolean;
   rearAxleCheck?: boolean;
+  frontShocksCheck?: boolean;
+  rearShocksCheck?: boolean;
+  geometry?: boolean;
+  headlightAlignment?: boolean;
   /** @nullable */
   serviceDate?: string | null;
   /** @nullable */
@@ -543,6 +551,10 @@ export interface WorkOrderUpdate {
   brakeFluid?: boolean;
   frontAxleCheck?: boolean;
   rearAxleCheck?: boolean;
+  frontShocksCheck?: boolean;
+  rearShocksCheck?: boolean;
+  geometry?: boolean;
+  headlightAlignment?: boolean;
   /** @nullable */
   serviceDate?: string | null;
   /** @nullable */

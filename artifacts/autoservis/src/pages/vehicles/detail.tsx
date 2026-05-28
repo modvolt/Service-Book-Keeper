@@ -525,6 +525,10 @@ export default function VehicleDetail() {
                         {wo.lightsCheck && <Badge variant="outline" className="text-xs">Osvětlení</Badge>}
                         {wo.frontAxleCheck && <Badge variant="outline" className="text-xs">Přední náprava</Badge>}
                         {wo.rearAxleCheck && <Badge variant="outline" className="text-xs">Zadní náprava</Badge>}
+                        {wo.frontShocksCheck && <Badge variant="outline" className="text-xs">Přední tlumiče</Badge>}
+                        {wo.rearShocksCheck && <Badge variant="outline" className="text-xs">Zadní tlumiče</Badge>}
+                        {wo.geometry && <Badge variant="outline" className="text-xs">Geometrie</Badge>}
+                        {wo.headlightAlignment && <Badge variant="outline" className="text-xs">Světlomety</Badge>}
                         {wo.stk && <Badge variant="outline" className="text-xs">STK</Badge>}
                       </div>
                       {wo.description && <p className="text-sm text-muted-foreground">{wo.description}</p>}

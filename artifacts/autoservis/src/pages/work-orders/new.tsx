@@ -51,6 +51,7 @@ export default function NewWorkOrder() {
     timing: false, airFilter: false, cabinFilter: false, stk: false,
     tireChange: false, diagnostics: false, lightsCheck: false, brakeFluid: false,
     frontAxleCheck: false, rearAxleCheck: false,
+    frontShocksCheck: false, rearShocksCheck: false, geometry: false, headlightAlignment: false,
     otherWork: "", otherServices: "", notes: "",
     laborHours: "", laborPrice: "",
     serviceDate: today,
@@ -108,6 +109,10 @@ export default function NewWorkOrder() {
         brakeFluid: form.brakeFluid,
         frontAxleCheck: form.frontAxleCheck,
         rearAxleCheck: form.rearAxleCheck,
+        frontShocksCheck: form.frontShocksCheck,
+        rearShocksCheck: form.rearShocksCheck,
+        geometry: form.geometry,
+        headlightAlignment: form.headlightAlignment,
         serviceDate: form.serviceDate || null,
         otherWork: form.otherWork || null,
         otherServices: form.otherServices || null,
@@ -211,7 +216,7 @@ export default function NewWorkOrder() {
               {[
                 { key: "oilChange", label: "Výměna motorového oleje" },
                 ...(foundVehicle?.transmission === "automatic" ? [{ key: "transmissionOil", label: "Olej v převodovce" }] : []),
-                { key: "brakes", label: "Servis brzd" },
+                { key: "brakes", label: "Kontrola brzd" },
                 { key: "airFilter", label: "Filtr vzduchový" },
                 { key: "brakeFluid", label: "Výměna brzdové kapaliny" },
                 { key: "cabinFilter", label: "Filtr kabinový" },
@@ -219,9 +224,13 @@ export default function NewWorkOrder() {
                 { key: "tireChange", label: "Přezutí pneumatik" },
                 { key: "diagnostics", label: "Diagnostika" },
                 { key: "lightsCheck", label: "Kontrola osvětlení" },
+                { key: "headlightAlignment", label: "Seřízení světlometů" },
                 { key: "frontAxleCheck", label: "Kontrola přední nápravy" },
-                { key: "stk", label: "STK" },
                 { key: "rearAxleCheck", label: "Kontrola zadní nápravy" },
+                { key: "frontShocksCheck", label: "Kontrola předních tlumičů" },
+                { key: "rearShocksCheck", label: "Kontrola zadních tlumičů" },
+                { key: "geometry", label: "Geometrie" },
+                { key: "stk", label: "STK" },
               ].map(item => (
                 <Label
                   key={item.key}

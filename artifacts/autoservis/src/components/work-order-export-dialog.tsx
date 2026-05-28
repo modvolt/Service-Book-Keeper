@@ -69,7 +69,7 @@ function buildHtml(opts: {
   const SERVICE_FLAGS: Array<[keyof WorkOrder, string]> = [
     ["oilChange", "Výměna motorového oleje"],
     ["transmissionOil", "Výměna oleje v převodovce"],
-    ["brakes", "Servis brzd"],
+    ["brakes", "Kontrola brzd"],
     ["timing", "Výměna rozvodů"],
     ["airFilter", "Výměna vzduchového filtru"],
     ["cabinFilter", "Výměna kabinového filtru"],
@@ -79,6 +79,10 @@ function buildHtml(opts: {
     ["lightsCheck", "Kontrola osvětlení"],
     ["frontAxleCheck", "Kontrola přední nápravy"],
     ["rearAxleCheck", "Kontrola zadní nápravy"],
+    ["frontShocksCheck", "Kontrola předních tlumičů"],
+    ["rearShocksCheck", "Kontrola zadních tlumičů"],
+    ["geometry", "Geometrie"],
+    ["headlightAlignment", "Seřízení světlometů"],
     ["stk", "STK"],
   ];
   const performedItems = SERVICE_FLAGS.filter(([k]) => order[k]).map(([, l]) => l);

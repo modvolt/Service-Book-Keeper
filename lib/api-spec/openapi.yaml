@@ -1130,6 +1130,14 @@ components:
           type: boolean
         rearAxleCheck:
           type: boolean
+        frontShocksCheck:
+          type: boolean
+        rearShocksCheck:
+          type: boolean
+        geometry:
+          type: boolean
+        headlightAlignment:
+          type: boolean
         serviceDate:
           type: ["string", "null"]
           description: Date when service was performed (for backdated/historical orders)
@@ -1193,6 +1201,14 @@ components:
           type: boolean
         rearAxleCheck:
           type: boolean
+        frontShocksCheck:
+          type: boolean
+        rearShocksCheck:
+          type: boolean
+        geometry:
+          type: boolean
+        headlightAlignment:
+          type: boolean
         serviceDate:
           type: ["string", "null"]
         otherWork:
@@ -1241,6 +1257,14 @@ components:
         frontAxleCheck:
           type: boolean
         rearAxleCheck:
+          type: boolean
+        frontShocksCheck:
+          type: boolean
+        rearShocksCheck:
+          type: boolean
+        geometry:
+          type: boolean
+        headlightAlignment:
           type: boolean
         serviceDate:
           type: ["string", "null"]

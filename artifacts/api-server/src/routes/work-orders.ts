@@ -127,6 +127,10 @@ router.post("/work-orders", async (req, res): Promise<void> => {
     brakeFluid: parsed.data.brakeFluid ?? false,
     frontAxleCheck: parsed.data.frontAxleCheck ?? false,
     rearAxleCheck: parsed.data.rearAxleCheck ?? false,
+    frontShocksCheck: parsed.data.frontShocksCheck ?? false,
+    rearShocksCheck: parsed.data.rearShocksCheck ?? false,
+    geometry: parsed.data.geometry ?? false,
+    headlightAlignment: parsed.data.headlightAlignment ?? false,
   }).returning();
 
   await propagateWorkOrderToVehicle(order.id);

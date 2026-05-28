@@ -70,6 +70,7 @@ export default function WorkOrderDetail() {
     timing: false, airFilter: false, cabinFilter: false, stk: false,
     tireChange: false, diagnostics: false, lightsCheck: false, brakeFluid: false,
     frontAxleCheck: false, rearAxleCheck: false,
+    frontShocksCheck: false, rearShocksCheck: false, geometry: false, headlightAlignment: false,
     otherWork: "", otherServices: "", notes: "",
     laborHours: "", laborPrice: "", serviceDate: "",
   });
@@ -143,6 +144,10 @@ export default function WorkOrderDetail() {
       brakeFluid: order.brakeFluid ?? false,
       frontAxleCheck: order.frontAxleCheck ?? false,
       rearAxleCheck: order.rearAxleCheck ?? false,
+      frontShocksCheck: order.frontShocksCheck ?? false,
+      rearShocksCheck: order.rearShocksCheck ?? false,
+      geometry: order.geometry ?? false,
+      headlightAlignment: order.headlightAlignment ?? false,
       otherWork: order.otherWork ?? "", otherServices: order.otherServices ?? "", notes: order.notes ?? "",
       laborHours: order.laborHours ?? "", laborPrice: order.laborPrice != null ? String(order.laborPrice) : "",
       serviceDate: order.serviceDate ?? "",
@@ -203,6 +208,10 @@ export default function WorkOrderDetail() {
         brakeFluid: editForm.brakeFluid,
         frontAxleCheck: editForm.frontAxleCheck,
         rearAxleCheck: editForm.rearAxleCheck,
+        frontShocksCheck: editForm.frontShocksCheck,
+        rearShocksCheck: editForm.rearShocksCheck,
+        geometry: editForm.geometry,
+        headlightAlignment: editForm.headlightAlignment,
         serviceDate: editForm.serviceDate || null,
         otherWork: editForm.otherWork || null,
         otherServices: editForm.otherServices || null,
@@ -502,7 +511,7 @@ export default function WorkOrderDetail() {
                 {[
                   { key: "oilChange", label: "Výměna motorového oleje" },
                   ...(isAutomatic || editForm.transmissionOil ? [{ key: "transmissionOil", label: "Olej v převodovce" }] : []),
-                  { key: "brakes", label: "Servis brzd" },
+                  { key: "brakes", label: "Kontrola brzd" },
                   { key: "airFilter", label: "Filtr vzduchový" },
                   { key: "brakeFluid", label: "Výměna brzdové kapaliny" },
                   { key: "cabinFilter", label: "Filtr kabinový" },
@@ -510,9 +519,13 @@ export default function WorkOrderDetail() {
                   { key: "tireChange", label: "Přezutí pneumatik" },
                   { key: "diagnostics", label: "Diagnostika" },
                   { key: "lightsCheck", label: "Kontrola osvětlení" },
+                  { key: "headlightAlignment", label: "Seřízení světlometů" },
                   { key: "frontAxleCheck", label: "Kontrola přední nápravy" },
-                  { key: "stk", label: "STK" },
                   { key: "rearAxleCheck", label: "Kontrola zadní nápravy" },
+                  { key: "frontShocksCheck", label: "Kontrola předních tlumičů" },
+                  { key: "rearShocksCheck", label: "Kontrola zadních tlumičů" },
+                  { key: "geometry", label: "Geometrie" },
+                  { key: "stk", label: "STK" },
                 ].map(item => (
                   <div key={item.key} className="flex items-center space-x-2">
                     <Checkbox
@@ -537,7 +550,7 @@ export default function WorkOrderDetail() {
                 {[
                   { checked: order.oilChange, label: "Výměna motorového oleje" },
                   ...(order.transmissionOil ? [{ checked: true, label: "Olej v převodovce" }] : []),
-                  { checked: order.brakes, label: "Servis brzd" },
+                  { checked: order.brakes, label: "Kontrola brzd" },
                   { checked: order.airFilter, label: "Filtr vzduchový" },
                   { checked: order.brakeFluid, label: "Výměna brzdové kapaliny" },
                   { checked: order.cabinFilter, label: "Filtr kabinový" },
@@ -545,9 +558,13 @@ export default function WorkOrderDetail() {
                   { checked: order.tireChange, label: "Přezutí pneumatik" },
                   { checked: order.diagnostics, label: "Diagnostika" },
                   { checked: order.lightsCheck, label: "Kontrola osvětlení" },
+                  { checked: order.headlightAlignment, label: "Seřízení světlometů" },
                   { checked: order.frontAxleCheck, label: "Kontrola přední nápravy" },
-                  { checked: order.stk, label: "STK" },
                   { checked: order.rearAxleCheck, label: "Kontrola zadní nápravy" },
+                  { checked: order.frontShocksCheck, label: "Kontrola předních tlumičů" },
+                  { checked: order.rearShocksCheck, label: "Kontrola zadních tlumičů" },
+                  { checked: order.geometry, label: "Geometrie" },
+                  { checked: order.stk, label: "STK" },
                 ].map(item => (
                   <div key={item.label} className="flex items-center gap-3 py-2">
                     <div className={`h-5 w-5 rounded-full flex items-center justify-center ${item.checked ? "bg-emerald-100 text-emerald-600" : "bg-muted text-muted-foreground"}`}>

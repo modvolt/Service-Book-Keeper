@@ -26,6 +26,10 @@ export interface WorkOrderUpdate {
   brakeFluid?: boolean;
   frontAxleCheck?: boolean;
   rearAxleCheck?: boolean;
+  frontShocksCheck?: boolean;
+  rearShocksCheck?: boolean;
+  geometry?: boolean;
+  headlightAlignment?: boolean;
   /** @nullable */
   serviceDate?: string | null;
   /** @nullable */

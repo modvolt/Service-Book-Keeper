@@ -70,6 +70,10 @@ const SERVICE_FLAGS: Array<[keyof WorkOrder, string]> = [
   ["lightsCheck", "Kontrola osvětlení"],
   ["frontAxleCheck", "Přední náprava"],
   ["rearAxleCheck", "Zadní náprava"],
+  ["frontShocksCheck", "Přední tlumiče"],
+  ["rearShocksCheck", "Zadní tlumiče"],
+  ["geometry", "Geometrie"],
+  ["headlightAlignment", "Seřízení světlometů"],
   ["stk", "STK"],
 ];
 

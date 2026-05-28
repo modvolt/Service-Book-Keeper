@@ -55,6 +55,10 @@ const SERVICE_FLAGS: Array<{ key: keyof WorkOrder; label: string }> = [
   { key: "lightsCheck", label: "Kontrola osvětlení" },
   { key: "frontAxleCheck", label: "Přední náprava" },
   { key: "rearAxleCheck", label: "Zadní náprava" },
+  { key: "frontShocksCheck", label: "Přední tlumiče" },
+  { key: "rearShocksCheck", label: "Zadní tlumiče" },
+  { key: "geometry", label: "Geometrie" },
+  { key: "headlightAlignment", label: "Seřízení světlometů" },
   { key: "stk", label: "STK" },
 ];
 
