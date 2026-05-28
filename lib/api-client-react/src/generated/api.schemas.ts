@@ -579,6 +579,98 @@ export interface InvoiceImportResult {
   items: InvoiceImportResultItemsItem[];
 }
 
+export type AppointmentStatus = typeof AppointmentStatus[keyof typeof AppointmentStatus];
+
+
+export const AppointmentStatus = {
+  planned: 'planned',
+  done: 'done',
+  cancelled: 'cancelled',
+} as const;
+
+export interface Appointment {
+  id: number;
+  /** @nullable */
+  vehicleId?: number | null;
+  /** @nullable */
+  licensePlate?: string | null;
+  scheduledDate: string;
+  /** @nullable */
+  scheduledTime?: string | null;
+  /** @nullable */
+  customerName?: string | null;
+  /** @nullable */
+  customerPhone?: string | null;
+  /** @nullable */
+  description?: string | null;
+  status: AppointmentStatus;
+  /** @nullable */
+  notes?: string | null;
+  createdAt: string;
+}
+
+/**
+ * @nullable
+ */
+export type AppointmentInputStatus = typeof AppointmentInputStatus[keyof typeof AppointmentInputStatus] | null;
+
+
+export const AppointmentInputStatus = {
+  planned: 'planned',
+  done: 'done',
+  cancelled: 'cancelled',
+} as const;
+
+export interface AppointmentInput {
+  /** @minLength 1 */
+  scheduledDate: string;
+  /** @nullable */
+  scheduledTime?: string | null;
+  /** @nullable */
+  licensePlate?: string | null;
+  /** @nullable */
+  customerName?: string | null;
+  /** @nullable */
+  customerPhone?: string | null;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  status?: AppointmentInputStatus;
+  /** @nullable */
+  notes?: string | null;
+}
+
+/**
+ * @nullable
+ */
+export type AppointmentUpdateStatus = typeof AppointmentUpdateStatus[keyof typeof AppointmentUpdateStatus] | null;
+
+
+export const AppointmentUpdateStatus = {
+  planned: 'planned',
+  done: 'done',
+  cancelled: 'cancelled',
+} as const;
+
+export interface AppointmentUpdate {
+  /** @nullable */
+  scheduledDate?: string | null;
+  /** @nullable */
+  scheduledTime?: string | null;
+  /** @nullable */
+  licensePlate?: string | null;
+  /** @nullable */
+  customerName?: string | null;
+  /** @nullable */
+  customerPhone?: string | null;
+  /** @nullable */
+  description?: string | null;
+  /** @nullable */
+  status?: AppointmentUpdateStatus;
+  /** @nullable */
+  notes?: string | null;
+}
+
 export interface DashboardSummary {
   totalVehicles: number;
   openWorkOrders: number;
@@ -615,4 +707,9 @@ export const ListWorkOrdersStatus = {
   needs_return: 'needs_return',
   completed: 'completed',
 } as const;
+
+export type ListAppointmentsParams = {
+from?: string;
+to?: string;
+};
 

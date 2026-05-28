@@ -549,6 +549,85 @@ paths:
         "204":
           description: Deleted
 
+  /appointments:
+    get:
+      operationId: listAppointments
+      tags: [appointments]
+      summary: List appointments in a date range
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Appointment"
+    post:
+      operationId: createAppointment
+      tags: [appointments]
+      summary: Create appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+
+  /appointments/{id}:
+    patch:
+      operationId: updateAppointment
+      tags: [appointments]
+      summary: Update appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+    delete:
+      operationId: deleteAppointment
+      tags: [appointments]
+      summary: Delete appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
   /dashboard/summary:
     get:
       operationId: getDashboardSummary
@@ -1168,6 +1247,79 @@ components:
         createdAt:
           type: string
           format: date-time
+
+    Appointment:
+      type: object
+      required: [id, scheduledDate, status, createdAt]
+      properties:
+        id:
+          type: integer
+        vehicleId:
+          type: ["integer", "null"]
+        licensePlate:
+          type: ["string", "null"]
+        scheduledDate:
+          type: string
+        scheduledTime:
+          type: ["string", "null"]
+        customerName:
+          type: ["string", "null"]
+        customerPhone:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        status:
+          type: string
+          enum: [planned, done, cancelled]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    AppointmentInput:
+      type: object
+      required: [scheduledDate]
+      properties:
+        scheduledDate:
+          type: string
+          minLength: 1
+        scheduledTime:
+          type: ["string", "null"]
+        licensePlate:
+          type: ["string", "null"]
+        customerName:
+          type: ["string", "null"]
+        customerPhone:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        status:
+          type: ["string", "null"]
+          enum: [planned, done, cancelled, null]
+        notes:
+          type: ["string", "null"]
+
+    AppointmentUpdate:
+      type: object
+      properties:
+        scheduledDate:
+          type: ["string", "null"]
+        scheduledTime:
+          type: ["string", "null"]
+        licensePlate:
+          type: ["string", "null"]
+        customerName:
+          type: ["string", "null"]
+        customerPhone:
+          type: ["string", "null"]
+        description:
+          type: ["string", "null"]
+        status:
+          type: ["string", "null"]
+          enum: [planned, done, cancelled, null]
+        notes:
+          type: ["string", "null"]
 
     DashboardSummary:
       type: object

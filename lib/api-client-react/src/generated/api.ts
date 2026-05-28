@@ -20,12 +20,16 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  Appointment,
+  AppointmentInput,
+  AppointmentUpdate,
   DashboardSummary,
   HealthStatus,
   ImportTpInput,
   ImportTpResult,
   InvoiceImportInput,
   InvoiceImportResult,
+  ListAppointmentsParams,
   ListMaterialsParams,
   ListVehicleModelsParams,
   ListVehiclesParams,
@@ -2149,6 +2153,303 @@ export const useDeletePhoto = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeletePhotoMutationOptions(options));
+    }
+
+export const getListAppointmentsUrl = (params?: ListAppointmentsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/appointments?${stringifiedParams}` : `/api/appointments`
+}
+
+/**
+ * @summary List appointments in a date range
+ */
+export const listAppointments = async (params?: ListAppointmentsParams, options?: RequestInit): Promise<Appointment[]> => {
+
+  return customFetch<Appointment[]>(getListAppointmentsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAppointmentsQueryKey = (params?: ListAppointmentsParams,) => {
+    return [
+    `/api/appointments`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAppointmentsQueryOptions = <TData = Awaited<ReturnType<typeof listAppointments>>, TError = ErrorType<unknown>>(params?: ListAppointmentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAppointments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAppointmentsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAppointments>>> = ({ signal }) => listAppointments(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAppointments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAppointmentsQueryResult = NonNullable<Awaited<ReturnType<typeof listAppointments>>>
+export type ListAppointmentsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List appointments in a date range
+ */
+
+export function useListAppointments<TData = Awaited<ReturnType<typeof listAppointments>>, TError = ErrorType<unknown>>(
+ params?: ListAppointmentsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAppointments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAppointmentsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateAppointmentUrl = () => {
+
+
+
+
+  return `/api/appointments`
+}
+
+/**
+ * @summary Create appointment
+ */
+export const createAppointment = async (appointmentInput: AppointmentInput, options?: RequestInit): Promise<Appointment> => {
+
+  return customFetch<Appointment>(getCreateAppointmentUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      appointmentInput,)
+  }
+);}
+
+
+
+
+export const getCreateAppointmentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAppointment>>, TError,{data: BodyType<AppointmentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAppointment>>, TError,{data: BodyType<AppointmentInput>}, TContext> => {
+
+const mutationKey = ['createAppointment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAppointment>>, {data: BodyType<AppointmentInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAppointment(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAppointmentMutationResult = NonNullable<Awaited<ReturnType<typeof createAppointment>>>
+    export type CreateAppointmentMutationBody = BodyType<AppointmentInput>
+    export type CreateAppointmentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create appointment
+ */
+export const useCreateAppointment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAppointment>>, TError,{data: BodyType<AppointmentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAppointment>>,
+        TError,
+        {data: BodyType<AppointmentInput>},
+        TContext
+      > => {
+      return useMutation(getCreateAppointmentMutationOptions(options));
+    }
+
+export const getUpdateAppointmentUrl = (id: number,) => {
+
+
+
+
+  return `/api/appointments/${id}`
+}
+
+/**
+ * @summary Update appointment
+ */
+export const updateAppointment = async (id: number,
+    appointmentUpdate: AppointmentUpdate, options?: RequestInit): Promise<Appointment> => {
+
+  return customFetch<Appointment>(getUpdateAppointmentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      appointmentUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateAppointmentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAppointment>>, TError,{id: number;data: BodyType<AppointmentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAppointment>>, TError,{id: number;data: BodyType<AppointmentUpdate>}, TContext> => {
+
+const mutationKey = ['updateAppointment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAppointment>>, {id: number;data: BodyType<AppointmentUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateAppointment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAppointmentMutationResult = NonNullable<Awaited<ReturnType<typeof updateAppointment>>>
+    export type UpdateAppointmentMutationBody = BodyType<AppointmentUpdate>
+    export type UpdateAppointmentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update appointment
+ */
+export const useUpdateAppointment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAppointment>>, TError,{id: number;data: BodyType<AppointmentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAppointment>>,
+        TError,
+        {id: number;data: BodyType<AppointmentUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateAppointmentMutationOptions(options));
+    }
+
+export const getDeleteAppointmentUrl = (id: number,) => {
+
+
+
+
+  return `/api/appointments/${id}`
+}
+
+/**
+ * @summary Delete appointment
+ */
+export const deleteAppointment = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteAppointmentUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteAppointmentMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAppointment>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAppointment>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteAppointment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAppointment>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteAppointment(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAppointmentMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAppointment>>>
+
+    export type DeleteAppointmentMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete appointment
+ */
+export const useDeleteAppointment = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAppointment>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAppointment>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteAppointmentMutationOptions(options));
     }
 
 export const getGetDashboardSummaryUrl = () => {

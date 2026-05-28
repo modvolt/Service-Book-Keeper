@@ -726,6 +726,89 @@ export const DeletePhotoParams = zod.object({
 
 
 /**
+ * @summary List appointments in a date range
+ */
+export const ListAppointmentsQueryParams = zod.object({
+  "from": zod.coerce.string().optional(),
+  "to": zod.coerce.string().optional()
+})
+
+export const ListAppointmentsResponseItem = zod.object({
+  "id": zod.number(),
+  "vehicleId": zod.number().nullish(),
+  "licensePlate": zod.string().nullish(),
+  "scheduledDate": zod.string(),
+  "scheduledTime": zod.string().nullish(),
+  "customerName": zod.string().nullish(),
+  "customerPhone": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.enum(['planned', 'done', 'cancelled']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListAppointmentsResponse = zod.array(ListAppointmentsResponseItem)
+
+
+/**
+ * @summary Create appointment
+ */
+
+
+
+export const CreateAppointmentBody = zod.object({
+  "scheduledDate": zod.string().min(1),
+  "scheduledTime": zod.string().nullish(),
+  "licensePlate": zod.string().nullish(),
+  "customerName": zod.string().nullish(),
+  "customerPhone": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.union([zod.literal('planned'),zod.literal('done'),zod.literal('cancelled'),zod.literal(null)]).nullish(),
+  "notes": zod.string().nullish()
+})
+
+
+/**
+ * @summary Update appointment
+ */
+export const UpdateAppointmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateAppointmentBody = zod.object({
+  "scheduledDate": zod.string().nullish(),
+  "scheduledTime": zod.string().nullish(),
+  "licensePlate": zod.string().nullish(),
+  "customerName": zod.string().nullish(),
+  "customerPhone": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.union([zod.literal('planned'),zod.literal('done'),zod.literal('cancelled'),zod.literal(null)]).nullish(),
+  "notes": zod.string().nullish()
+})
+
+export const UpdateAppointmentResponse = zod.object({
+  "id": zod.number(),
+  "vehicleId": zod.number().nullish(),
+  "licensePlate": zod.string().nullish(),
+  "scheduledDate": zod.string(),
+  "scheduledTime": zod.string().nullish(),
+  "customerName": zod.string().nullish(),
+  "customerPhone": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.enum(['planned', 'done', 'cancelled']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete appointment
+ */
+export const DeleteAppointmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary Dashboard summary statistics
  */
 export const GetDashboardSummaryResponse = zod.object({

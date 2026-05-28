@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package } from "lucide-react";
+import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: "/", label: "Přehled", icon: LayoutDashboard },
   { href: "/vehicles", label: "Vozidla", icon: Car },
   { href: "/work-orders", label: "Zakázky", icon: ClipboardList },
+  { href: "/kalendar", label: "Kalendář", icon: Calendar },
   { href: "/sklad", label: "Sklad", icon: Package },
 ];
 

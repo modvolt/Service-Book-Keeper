@@ -6,6 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './appointment';
+export * from './appointmentInput';
+export * from './appointmentInputStatus';
+export * from './appointmentStatus';
+export * from './appointmentUpdate';
+export * from './appointmentUpdateStatus';
 export * from './dashboardSummary';
 export * from './healthStatus';
 export * from './importTpInput';
@@ -13,6 +19,7 @@ export * from './importTpResult';
 export * from './invoiceImportInput';
 export * from './invoiceImportResult';
 export * from './invoiceImportResultItemsItem';
+export * from './listAppointmentsParams';
 export * from './listMaterialsParams';
 export * from './listVehicleModelsParams';
 export * from './listVehiclesParams';
