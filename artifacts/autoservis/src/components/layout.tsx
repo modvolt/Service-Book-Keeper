@@ -73,7 +73,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <img
           src={logoUrl}
           alt={companyName}
-          className={large ? "h-20 max-h-20 w-auto max-w-full object-contain" : "h-10 max-h-10 w-auto max-w-full object-contain"}
+          className={large ? "h-28 max-h-28 w-auto max-w-full object-contain" : "h-12 max-h-12 w-auto max-w-full object-contain"}
         />
       ) : (
         <>
