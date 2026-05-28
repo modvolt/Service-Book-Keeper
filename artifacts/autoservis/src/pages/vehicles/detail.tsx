@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useRoute, Link, useLocation } from "wouter";
-import { useGetVehicle, useUpdateVehicle, useCreateServiceRecord, useDeleteServiceRecord, getGetVehicleQueryKey, getListServiceRecordsQueryKey } from "@workspace/api-client-react";
+import { useGetVehicle, useUpdateVehicle, useDeleteVehicle, useCreateServiceRecord, useDeleteServiceRecord, getGetVehicleQueryKey, getListServiceRecordsQueryKey, getListVehiclesQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -40,8 +40,11 @@ export default function VehicleDetail() {
   const [addServiceOpen, setAddServiceOpen] = useState(false);
 
   const updateVehicle = useUpdateVehicle();
+  const deleteVehicle = useDeleteVehicle();
   const createRecord = useCreateServiceRecord();
   const deleteRecord = useDeleteServiceRecord();
+
+  const hasOpenOrders = (vehicle?.openWorkOrders?.length ?? 0) > 0;
 
   const [editForm, setEditForm] = useState({
     make: "", model: "", year: "", color: "", vin: "", currentKm: "", notes: "", stkValidUntil: "",
@@ -158,6 +161,39 @@ export default function VehicleDetail() {
           <Link href={`/work-orders/new?spz=${vehicle.licensePlate}`}>
             <Button><Plus className="h-4 w-4 mr-2" />Nová zakázka</Button>
           </Link>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="icon" title="Smazat vozidlo"><Trash2 className="h-4 w-4" /></Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Smazat vozidlo {vehicle.licensePlate}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Tato akce je nevratná. Smaže se vozidlo i celá jeho servisní historie.
+                  {hasOpenOrders && (
+                    <span className="block mt-2 text-destructive font-medium">
+                      Pozor: vozidlo má {vehicle.openWorkOrders!.length} otevřenou zakázku. Zakázky zůstanou zachovány, ale ztratí vazbu na vozidlo.
+                    </span>
+                  )}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Zrušit</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    deleteVehicle.mutate({ id }, {
+                      onSuccess: () => {
+                        queryClient.invalidateQueries({ queryKey: getListVehiclesQueryKey() });
+                        toast({ title: "Vozidlo smazáno" });
+                        navigate("/vehicles");
+                      },
+                      onError: () => toast({ title: "Chyba", description: "Vozidlo se nepodařilo smazat.", variant: "destructive" }),
+                    });
+                  }}
+                >Smazat</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
 
