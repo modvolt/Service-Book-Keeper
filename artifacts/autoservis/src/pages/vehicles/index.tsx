@@ -7,7 +7,8 @@ import { LicensePlate } from "@/components/license-plate";
 import { Search, Plus, AlertCircle } from "lucide-react";
 import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
-import { differenceInDays, parseISO } from "date-fns";
+import { differenceInDays, parseISO, format } from "date-fns";
+import { cs } from "date-fns/locale";
 
 export default function VehiclesList() {
   const [search, setSearch] = useState("");
@@ -19,10 +20,11 @@ export default function VehiclesList() {
     if (!dateString) return null;
     const date = parseISO(dateString);
     const diff = differenceInDays(date, new Date());
-    
-    if (diff < 0) return <Badge variant="destructive" className="flex items-center gap-1"><AlertCircle className="w-3 h-3"/> Propadlá STK</Badge>;
-    if (diff <= 30) return <Badge className="bg-amber-500 hover:bg-amber-600 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> STK brzy propadne</Badge>;
-    return null;
+    const label = format(date, "LLLL yyyy", { locale: cs });
+
+    if (diff < 0) return <Badge variant="destructive" className="flex items-center gap-1"><AlertCircle className="w-3 h-3"/> Propadlá STK ({label})</Badge>;
+    if (diff <= 30) return <Badge className="bg-amber-500 hover:bg-amber-600 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> STK brzy propadne ({label})</Badge>;
+    return <Badge className="bg-emerald-600 hover:bg-emerald-700 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> STK do {label}</Badge>;
   };
 
   return (
