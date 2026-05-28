@@ -310,14 +310,15 @@ export function WorkOrderExportDialog({ order, materials, vehicle, settings, pho
 
   function handlePrint() {
     const html = buildHtml({ order, materials, vehicle, settings, photos, options: opts });
-    const w = window.open("", "_blank", "width=900,height=1100");
+    const blob = new Blob(["\ufeff" + html], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url, "_blank", "width=900,height=1100");
     if (!w) {
+      URL.revokeObjectURL(url);
       alert("Vyskakovací okno bylo zablokováno. Povolte vyskakovací okna pro tuto stránku.");
       return;
     }
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
     setOpen(false);
   }
 

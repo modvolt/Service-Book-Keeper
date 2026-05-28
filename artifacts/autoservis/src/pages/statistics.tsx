@@ -357,14 +357,15 @@ export default function StatisticsPage() {
         fields,
         settings: settings ?? null,
       });
-      const w = window.open("", "_blank", "width=1100,height=1200");
+      const blob = new Blob(["\ufeff" + html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const w = window.open(url, "_blank", "width=1100,height=1200");
       if (!w) {
+        URL.revokeObjectURL(url);
         toast({ title: "Vyskakovací okno blokováno", description: "Povolte vyskakovací okna pro tuto stránku.", variant: "destructive" });
         return;
       }
-      w.document.open();
-      w.document.write(html);
-      w.document.close();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
       toast({ title: "Export připraven", description: `${allOrders.length} zakázek — v okně zvolte „Uložit jako PDF".` });
     } catch (e: any) {
       toast({ title: "Chyba exportu", description: String(e?.message ?? e), variant: "destructive" });
