@@ -5,6 +5,7 @@ import { Link } from "wouter";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
+import { WorkOrderStatusBadge } from "@/lib/work-order-status";
 
 export default function Dashboard() {
   const { data: summary, isLoading, isError } = useGetDashboardSummary();
@@ -22,14 +23,7 @@ export default function Dashboard() {
     return <div>Chyba při načítání přehledu.</div>;
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'open': return <Badge variant="secondary">Nová</Badge>;
-      case 'in_progress': return <Badge className="bg-amber-500 text-white hover:bg-amber-600">Probíhá</Badge>;
-      case 'completed': return <Badge className="bg-emerald-600 text-white hover:bg-emerald-700">Dokončeno</Badge>;
-      default: return <Badge>{status}</Badge>;
-    }
-  };
+  const getStatusBadge = (status: string) => <WorkOrderStatusBadge status={status} size="sm" />;
 
   return (
     <div className="space-y-6">

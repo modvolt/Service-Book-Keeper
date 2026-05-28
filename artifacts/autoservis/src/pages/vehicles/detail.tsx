@@ -11,7 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Car, Wrench, Plus, AlertTriangle, CheckCircle2, Trash2, ClipboardList, Edit } from "lucide-react";
+import { ArrowLeft, Car, Wrench, Plus, Trash2, ClipboardList, Edit, User } from "lucide-react";
+import { WorkOrderStatusBadge } from "@/lib/work-order-status";
 import { format, differenceInDays, parseISO, isValid } from "date-fns";
 import { cs } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -33,7 +34,7 @@ export default function VehicleDetail() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
-  const { data: vehicle, isLoading, isError } = useGetVehicle(id, { query: { enabled: !isNaN(id) } });
+  const { data: vehicle, isLoading, isError } = useGetVehicle(id, { query: { enabled: !isNaN(id) } as any });
 
   const [editOpen, setEditOpen] = useState(false);
   const [addServiceOpen, setAddServiceOpen] = useState(false);
@@ -44,6 +45,8 @@ export default function VehicleDetail() {
 
   const [editForm, setEditForm] = useState({
     make: "", model: "", year: "", color: "", vin: "", currentKm: "", notes: "", stkValidUntil: "",
+    engineDisplacement: "", registrationDate: "",
+    ownerName: "", ownerAddress: "",
     lastOilChangeKm: "", lastOilChangeDate: "", lastBrakesDate: "", lastTimingDate: ""
   });
 
@@ -59,6 +62,10 @@ export default function VehicleDetail() {
       make: vehicle.make, model: vehicle.model, year: vehicle.year?.toString() ?? "",
       color: vehicle.color ?? "", vin: vehicle.vin ?? "", currentKm: vehicle.currentKm?.toString() ?? "",
       notes: vehicle.notes ?? "", stkValidUntil: vehicle.stkValidUntil ?? "",
+      engineDisplacement: vehicle.engineDisplacement?.toString() ?? "",
+      registrationDate: vehicle.registrationDate ?? "",
+      ownerName: vehicle.ownerName ?? "",
+      ownerAddress: vehicle.ownerAddress ?? "",
       lastOilChangeKm: vehicle.lastOilChangeKm?.toString() ?? "",
       lastOilChangeDate: vehicle.lastOilChangeDate ?? "", lastBrakesDate: vehicle.lastBrakesDate ?? "",
       lastTimingDate: vehicle.lastTimingDate ?? ""
@@ -74,6 +81,10 @@ export default function VehicleDetail() {
         ...editForm,
         year: editForm.year ? parseInt(editForm.year) : null,
         currentKm: editForm.currentKm ? parseInt(editForm.currentKm) : null,
+        engineDisplacement: editForm.engineDisplacement ? parseInt(editForm.engineDisplacement) : null,
+        registrationDate: editForm.registrationDate || null,
+        ownerName: editForm.ownerName || null,
+        ownerAddress: editForm.ownerAddress || null,
         lastOilChangeKm: editForm.lastOilChangeKm ? parseInt(editForm.lastOilChangeKm) : null,
         stkValidUntil: editForm.stkValidUntil || null,
         lastOilChangeDate: editForm.lastOilChangeDate || null,
@@ -162,12 +173,26 @@ export default function VehicleDetail() {
               <span className="text-muted-foreground">Rok</span><span>{vehicle.year ?? "-"}</span>
               <span className="text-muted-foreground">Barva</span><span>{vehicle.color ?? "-"}</span>
               <span className="text-muted-foreground">VIN</span><span className="font-mono text-xs break-all">{vehicle.vin ?? "-"}</span>
+              <span className="text-muted-foreground">Objem motoru</span>
+              <span>{vehicle.engineDisplacement ? `${vehicle.engineDisplacement.toLocaleString('cs-CZ')} cm³` : "-"}</span>
+              <span className="text-muted-foreground">První registrace</span>
+              <span>{dateStr(vehicle.registrationDate)}</span>
               <span className="text-muted-foreground">Najeté km</span>
               <span className="font-semibold">{vehicle.currentKm ? `${vehicle.currentKm.toLocaleString('cs-CZ')} km` : "-"}</span>
             </div>
             {vehicle.notes && <p className="text-muted-foreground border-t pt-2 mt-2">{vehicle.notes}</p>}
           </CardContent>
         </Card>
+
+        {(vehicle.ownerName || vehicle.ownerAddress) && (
+          <Card>
+            <CardHeader><CardTitle className="flex items-center gap-2"><User className="h-4 w-4" />Vlastník</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              {vehicle.ownerName && <div><span className="text-muted-foreground block text-xs">Jméno</span><span className="font-medium">{vehicle.ownerName}</span></div>}
+              {vehicle.ownerAddress && <div><span className="text-muted-foreground block text-xs">Adresa</span><span>{vehicle.ownerAddress}</span></div>}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Service status */}
         <Card>
@@ -206,7 +231,7 @@ export default function VehicleDetail() {
                 <Link key={wo.id} href={`/work-orders/${wo.id}`}>
                   <div className="flex items-center justify-between p-3 rounded border hover:bg-accent/50 transition-colors cursor-pointer">
                     <div className="flex items-center gap-3">
-                      <Badge className={wo.status === "in_progress" ? "bg-amber-500 text-white" : ""}>{wo.status === "in_progress" ? "Probíhá" : "Nová"}</Badge>
+                      <WorkOrderStatusBadge status={wo.status} size="sm" />
                       <span className="text-sm">{wo.description || "Bez popisu"}</span>
                     </div>
                     <span className="text-xs text-muted-foreground">{dateStr(wo.createdAt)}</span>
@@ -340,6 +365,10 @@ export default function VehicleDetail() {
               <div className="space-y-1"><Label>Rok</Label><Input type="number" value={editForm.year} onChange={e => setEditForm(f => ({ ...f, year: e.target.value }))} /></div>
               <div className="space-y-1"><Label>Barva</Label><Input value={editForm.color} onChange={e => setEditForm(f => ({ ...f, color: e.target.value }))} /></div>
               <div className="space-y-1 col-span-2"><Label>VIN</Label><Input value={editForm.vin} onChange={e => setEditForm(f => ({ ...f, vin: e.target.value }))} /></div>
+              <div className="space-y-1"><Label>Objem motoru (cm³)</Label><Input type="number" value={editForm.engineDisplacement} onChange={e => setEditForm(f => ({ ...f, engineDisplacement: e.target.value }))} /></div>
+              <div className="space-y-1"><Label>První registrace</Label><Input type="date" value={editForm.registrationDate} onChange={e => setEditForm(f => ({ ...f, registrationDate: e.target.value }))} /></div>
+              <div className="space-y-1 col-span-2"><Label>Vlastník</Label><Input value={editForm.ownerName} onChange={e => setEditForm(f => ({ ...f, ownerName: e.target.value }))} /></div>
+              <div className="space-y-1 col-span-2"><Label>Adresa vlastníka</Label><Input value={editForm.ownerAddress} onChange={e => setEditForm(f => ({ ...f, ownerAddress: e.target.value }))} /></div>
               <div className="space-y-1"><Label>Aktuální km</Label><Input type="number" value={editForm.currentKm} onChange={e => setEditForm(f => ({ ...f, currentKm: e.target.value }))} /></div>
               <div className="space-y-1"><Label>STK platná do</Label><Input type="date" value={editForm.stkValidUntil} onChange={e => setEditForm(f => ({ ...f, stkValidUntil: e.target.value }))} /></div>
               <div className="space-y-1"><Label>Datum výměny oleje</Label><Input type="date" value={editForm.lastOilChangeDate} onChange={e => setEditForm(f => ({ ...f, lastOilChangeDate: e.target.value }))} /></div>

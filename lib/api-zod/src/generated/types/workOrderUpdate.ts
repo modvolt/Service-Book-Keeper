@@ -20,5 +20,7 @@ export interface WorkOrderUpdate {
   /** @nullable */
   otherWork?: string | null;
   /** @nullable */
+  otherServices?: string | null;
+  /** @nullable */
   notes?: string | null;
 }

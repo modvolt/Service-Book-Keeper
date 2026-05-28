@@ -8,6 +8,8 @@
 
 export * from './dashboardSummary';
 export * from './healthStatus';
+export * from './importTpInput';
+export * from './importTpResult';
 export * from './listVehiclesParams';
 export * from './listWorkOrdersParams';
 export * from './listWorkOrdersStatus';

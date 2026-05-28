@@ -6,10 +6,13 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface VehicleUpdate {
-  licensePlate?: string;
-  make?: string;
-  model?: string;
+export interface ImportTpResult {
+  /** @nullable */
+  licensePlate?: string | null;
+  /** @nullable */
+  make?: string | null;
+  /** @nullable */
+  model?: string | null;
   /** @nullable */
   year?: number | null;
   /** @nullable */
@@ -24,18 +27,4 @@ export interface VehicleUpdate {
   ownerName?: string | null;
   /** @nullable */
   ownerAddress?: string | null;
-  /** @nullable */
-  currentKm?: number | null;
-  /** @nullable */
-  notes?: string | null;
-  /** @nullable */
-  stkValidUntil?: string | null;
-  /** @nullable */
-  lastOilChangeKm?: number | null;
-  /** @nullable */
-  lastOilChangeDate?: string | null;
-  /** @nullable */
-  lastBrakesDate?: string | null;
-  /** @nullable */
-  lastTimingDate?: string | null;
 }

@@ -25,6 +25,8 @@ export interface WorkOrder {
   /** @nullable */
   otherWork?: string | null;
   /** @nullable */
+  otherServices?: string | null;
+  /** @nullable */
   notes?: string | null;
   photos?: Photo[];
   createdAt: Date;

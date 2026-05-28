@@ -70,6 +70,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/Vehicle"
 
+  /vehicles/import-tp:
+    post:
+      operationId: importVehicleFromTp
+      tags: [vehicles]
+      summary: Extract vehicle data from a photo of a Czech technical license (TP)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportTpInput"
+      responses:
+        "200":
+          description: Extracted vehicle data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportTpResult"
+
   /vehicles/by-plate/{plate}:
     get:
       operationId: getVehicleByPlate
@@ -234,7 +253,7 @@ paths:
           in: query
           schema:
             type: string
-            enum: [open, in_progress, completed]
+            enum: [open, in_progress, waiting_parts, needs_return, completed]
         - name: search
           in: query
           schema:
@@ -398,24 +417,28 @@ components:
           type: ["string", "null"]
         vin:
           type: ["string", "null"]
+        engineDisplacement:
+          type: ["integer", "null"]
+        registrationDate:
+          type: ["string", "null"]
+        ownerName:
+          type: ["string", "null"]
+        ownerAddress:
+          type: ["string", "null"]
         currentKm:
           type: ["integer", "null"]
         notes:
           type: ["string", "null"]
         stkValidUntil:
           type: ["string", "null"]
-          format: date
         lastOilChangeKm:
           type: ["integer", "null"]
         lastOilChangeDate:
           type: ["string", "null"]
-          format: date
         lastBrakesDate:
           type: ["string", "null"]
-          format: date
         lastTimingDate:
           type: ["string", "null"]
-          format: date
         createdAt:
           type: string
           format: date-time
@@ -438,24 +461,28 @@ components:
           type: ["string", "null"]
         vin:
           type: ["string", "null"]
+        engineDisplacement:
+          type: ["integer", "null"]
+        registrationDate:
+          type: ["string", "null"]
+        ownerName:
+          type: ["string", "null"]
+        ownerAddress:
+          type: ["string", "null"]
         currentKm:
           type: ["integer", "null"]
         notes:
           type: ["string", "null"]
         stkValidUntil:
           type: ["string", "null"]
-          format: date
         lastOilChangeKm:
           type: ["integer", "null"]
         lastOilChangeDate:
           type: ["string", "null"]
-          format: date
         lastBrakesDate:
           type: ["string", "null"]
-          format: date
         lastTimingDate:
           type: ["string", "null"]
-          format: date
         createdAt:
           type: string
           format: date-time
@@ -487,24 +514,28 @@ components:
           type: ["string", "null"]
         vin:
           type: ["string", "null"]
+        engineDisplacement:
+          type: ["integer", "null"]
+        registrationDate:
+          type: ["string", "null"]
+        ownerName:
+          type: ["string", "null"]
+        ownerAddress:
+          type: ["string", "null"]
         currentKm:
           type: ["integer", "null"]
         notes:
           type: ["string", "null"]
         stkValidUntil:
           type: ["string", "null"]
-          format: date
         lastOilChangeKm:
           type: ["integer", "null"]
         lastOilChangeDate:
           type: ["string", "null"]
-          format: date
         lastBrakesDate:
           type: ["string", "null"]
-          format: date
         lastTimingDate:
           type: ["string", "null"]
-          format: date
 
     VehicleUpdate:
       type: object
@@ -521,24 +552,28 @@ components:
           type: ["string", "null"]
         vin:
           type: ["string", "null"]
+        engineDisplacement:
+          type: ["integer", "null"]
+        registrationDate:
+          type: ["string", "null"]
+        ownerName:
+          type: ["string", "null"]
+        ownerAddress:
+          type: ["string", "null"]
         currentKm:
           type: ["integer", "null"]
         notes:
           type: ["string", "null"]
         stkValidUntil:
           type: ["string", "null"]
-          format: date
         lastOilChangeKm:
           type: ["integer", "null"]
         lastOilChangeDate:
           type: ["string", "null"]
-          format: date
         lastBrakesDate:
           type: ["string", "null"]
-          format: date
         lastTimingDate:
           type: ["string", "null"]
-          format: date
 
     ServiceRecord:
       type: object
@@ -550,7 +585,6 @@ components:
           type: integer
         date:
           type: string
-          format: date
         km:
           type: ["integer", "null"]
         description:
@@ -577,7 +611,6 @@ components:
       properties:
         date:
           type: string
-          format: date
         km:
           type: ["integer", "null"]
         description:
@@ -607,7 +640,7 @@ components:
           type: string
         status:
           type: string
-          enum: [open, in_progress, completed]
+          enum: [open, in_progress, waiting_parts, needs_return, completed]
         km:
           type: ["integer", "null"]
         description:
@@ -621,6 +654,8 @@ components:
         stk:
           type: boolean
         otherWork:
+          type: ["string", "null"]
+        otherServices:
           type: ["string", "null"]
         notes:
           type: ["string", "null"]
@@ -656,6 +691,8 @@ components:
           type: boolean
         otherWork:
           type: ["string", "null"]
+        otherServices:
+          type: ["string", "null"]
         notes:
           type: ["string", "null"]
 
@@ -664,7 +701,7 @@ components:
       properties:
         status:
           type: string
-          enum: [open, in_progress, completed]
+          enum: [open, in_progress, waiting_parts, needs_return, completed]
         km:
           type: ["integer", "null"]
         description:
@@ -679,7 +716,45 @@ components:
           type: boolean
         otherWork:
           type: ["string", "null"]
+        otherServices:
+          type: ["string", "null"]
         notes:
+          type: ["string", "null"]
+
+    ImportTpInput:
+      type: object
+      required: [images]
+      properties:
+        images:
+          type: array
+          minItems: 1
+          maxItems: 4
+          items:
+            type: string
+            description: Base64-encoded image data (without the data URI prefix)
+
+    ImportTpResult:
+      type: object
+      properties:
+        licensePlate:
+          type: ["string", "null"]
+        make:
+          type: ["string", "null"]
+        model:
+          type: ["string", "null"]
+        year:
+          type: ["integer", "null"]
+        color:
+          type: ["string", "null"]
+        vin:
+          type: ["string", "null"]
+        engineDisplacement:
+          type: ["integer", "null"]
+        registrationDate:
+          type: ["string", "null"]
+        ownerName:
+          type: ["string", "null"]
+        ownerAddress:
           type: ["string", "null"]
 
     Photo:

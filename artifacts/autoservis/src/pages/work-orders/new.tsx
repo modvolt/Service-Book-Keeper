@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useLocation, useSearch } from "wouter";
-import { useCreateWorkOrder, useGetVehicleByPlate, getListWorkOrdersQueryKey, getGetVehicleByPlateQueryKey } from "@workspace/api-client-react";
+import { useCreateWorkOrder, useGetVehicleByPlate, getListWorkOrdersQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,12 +25,12 @@ export default function NewWorkOrder() {
   const [spzQuery, setSpzQuery] = useState(initialSpz);
 
   const { data: foundVehicle } = useGetVehicleByPlate(spzQuery, {
-    query: { enabled: spzQuery.length >= 3 }
+    query: { enabled: spzQuery.length >= 3 } as any
   });
 
   const [form, setForm] = useState({
     km: "", description: "", oilChange: false, brakes: false,
-    timing: false, stk: false, otherWork: "", notes: ""
+    timing: false, stk: false, otherWork: "", otherServices: "", notes: ""
   });
 
   function handleSpzChange(value: string) {
@@ -55,6 +55,7 @@ export default function NewWorkOrder() {
         timing: form.timing,
         stk: form.stk,
         otherWork: form.otherWork || null,
+        otherServices: form.otherServices || null,
         notes: form.notes || null,
       }
     }, {
@@ -82,7 +83,6 @@ export default function NewWorkOrder() {
       </div>
 
       <form onSubmit={handleSubmit} className="grid gap-6 max-w-2xl">
-        {/* SPZ */}
         <Card>
           <CardHeader><CardTitle>Vozidlo</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -118,7 +118,6 @@ export default function NewWorkOrder() {
           </CardContent>
         </Card>
 
-        {/* Service items */}
         <Card>
           <CardHeader><CardTitle>Servisní úkony</CardTitle></CardHeader>
           <CardContent className="space-y-4">
@@ -141,13 +140,16 @@ export default function NewWorkOrder() {
               ))}
             </div>
             <div className="space-y-1">
+              <Label>Ostatní servisní úkony</Label>
+              <Textarea placeholder="Další servisní úkony mimo standardní položky..." value={form.otherServices} onChange={e => setForm(f => ({ ...f, otherServices: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
               <Label>Ostatní práce</Label>
               <Input placeholder="Výměna žárovky, korekce geometrie..." value={form.otherWork} onChange={e => setForm(f => ({ ...f, otherWork: e.target.value }))} />
             </div>
           </CardContent>
         </Card>
 
-        {/* Notes */}
         <Card>
           <CardHeader><CardTitle>Popis a poznámky</CardTitle></CardHeader>
           <CardContent className="space-y-4">

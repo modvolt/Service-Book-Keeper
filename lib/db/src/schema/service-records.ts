@@ -6,7 +6,7 @@ import { vehiclesTable } from "./vehicles";
 export const serviceRecordsTable = pgTable("service_records", {
   id: serial("id").primaryKey(),
   vehicleId: integer("vehicle_id").notNull().references(() => vehiclesTable.id, { onDelete: "cascade" }),
-  date: date("date").notNull(),
+  date: date("date", { mode: "string" }).notNull(),
   km: integer("km"),
   description: text("description"),
   oilChanged: boolean("oil_changed").notNull().default(false),

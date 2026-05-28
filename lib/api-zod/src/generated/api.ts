@@ -31,13 +31,17 @@ export const ListVehiclesResponseItem = zod.object({
   "year": zod.number().nullish(),
   "color": zod.string().nullish(),
   "vin": zod.string().nullish(),
+  "engineDisplacement": zod.number().nullish(),
+  "registrationDate": zod.string().nullish(),
+  "ownerName": zod.string().nullish(),
+  "ownerAddress": zod.string().nullish(),
   "currentKm": zod.number().nullish(),
   "notes": zod.string().nullish(),
-  "stkValidUntil": zod.coerce.date().nullish(),
+  "stkValidUntil": zod.string().nullish(),
   "lastOilChangeKm": zod.number().nullish(),
-  "lastOilChangeDate": zod.coerce.date().nullish(),
-  "lastBrakesDate": zod.coerce.date().nullish(),
-  "lastTimingDate": zod.coerce.date().nullish(),
+  "lastOilChangeDate": zod.string().nullish(),
+  "lastBrakesDate": zod.string().nullish(),
+  "lastTimingDate": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 export const ListVehiclesResponse = zod.array(ListVehiclesResponseItem)
@@ -58,13 +62,42 @@ export const CreateVehicleBody = zod.object({
   "year": zod.number().nullish(),
   "color": zod.string().nullish(),
   "vin": zod.string().nullish(),
+  "engineDisplacement": zod.number().nullish(),
+  "registrationDate": zod.string().nullish(),
+  "ownerName": zod.string().nullish(),
+  "ownerAddress": zod.string().nullish(),
   "currentKm": zod.number().nullish(),
   "notes": zod.string().nullish(),
-  "stkValidUntil": zod.coerce.date().nullish(),
+  "stkValidUntil": zod.string().nullish(),
   "lastOilChangeKm": zod.number().nullish(),
-  "lastOilChangeDate": zod.coerce.date().nullish(),
-  "lastBrakesDate": zod.coerce.date().nullish(),
-  "lastTimingDate": zod.coerce.date().nullish()
+  "lastOilChangeDate": zod.string().nullish(),
+  "lastBrakesDate": zod.string().nullish(),
+  "lastTimingDate": zod.string().nullish()
+})
+
+
+/**
+ * @summary Extract vehicle data from a photo of a Czech technical license (TP)
+ */
+export const importVehicleFromTpBodyImagesMax = 4;
+
+
+
+export const ImportVehicleFromTpBody = zod.object({
+  "images": zod.array(zod.string().describe('Base64-encoded image data (without the data URI prefix)')).min(1).max(importVehicleFromTpBodyImagesMax)
+})
+
+export const ImportVehicleFromTpResponse = zod.object({
+  "licensePlate": zod.string().nullish(),
+  "make": zod.string().nullish(),
+  "model": zod.string().nullish(),
+  "year": zod.number().nullish(),
+  "color": zod.string().nullish(),
+  "vin": zod.string().nullish(),
+  "engineDisplacement": zod.number().nullish(),
+  "registrationDate": zod.string().nullish(),
+  "ownerName": zod.string().nullish(),
+  "ownerAddress": zod.string().nullish()
 })
 
 
@@ -83,13 +116,17 @@ export const GetVehicleByPlateResponse = zod.object({
   "year": zod.number().nullish(),
   "color": zod.string().nullish(),
   "vin": zod.string().nullish(),
+  "engineDisplacement": zod.number().nullish(),
+  "registrationDate": zod.string().nullish(),
+  "ownerName": zod.string().nullish(),
+  "ownerAddress": zod.string().nullish(),
   "currentKm": zod.number().nullish(),
   "notes": zod.string().nullish(),
-  "stkValidUntil": zod.coerce.date().nullish(),
+  "stkValidUntil": zod.string().nullish(),
   "lastOilChangeKm": zod.number().nullish(),
-  "lastOilChangeDate": zod.coerce.date().nullish(),
-  "lastBrakesDate": zod.coerce.date().nullish(),
-  "lastTimingDate": zod.coerce.date().nullish(),
+  "lastOilChangeDate": zod.string().nullish(),
+  "lastBrakesDate": zod.string().nullish(),
+  "lastTimingDate": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -109,18 +146,22 @@ export const GetVehicleResponse = zod.object({
   "year": zod.number().nullish(),
   "color": zod.string().nullish(),
   "vin": zod.string().nullish(),
+  "engineDisplacement": zod.number().nullish(),
+  "registrationDate": zod.string().nullish(),
+  "ownerName": zod.string().nullish(),
+  "ownerAddress": zod.string().nullish(),
   "currentKm": zod.number().nullish(),
   "notes": zod.string().nullish(),
-  "stkValidUntil": zod.coerce.date().nullish(),
+  "stkValidUntil": zod.string().nullish(),
   "lastOilChangeKm": zod.number().nullish(),
-  "lastOilChangeDate": zod.coerce.date().nullish(),
-  "lastBrakesDate": zod.coerce.date().nullish(),
-  "lastTimingDate": zod.coerce.date().nullish(),
+  "lastOilChangeDate": zod.string().nullish(),
+  "lastBrakesDate": zod.string().nullish(),
+  "lastTimingDate": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "serviceRecords": zod.array(zod.object({
   "id": zod.number(),
   "vehicleId": zod.number(),
-  "date": zod.coerce.date(),
+  "date": zod.string(),
   "km": zod.number().nullish(),
   "description": zod.string().nullish(),
   "oilChanged": zod.boolean().optional(),
@@ -135,7 +176,7 @@ export const GetVehicleResponse = zod.object({
   "id": zod.number(),
   "vehicleId": zod.number().nullish(),
   "licensePlate": zod.string(),
-  "status": zod.enum(['open', 'in_progress', 'completed']),
+  "status": zod.enum(['open', 'in_progress', 'waiting_parts', 'needs_return', 'completed']),
   "km": zod.number().nullish(),
   "description": zod.string().nullish(),
   "oilChange": zod.boolean().optional(),
@@ -143,6 +184,7 @@ export const GetVehicleResponse = zod.object({
   "timing": zod.boolean().optional(),
   "stk": zod.boolean().optional(),
   "otherWork": zod.string().nullish(),
+  "otherServices": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "photos": zod.array(zod.object({
   "id": zod.number(),
@@ -171,13 +213,17 @@ export const UpdateVehicleBody = zod.object({
   "year": zod.number().nullish(),
   "color": zod.string().nullish(),
   "vin": zod.string().nullish(),
+  "engineDisplacement": zod.number().nullish(),
+  "registrationDate": zod.string().nullish(),
+  "ownerName": zod.string().nullish(),
+  "ownerAddress": zod.string().nullish(),
   "currentKm": zod.number().nullish(),
   "notes": zod.string().nullish(),
-  "stkValidUntil": zod.coerce.date().nullish(),
+  "stkValidUntil": zod.string().nullish(),
   "lastOilChangeKm": zod.number().nullish(),
-  "lastOilChangeDate": zod.coerce.date().nullish(),
-  "lastBrakesDate": zod.coerce.date().nullish(),
-  "lastTimingDate": zod.coerce.date().nullish()
+  "lastOilChangeDate": zod.string().nullish(),
+  "lastBrakesDate": zod.string().nullish(),
+  "lastTimingDate": zod.string().nullish()
 })
 
 export const UpdateVehicleResponse = zod.object({
@@ -188,13 +234,17 @@ export const UpdateVehicleResponse = zod.object({
   "year": zod.number().nullish(),
   "color": zod.string().nullish(),
   "vin": zod.string().nullish(),
+  "engineDisplacement": zod.number().nullish(),
+  "registrationDate": zod.string().nullish(),
+  "ownerName": zod.string().nullish(),
+  "ownerAddress": zod.string().nullish(),
   "currentKm": zod.number().nullish(),
   "notes": zod.string().nullish(),
-  "stkValidUntil": zod.coerce.date().nullish(),
+  "stkValidUntil": zod.string().nullish(),
   "lastOilChangeKm": zod.number().nullish(),
-  "lastOilChangeDate": zod.coerce.date().nullish(),
-  "lastBrakesDate": zod.coerce.date().nullish(),
-  "lastTimingDate": zod.coerce.date().nullish(),
+  "lastOilChangeDate": zod.string().nullish(),
+  "lastBrakesDate": zod.string().nullish(),
+  "lastTimingDate": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 
@@ -217,7 +267,7 @@ export const ListServiceRecordsParams = zod.object({
 export const ListServiceRecordsResponseItem = zod.object({
   "id": zod.number(),
   "vehicleId": zod.number(),
-  "date": zod.coerce.date(),
+  "date": zod.string(),
   "km": zod.number().nullish(),
   "description": zod.string().nullish(),
   "oilChanged": zod.boolean().optional(),
@@ -239,7 +289,7 @@ export const CreateServiceRecordParams = zod.object({
 })
 
 export const CreateServiceRecordBody = zod.object({
-  "date": zod.coerce.date(),
+  "date": zod.string(),
   "km": zod.number().nullish(),
   "description": zod.string().nullish(),
   "oilChanged": zod.boolean().optional(),
@@ -261,7 +311,7 @@ export const GetServiceRecordParams = zod.object({
 export const GetServiceRecordResponse = zod.object({
   "id": zod.number(),
   "vehicleId": zod.number(),
-  "date": zod.coerce.date(),
+  "date": zod.string(),
   "km": zod.number().nullish(),
   "description": zod.string().nullish(),
   "oilChanged": zod.boolean().optional(),
@@ -286,7 +336,7 @@ export const DeleteServiceRecordParams = zod.object({
  * @summary List all work orders
  */
 export const ListWorkOrdersQueryParams = zod.object({
-  "status": zod.enum(['open', 'in_progress', 'completed']).optional(),
+  "status": zod.enum(['open', 'in_progress', 'waiting_parts', 'needs_return', 'completed']).optional(),
   "search": zod.coerce.string().optional()
 })
 
@@ -294,7 +344,7 @@ export const ListWorkOrdersResponseItem = zod.object({
   "id": zod.number(),
   "vehicleId": zod.number().nullish(),
   "licensePlate": zod.string(),
-  "status": zod.enum(['open', 'in_progress', 'completed']),
+  "status": zod.enum(['open', 'in_progress', 'waiting_parts', 'needs_return', 'completed']),
   "km": zod.number().nullish(),
   "description": zod.string().nullish(),
   "oilChange": zod.boolean().optional(),
@@ -302,6 +352,7 @@ export const ListWorkOrdersResponseItem = zod.object({
   "timing": zod.boolean().optional(),
   "stk": zod.boolean().optional(),
   "otherWork": zod.string().nullish(),
+  "otherServices": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "photos": zod.array(zod.object({
   "id": zod.number(),
@@ -331,6 +382,7 @@ export const CreateWorkOrderBody = zod.object({
   "timing": zod.boolean().optional(),
   "stk": zod.boolean().optional(),
   "otherWork": zod.string().nullish(),
+  "otherServices": zod.string().nullish(),
   "notes": zod.string().nullish()
 })
 
@@ -346,7 +398,7 @@ export const GetWorkOrderResponse = zod.object({
   "id": zod.number(),
   "vehicleId": zod.number().nullish(),
   "licensePlate": zod.string(),
-  "status": zod.enum(['open', 'in_progress', 'completed']),
+  "status": zod.enum(['open', 'in_progress', 'waiting_parts', 'needs_return', 'completed']),
   "km": zod.number().nullish(),
   "description": zod.string().nullish(),
   "oilChange": zod.boolean().optional(),
@@ -354,6 +406,7 @@ export const GetWorkOrderResponse = zod.object({
   "timing": zod.boolean().optional(),
   "stk": zod.boolean().optional(),
   "otherWork": zod.string().nullish(),
+  "otherServices": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "photos": zod.array(zod.object({
   "id": zod.number(),
@@ -375,7 +428,7 @@ export const UpdateWorkOrderParams = zod.object({
 })
 
 export const UpdateWorkOrderBody = zod.object({
-  "status": zod.enum(['open', 'in_progress', 'completed']).optional(),
+  "status": zod.enum(['open', 'in_progress', 'waiting_parts', 'needs_return', 'completed']).optional(),
   "km": zod.number().nullish(),
   "description": zod.string().nullish(),
   "oilChange": zod.boolean().optional(),
@@ -383,6 +436,7 @@ export const UpdateWorkOrderBody = zod.object({
   "timing": zod.boolean().optional(),
   "stk": zod.boolean().optional(),
   "otherWork": zod.string().nullish(),
+  "otherServices": zod.string().nullish(),
   "notes": zod.string().nullish()
 })
 
@@ -390,7 +444,7 @@ export const UpdateWorkOrderResponse = zod.object({
   "id": zod.number(),
   "vehicleId": zod.number().nullish(),
   "licensePlate": zod.string(),
-  "status": zod.enum(['open', 'in_progress', 'completed']),
+  "status": zod.enum(['open', 'in_progress', 'waiting_parts', 'needs_return', 'completed']),
   "km": zod.number().nullish(),
   "description": zod.string().nullish(),
   "oilChange": zod.boolean().optional(),
@@ -398,6 +452,7 @@ export const UpdateWorkOrderResponse = zod.object({
   "timing": zod.boolean().optional(),
   "stk": zod.boolean().optional(),
   "otherWork": zod.string().nullish(),
+  "otherServices": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "photos": zod.array(zod.object({
   "id": zod.number(),
@@ -457,7 +512,7 @@ export const GetDashboardSummaryResponse = zod.object({
   "id": zod.number(),
   "vehicleId": zod.number().nullish(),
   "licensePlate": zod.string(),
-  "status": zod.enum(['open', 'in_progress', 'completed']),
+  "status": zod.enum(['open', 'in_progress', 'waiting_parts', 'needs_return', 'completed']),
   "km": zod.number().nullish(),
   "description": zod.string().nullish(),
   "oilChange": zod.boolean().optional(),
@@ -465,6 +520,7 @@ export const GetDashboardSummaryResponse = zod.object({
   "timing": zod.boolean().optional(),
   "stk": zod.boolean().optional(),
   "otherWork": zod.string().nullish(),
+  "otherServices": zod.string().nullish(),
   "notes": zod.string().nullish(),
   "photos": zod.array(zod.object({
   "id": zod.number(),

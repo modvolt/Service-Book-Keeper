@@ -12,5 +12,7 @@ export type WorkOrderUpdateStatus = typeof WorkOrderUpdateStatus[keyof typeof Wo
 export const WorkOrderUpdateStatus = {
   open: 'open',
   in_progress: 'in_progress',
+  waiting_parts: 'waiting_parts',
+  needs_return: 'needs_return',
   completed: 'completed',
 } as const;

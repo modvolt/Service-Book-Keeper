@@ -9,30 +9,21 @@ import { Plus, Search, Wrench, Image as ImageIcon } from "lucide-react";
 import { Link } from "wouter";
 import { format, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
+import { WorkOrderStatusBadge, WORK_ORDER_STATUSES, type WorkOrderStatus } from "@/lib/work-order-status";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "Všechny" },
-  { value: "open", label: "Nové" },
-  { value: "in_progress", label: "Probíhají" },
-  { value: "completed", label: "Dokončené" },
+  ...WORK_ORDER_STATUSES.map((s) => ({ value: s.value, label: s.label })),
 ];
 
-function StatusBadge({ status }: { status: string }) {
-  switch (status) {
-    case "open": return <Badge variant="secondary">Nová</Badge>;
-    case "in_progress": return <Badge className="bg-amber-500 text-white hover:bg-amber-600">Probíhá</Badge>;
-    case "completed": return <Badge className="bg-emerald-600 text-white hover:bg-emerald-700">Dokončeno</Badge>;
-    default: return <Badge>{status}</Badge>;
-  }
-}
-
-function ServiceIcons({ order }: { order: { oilChange: boolean; brakes: boolean; timing: boolean; stk: boolean; otherWork?: string | null } }) {
+function ServiceIcons({ order }: { order: { oilChange?: boolean; brakes?: boolean; timing?: boolean; stk?: boolean; otherWork?: string | null; otherServices?: string | null } }) {
   const items = [
     order.oilChange && "Olej",
     order.brakes && "Brzdy",
     order.timing && "Rozvody",
     order.stk && "STK",
-    order.otherWork && "Ostatní",
+    order.otherServices && "Ostatní úkony",
+    order.otherWork && "Ostatní práce",
   ].filter(Boolean);
   if (!items.length) return <span className="text-muted-foreground text-xs">—</span>;
   return (
@@ -49,7 +40,7 @@ export default function WorkOrdersList() {
   const [status, setStatus] = useState("all");
 
   const { data: workOrders, isLoading } = useListWorkOrders(
-    status !== "all" ? { status: status as "open" | "in_progress" | "completed" } : {}
+    status !== "all" ? { status: status as WorkOrderStatus } : {}
   );
 
   const filtered = workOrders?.filter(wo =>
@@ -115,7 +106,7 @@ export default function WorkOrdersList() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 flex-wrap mb-1">
                         <span className="font-mono font-bold text-lg tracking-wider uppercase">{wo.licensePlate}</span>
-                        <StatusBadge status={wo.status} />
+                        <WorkOrderStatusBadge status={wo.status} size="sm" />
                         {wo.photos && wo.photos.length > 0 && (
                           <span className="flex items-center gap-1 text-xs text-muted-foreground">
                             <ImageIcon className="h-3 w-3" />{wo.photos.length}

@@ -20,17 +20,25 @@ export interface VehicleInput {
   /** @nullable */
   vin?: string | null;
   /** @nullable */
+  engineDisplacement?: number | null;
+  /** @nullable */
+  registrationDate?: string | null;
+  /** @nullable */
+  ownerName?: string | null;
+  /** @nullable */
+  ownerAddress?: string | null;
+  /** @nullable */
   currentKm?: number | null;
   /** @nullable */
   notes?: string | null;
   /** @nullable */
-  stkValidUntil?: Date | null;
+  stkValidUntil?: string | null;
   /** @nullable */
   lastOilChangeKm?: number | null;
   /** @nullable */
-  lastOilChangeDate?: Date | null;
+  lastOilChangeDate?: string | null;
   /** @nullable */
-  lastBrakesDate?: Date | null;
+  lastBrakesDate?: string | null;
   /** @nullable */
-  lastTimingDate?: Date | null;
+  lastTimingDate?: string | null;
 }

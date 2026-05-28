@@ -9,7 +9,7 @@
 export interface ServiceRecord {
   id: number;
   vehicleId: number;
-  date: Date;
+  date: string;
   /** @nullable */
   km?: number | null;
   /** @nullable */

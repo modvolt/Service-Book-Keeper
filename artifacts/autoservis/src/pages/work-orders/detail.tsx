@@ -15,19 +15,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Camera, Upload, Trash2, Car, CheckCircle2, Clock, AlertCircle, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Camera, Upload, Trash2, CheckCircle2, X, Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
-
-function StatusBadge({ status }: { status: string }) {
-  switch (status) {
-    case "open": return <Badge variant="secondary" className="text-sm px-3 py-1"><AlertCircle className="h-3 w-3 mr-1" />Nová</Badge>;
-    case "in_progress": return <Badge className="bg-amber-500 text-white text-sm px-3 py-1 hover:bg-amber-600"><Clock className="h-3 w-3 mr-1" />Probíhá</Badge>;
-    case "completed": return <Badge className="bg-emerald-600 text-white text-sm px-3 py-1 hover:bg-emerald-700"><CheckCircle2 className="h-3 w-3 mr-1" />Dokončeno</Badge>;
-    default: return <Badge>{status}</Badge>;
-  }
-}
+import { WorkOrderStatusBadge, WORK_ORDER_STATUSES, type WorkOrderStatus } from "@/lib/work-order-status";
 
 export default function WorkOrderDetail() {
   const [, params] = useRoute("/work-orders/:id");
@@ -36,8 +28,8 @@ export default function WorkOrderDetail() {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: order, isLoading } = useGetWorkOrder(id, { query: { enabled: !isNaN(id) } });
-  const { data: photos, isLoading: photosLoading } = useListWorkOrderPhotos(id, { query: { enabled: !isNaN(id) } });
+  const { data: order, isLoading } = useGetWorkOrder(id, { query: { enabled: !isNaN(id) } as any });
+  const { data: photos, isLoading: photosLoading } = useListWorkOrderPhotos(id, { query: { enabled: !isNaN(id) } as any });
   const updateOrder = useUpdateWorkOrder();
   const deletePhoto = useDeletePhoto();
   const deleteOrder = useDeleteWorkOrder();
@@ -46,15 +38,15 @@ export default function WorkOrderDetail() {
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({
     status: "open", km: "", description: "", oilChange: false, brakes: false,
-    timing: false, stk: false, otherWork: "", notes: ""
+    timing: false, stk: false, otherWork: "", otherServices: "", notes: ""
   });
 
   function openEdit() {
     if (!order) return;
     setEditForm({
       status: order.status, km: order.km?.toString() ?? "", description: order.description ?? "",
-      oilChange: order.oilChange, brakes: order.brakes, timing: order.timing, stk: order.stk,
-      otherWork: order.otherWork ?? "", notes: order.notes ?? ""
+      oilChange: order.oilChange ?? false, brakes: order.brakes ?? false, timing: order.timing ?? false, stk: order.stk ?? false,
+      otherWork: order.otherWork ?? "", otherServices: order.otherServices ?? "", notes: order.notes ?? ""
     });
     setEditMode(true);
   }
@@ -63,7 +55,7 @@ export default function WorkOrderDetail() {
     updateOrder.mutate({
       id,
       data: {
-        status: editForm.status as "open" | "in_progress" | "completed",
+        status: editForm.status as WorkOrderStatus,
         km: editForm.km ? parseInt(editForm.km) : null,
         description: editForm.description || null,
         oilChange: editForm.oilChange,
@@ -71,6 +63,7 @@ export default function WorkOrderDetail() {
         timing: editForm.timing,
         stk: editForm.stk,
         otherWork: editForm.otherWork || null,
+        otherServices: editForm.otherServices || null,
         notes: editForm.notes || null,
       }
     }, {
@@ -130,7 +123,7 @@ export default function WorkOrderDetail() {
         <div className="flex-1">
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-3xl font-bold font-mono uppercase tracking-wider">{order.licensePlate}</h1>
-            <StatusBadge status={order.status} />
+            <WorkOrderStatusBadge status={order.status} />
           </div>
           <p className="text-muted-foreground text-sm mt-1">Zakázka #{order.id} — vytvořena {dateStr(order.createdAt)}</p>
         </div>
@@ -175,9 +168,9 @@ export default function WorkOrderDetail() {
                   <Select value={editForm.status} onValueChange={v => setEditForm(f => ({ ...f, status: v }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="open">Nová</SelectItem>
-                      <SelectItem value="in_progress">Probíhá</SelectItem>
-                      <SelectItem value="completed">Dokončeno</SelectItem>
+                      {WORK_ORDER_STATUSES.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
@@ -243,6 +236,10 @@ export default function WorkOrderDetail() {
                   </div>
                 ))}
                 <div className="space-y-1 pt-2">
+                  <Label>Ostatní servisní úkony</Label>
+                  <Textarea placeholder="Další úkony mimo standardní položky..." value={editForm.otherServices} onChange={e => setEditForm(f => ({ ...f, otherServices: e.target.value }))} />
+                </div>
+                <div className="space-y-1">
                   <Label>Ostatní práce</Label>
                   <Input value={editForm.otherWork} onChange={e => setEditForm(f => ({ ...f, otherWork: e.target.value }))} />
                 </div>
@@ -262,6 +259,12 @@ export default function WorkOrderDetail() {
                     <span className={`text-sm ${item.checked ? "font-medium" : "text-muted-foreground line-through"}`}>{item.label}</span>
                   </div>
                 ))}
+                {order.otherServices && (
+                  <div className="pt-2 border-t">
+                    <p className="text-xs text-muted-foreground mb-1">Ostatní servisní úkony</p>
+                    <p className="text-sm whitespace-pre-wrap">{order.otherServices}</p>
+                  </div>
+                )}
                 {order.otherWork && (
                   <div className="pt-2 border-t">
                     <p className="text-xs text-muted-foreground mb-1">Ostatní práce</p>

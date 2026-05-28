@@ -22,6 +22,8 @@ import type {
 import type {
   DashboardSummary,
   HealthStatus,
+  ImportTpInput,
+  ImportTpResult,
   ListVehiclesParams,
   ListWorkOrdersParams,
   Photo,
@@ -278,6 +280,77 @@ export const useCreateVehicle = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateVehicleMutationOptions(options));
+    }
+
+export const getImportVehicleFromTpUrl = () => {
+
+
+
+
+  return `/api/vehicles/import-tp`
+}
+
+/**
+ * @summary Extract vehicle data from a photo of a Czech technical license (TP)
+ */
+export const importVehicleFromTp = async (importTpInput: ImportTpInput, options?: RequestInit): Promise<ImportTpResult> => {
+
+  return customFetch<ImportTpResult>(getImportVehicleFromTpUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      importTpInput,)
+  }
+);}
+
+
+
+
+export const getImportVehicleFromTpMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importVehicleFromTp>>, TError,{data: BodyType<ImportTpInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importVehicleFromTp>>, TError,{data: BodyType<ImportTpInput>}, TContext> => {
+
+const mutationKey = ['importVehicleFromTp'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importVehicleFromTp>>, {data: BodyType<ImportTpInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  importVehicleFromTp(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportVehicleFromTpMutationResult = NonNullable<Awaited<ReturnType<typeof importVehicleFromTp>>>
+    export type ImportVehicleFromTpMutationBody = BodyType<ImportTpInput>
+    export type ImportVehicleFromTpMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Extract vehicle data from a photo of a Czech technical license (TP)
+ */
+export const useImportVehicleFromTp = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importVehicleFromTp>>, TError,{data: BodyType<ImportTpInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof importVehicleFromTp>>,
+        TError,
+        {data: BodyType<ImportTpInput>},
+        TContext
+      > => {
+      return useMutation(getImportVehicleFromTpMutationOptions(options));
     }
 
 export const getGetVehicleByPlateUrl = (plate: string,) => {

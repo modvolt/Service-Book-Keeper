@@ -109,7 +109,7 @@ router.patch("/work-orders/:id", async (req, res): Promise<void> => {
   const updateData: Partial<typeof workOrdersTable.$inferInsert> = { ...parsed.data };
   if (parsed.data.status === "completed") {
     updateData.completedAt = new Date();
-  } else if (parsed.data.status && parsed.data.status !== "completed") {
+  } else if (parsed.data.status) {
     updateData.completedAt = null;
   }
 

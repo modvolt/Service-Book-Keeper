@@ -21,6 +21,14 @@ export interface Vehicle {
   /** @nullable */
   vin?: string | null;
   /** @nullable */
+  engineDisplacement?: number | null;
+  /** @nullable */
+  registrationDate?: string | null;
+  /** @nullable */
+  ownerName?: string | null;
+  /** @nullable */
+  ownerAddress?: string | null;
+  /** @nullable */
   currentKm?: number | null;
   /** @nullable */
   notes?: string | null;
@@ -62,6 +70,8 @@ export type WorkOrderStatus = typeof WorkOrderStatus[keyof typeof WorkOrderStatu
 export const WorkOrderStatus = {
   open: 'open',
   in_progress: 'in_progress',
+  waiting_parts: 'waiting_parts',
+  needs_return: 'needs_return',
   completed: 'completed',
 } as const;
 
@@ -90,6 +100,8 @@ export interface WorkOrder {
   /** @nullable */
   otherWork?: string | null;
   /** @nullable */
+  otherServices?: string | null;
+  /** @nullable */
   notes?: string | null;
   photos?: Photo[];
   createdAt: string;
@@ -108,6 +120,14 @@ export interface VehicleDetail {
   color?: string | null;
   /** @nullable */
   vin?: string | null;
+  /** @nullable */
+  engineDisplacement?: number | null;
+  /** @nullable */
+  registrationDate?: string | null;
+  /** @nullable */
+  ownerName?: string | null;
+  /** @nullable */
+  ownerAddress?: string | null;
   /** @nullable */
   currentKm?: number | null;
   /** @nullable */
@@ -141,6 +161,14 @@ export interface VehicleInput {
   /** @nullable */
   vin?: string | null;
   /** @nullable */
+  engineDisplacement?: number | null;
+  /** @nullable */
+  registrationDate?: string | null;
+  /** @nullable */
+  ownerName?: string | null;
+  /** @nullable */
+  ownerAddress?: string | null;
+  /** @nullable */
   currentKm?: number | null;
   /** @nullable */
   notes?: string | null;
@@ -166,6 +194,14 @@ export interface VehicleUpdate {
   color?: string | null;
   /** @nullable */
   vin?: string | null;
+  /** @nullable */
+  engineDisplacement?: number | null;
+  /** @nullable */
+  registrationDate?: string | null;
+  /** @nullable */
+  ownerName?: string | null;
+  /** @nullable */
+  ownerAddress?: string | null;
   /** @nullable */
   currentKm?: number | null;
   /** @nullable */
@@ -212,6 +248,8 @@ export interface WorkOrderInput {
   /** @nullable */
   otherWork?: string | null;
   /** @nullable */
+  otherServices?: string | null;
+  /** @nullable */
   notes?: string | null;
 }
 
@@ -221,6 +259,8 @@ export type WorkOrderUpdateStatus = typeof WorkOrderUpdateStatus[keyof typeof Wo
 export const WorkOrderUpdateStatus = {
   open: 'open',
   in_progress: 'in_progress',
+  waiting_parts: 'waiting_parts',
+  needs_return: 'needs_return',
   completed: 'completed',
 } as const;
 
@@ -237,7 +277,40 @@ export interface WorkOrderUpdate {
   /** @nullable */
   otherWork?: string | null;
   /** @nullable */
+  otherServices?: string | null;
+  /** @nullable */
   notes?: string | null;
+}
+
+export interface ImportTpInput {
+  /**
+     * @minItems 1
+     * @maxItems 4
+     */
+  images: string[];
+}
+
+export interface ImportTpResult {
+  /** @nullable */
+  licensePlate?: string | null;
+  /** @nullable */
+  make?: string | null;
+  /** @nullable */
+  model?: string | null;
+  /** @nullable */
+  year?: number | null;
+  /** @nullable */
+  color?: string | null;
+  /** @nullable */
+  vin?: string | null;
+  /** @nullable */
+  engineDisplacement?: number | null;
+  /** @nullable */
+  registrationDate?: string | null;
+  /** @nullable */
+  ownerName?: string | null;
+  /** @nullable */
+  ownerAddress?: string | null;
 }
 
 export interface DashboardSummary {
@@ -264,6 +337,8 @@ export type ListWorkOrdersStatus = typeof ListWorkOrdersStatus[keyof typeof List
 export const ListWorkOrdersStatus = {
   open: 'open',
   in_progress: 'in_progress',
+  waiting_parts: 'waiting_parts',
+  needs_return: 'needs_return',
   completed: 'completed',
 } as const;
 

@@ -7,7 +7,7 @@
  */
 
 export interface ServiceRecordInput {
-  date: Date;
+  date: string;
   /** @nullable */
   km?: number | null;
   /** @nullable */

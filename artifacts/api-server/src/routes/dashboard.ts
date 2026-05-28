@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, gte, lte, and, count, sql } from "drizzle-orm";
+import { eq, ne, gte, lte, and, count, sql } from "drizzle-orm";
 import { db, vehiclesTable, workOrdersTable } from "@workspace/db";
 import { photosTable } from "@workspace/db";
 
@@ -16,7 +16,7 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
   const [openResult] = await db
     .select({ count: count() })
     .from(workOrdersTable)
-    .where(eq(workOrdersTable.status, "open"));
+    .where(ne(workOrdersTable.status, "completed"));
   const [inProgressResult] = await db
     .select({ count: count() })
     .from(workOrdersTable)

@@ -12,5 +12,7 @@ export type ListWorkOrdersStatus = typeof ListWorkOrdersStatus[keyof typeof List
 export const ListWorkOrdersStatus = {
   open: 'open',
   in_progress: 'in_progress',
+  waiting_parts: 'waiting_parts',
+  needs_return: 'needs_return',
   completed: 'completed',
 } as const;
