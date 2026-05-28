@@ -340,6 +340,27 @@ paths:
         "204":
           description: Deleted
 
+  /vehicles/{id}/recompute-status:
+    post:
+      operationId: recomputeVehicleStatus
+      tags: [vehicles]
+      summary: Recompute current km and service status from full service history
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated vehicle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vehicle"
+        "404":
+          description: Not found
+
   /vehicles/{id}/service-records:
     get:
       operationId: listServiceRecords

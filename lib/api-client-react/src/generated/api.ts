@@ -1341,6 +1341,76 @@ export const useDeleteVehicle = <TError = ErrorType<unknown>,
       return useMutation(getDeleteVehicleMutationOptions(options));
     }
 
+export const getRecomputeVehicleStatusUrl = (id: number,) => {
+
+
+
+
+  return `/api/vehicles/${id}/recompute-status`
+}
+
+/**
+ * @summary Recompute current km and service status from full service history
+ */
+export const recomputeVehicleStatus = async (id: number, options?: RequestInit): Promise<Vehicle> => {
+
+  return customFetch<Vehicle>(getRecomputeVehicleStatusUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getRecomputeVehicleStatusMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recomputeVehicleStatus>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recomputeVehicleStatus>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['recomputeVehicleStatus'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recomputeVehicleStatus>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  recomputeVehicleStatus(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecomputeVehicleStatusMutationResult = NonNullable<Awaited<ReturnType<typeof recomputeVehicleStatus>>>
+
+    export type RecomputeVehicleStatusMutationError = ErrorType<void>
+
+    /**
+ * @summary Recompute current km and service status from full service history
+ */
+export const useRecomputeVehicleStatus = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recomputeVehicleStatus>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recomputeVehicleStatus>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRecomputeVehicleStatusMutationOptions(options));
+    }
+
 export const getListServiceRecordsUrl = (id: number,) => {
 
 

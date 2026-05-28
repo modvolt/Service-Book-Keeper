@@ -544,6 +544,53 @@ export const DeleteVehicleParams = zod.object({
 
 
 /**
+ * @summary Recompute current km and service status from full service history
+ */
+export const RecomputeVehicleStatusParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RecomputeVehicleStatusResponse = zod.object({
+  "id": zod.number(),
+  "licensePlate": zod.string(),
+  "make": zod.string(),
+  "model": zod.string(),
+  "year": zod.number().nullish(),
+  "color": zod.string().nullish(),
+  "vin": zod.string().nullish(),
+  "engineDisplacement": zod.number().nullish(),
+  "registrationDate": zod.string().nullish(),
+  "transmission": zod.union([zod.literal('manual'),zod.literal('automatic'),zod.literal(null)]).nullish(),
+  "ownerType": zod.enum(['private', 'company']),
+  "ownerName": zod.string().nullish(),
+  "ownerAddress": zod.string().nullish(),
+  "ownerIco": zod.string().nullish(),
+  "ownerDic": zod.string().nullish(),
+  "ownerPhone": zod.string().nullish(),
+  "ownerEmail": zod.string().nullish(),
+  "currentKm": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "stkValidUntil": zod.string().nullish(),
+  "lastOilChangeKm": zod.number().nullish(),
+  "lastOilChangeDate": zod.string().nullish(),
+  "lastBrakesDate": zod.string().nullish(),
+  "lastTimingDate": zod.string().nullish(),
+  "lastTransmissionOilDate": zod.string().nullish(),
+  "lastTransmissionOilKm": zod.number().nullish(),
+  "lastBrakeFluidDate": zod.string().nullish(),
+  "oilChangeIntervalKm": zod.number().nullish(),
+  "oilChangeIntervalMonths": zod.number().nullish(),
+  "transmissionOilIntervalKm": zod.number().nullish(),
+  "transmissionOilIntervalMonths": zod.number().nullish(),
+  "brakesIntervalMonths": zod.number().nullish(),
+  "timingIntervalKm": zod.number().nullish(),
+  "timingIntervalMonths": zod.number().nullish(),
+  "brakeFluidIntervalMonths": zod.number().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
  * @summary List service records for a vehicle
  */
 export const ListServiceRecordsParams = zod.object({

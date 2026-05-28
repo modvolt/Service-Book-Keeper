@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useRoute, Link, useLocation } from "wouter";
 import { LicensePlate } from "@/components/license-plate";
-import { useGetVehicle, useUpdateVehicle, useDeleteVehicle, useCreateServiceRecord, useDeleteServiceRecord, useListVehicleMakes, useListVehicleModels, useGetSettings, getGetVehicleQueryKey, getListServiceRecordsQueryKey, getListVehiclesQueryKey } from "@workspace/api-client-react";
+import { useGetVehicle, useUpdateVehicle, useDeleteVehicle, useCreateServiceRecord, useDeleteServiceRecord, useListVehicleMakes, useListVehicleModels, useGetSettings, useRecomputeVehicleStatus, getGetVehicleQueryKey, getListServiceRecordsQueryKey, getListVehiclesQueryKey } from "@workspace/api-client-react";
 import { VehicleHistoryExportDialog } from "@/components/vehicle-history-export-dialog";
 import { AutocompleteInput } from "@/components/autocomplete-input";
 import { AresButton } from "@/components/ares-button";
@@ -16,11 +16,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Car, Wrench, Plus, Trash2, ClipboardList, Edit, User, FileDown } from "lucide-react";
+import { ArrowLeft, Car, Wrench, Plus, Trash2, ClipboardList, Edit, User, FileDown, RefreshCw } from "lucide-react";
 import { WorkOrderStatusBadge } from "@/lib/work-order-status";
 import { format, differenceInDays, parseISO, isValid } from "date-fns";
 import { cs } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { computeServiceStatus, type ServiceStatus } from "@/lib/service-status";
 
 function StkBadge({ date }: { date?: string | null }) {
@@ -108,6 +109,7 @@ export default function VehicleDetail() {
 
   const updateVehicle = useUpdateVehicle();
   const deleteVehicle = useDeleteVehicle();
+  const recompute = useRecomputeVehicleStatus();
   const createRecord = useCreateServiceRecord();
   const deleteRecord = useDeleteServiceRecord();
 
@@ -334,7 +336,28 @@ export default function VehicleDetail() {
       <div className="grid gap-4 md:grid-cols-2">
         {/* Basic info */}
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2 text-xl"><Car className="h-5 w-5" />Základní informace</CardTitle></CardHeader>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="flex items-center gap-2 text-xl"><Car className="h-5 w-5" />Základní informace</CardTitle>
+              <Button
+                type="button" size="sm" variant="ghost"
+                title="Přepočítat km a stav servisu z celé historie"
+                onClick={() => {
+                  recompute.mutate({ id }, {
+                    onSuccess: () => {
+                      queryClient.invalidateQueries({ queryKey: getGetVehicleQueryKey(id) });
+                      queryClient.invalidateQueries({ queryKey: getListVehiclesQueryKey() });
+                      toast({ title: "Údaje obnoveny", description: "Najeté km a stav servisu byly přepočítány z historie." });
+                    },
+                    onError: () => toast({ title: "Obnovení selhalo", variant: "destructive" }),
+                  });
+                }}
+                disabled={recompute.isPending}
+              >
+                <RefreshCw className={cn("h-4 w-4", recompute.isPending && "animate-spin")} />
+              </Button>
+            </div>
+          </CardHeader>
           <CardContent className="space-y-4 text-base">
             <div className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 items-center">
               <span className="text-muted-foreground">SPZ</span><div><LicensePlate plate={vehicle.licensePlate} size="md" /></div>

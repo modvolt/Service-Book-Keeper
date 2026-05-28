@@ -11,6 +11,7 @@ import {
   DeleteVehicleParams,
 } from "@workspace/api-zod";
 import { normalizeSpz } from "../lib/spz";
+import { recomputeVehicleServiceStatus } from "../lib/vehicleStatus";
 
 const router: IRouter = Router();
 
@@ -158,6 +159,19 @@ router.patch("/vehicles/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  res.json(vehicle);
+});
+
+router.post("/vehicles/:id/recompute-status", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const [existing] = await db.select().from(vehiclesTable).where(eq(vehiclesTable.id, id));
+  if (!existing) { res.status(404).json({ error: "Vozidlo nenalezeno" }); return; }
+
+  await recomputeVehicleServiceStatus(id);
+  const [vehicle] = await db.select().from(vehiclesTable).where(eq(vehiclesTable.id, id));
   res.json(vehicle);
 });
 
