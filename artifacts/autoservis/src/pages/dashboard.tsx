@@ -1,15 +1,33 @@
-import { useGetDashboardSummary } from "@workspace/api-client-react";
+import { useMemo, useState } from "react";
+import { useGetDashboardSummary, useListVehicles } from "@workspace/api-client-react";
 import { LicensePlate } from "@/components/license-plate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Car, ClipboardList, Wrench, AlertTriangle } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Car, ClipboardList, Wrench, AlertTriangle, Search, User, X } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
-import { Badge } from "@/components/ui/badge";
 import { WorkOrderStatusBadge } from "@/lib/work-order-status";
 
 export default function Dashboard() {
   const { data: summary, isLoading, isError } = useGetDashboardSummary();
+  const [search, setSearch] = useState("");
+  const trimmed = search.trim();
+  const { data: searchResults = [], isFetching: searching } = useListVehicles(
+    trimmed.length >= 2 ? { search: trimmed } : {},
+    { query: { enabled: trimmed.length >= 2 } as any },
+  );
+
+  const grouped = useMemo(() => {
+    if (trimmed.length < 2) return null;
+    const q = trimmed.toLowerCase();
+    const byPlate = searchResults.filter((v) => v.licensePlate.toLowerCase().includes(q));
+    const byOwner = searchResults.filter(
+      (v) => !byPlate.includes(v) && (v.ownerName?.toLowerCase().includes(q) ?? false),
+    );
+    const other = searchResults.filter((v) => !byPlate.includes(v) && !byOwner.includes(v));
+    return { byPlate, byOwner, other };
+  }, [searchResults, trimmed]);
 
   if (isLoading) {
     return <div className="space-y-4">
@@ -32,6 +50,94 @@ export default function Dashboard() {
         <h1 className="text-3xl font-bold tracking-tight text-foreground">Přehled</h1>
         <p className="text-muted-foreground mt-1">Stav dílny a aktuální práce.</p>
       </div>
+
+      <Card>
+        <CardContent className="p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Rychlé hledání — SPZ vozidla nebo jméno zákazníka…"
+              className="pl-9 pr-9 h-11 text-base"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="absolute right-2 top-2 p-1 rounded-md hover:bg-accent"
+                aria-label="Smazat"
+              >
+                <X className="h-4 w-4 text-muted-foreground" />
+              </button>
+            )}
+          </div>
+          {grouped && (
+            <div className="mt-3 border rounded-md max-h-80 overflow-auto">
+              {searching && searchResults.length === 0 ? (
+                <div className="p-4 text-sm text-muted-foreground">Hledám…</div>
+              ) : searchResults.length === 0 ? (
+                <div className="p-4 text-sm text-muted-foreground">Nic nenalezeno pro „{trimmed}".</div>
+              ) : (
+                <>
+                  {grouped.byPlate.length > 0 && (
+                    <div>
+                      <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground bg-muted/50 flex items-center gap-1.5">
+                        <Car className="h-3 w-3" /> Vozidla podle SPZ
+                      </div>
+                      {grouped.byPlate.map((v) => (
+                        <Link key={v.id} href={`/vehicles/${v.id}`}>
+                          <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-accent cursor-pointer border-t">
+                            <LicensePlate plate={v.licensePlate} size="sm" />
+                            <span className="flex-1">
+                              <span className="font-medium">{v.make} {v.model}</span>
+                              {v.ownerName && <span className="text-muted-foreground"> · {v.ownerName}</span>}
+                            </span>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                  {grouped.byOwner.length > 0 && (
+                    <div>
+                      <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground bg-muted/50 flex items-center gap-1.5 border-t">
+                        <User className="h-3 w-3" /> Zákazníci
+                      </div>
+                      {grouped.byOwner.map((v) => (
+                        <Link key={v.id} href={`/vehicles/${v.id}`}>
+                          <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-accent cursor-pointer border-t">
+                            <LicensePlate plate={v.licensePlate} size="sm" />
+                            <span className="flex-1">
+                              <span className="font-medium">{v.ownerName}</span>
+                              <span className="text-muted-foreground"> · {v.make} {v.model}</span>
+                            </span>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                  {grouped.other.length > 0 && (
+                    <div>
+                      <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground bg-muted/50 border-t">Další</div>
+                      {grouped.other.map((v) => (
+                        <Link key={v.id} href={`/vehicles/${v.id}`}>
+                          <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-accent cursor-pointer border-t">
+                            <LicensePlate plate={v.licensePlate} size="sm" />
+                            <span className="flex-1">
+                              <span className="font-medium">{v.make} {v.model}</span>
+                              {v.ownerName && <span className="text-muted-foreground"> · {v.ownerName}</span>}
+                            </span>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
