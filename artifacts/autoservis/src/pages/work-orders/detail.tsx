@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { useRoute, Link } from "wouter";
 import { LicensePlate } from "@/components/license-plate";
 import {
@@ -19,10 +19,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, Camera, Upload, Trash2, CheckCircle2, X, Loader2, Plus, Minus, Package, Sparkles, FileText, Pencil, Check, FileDown } from "lucide-react";
+import { ArrowLeft, Camera, Upload, Trash2, CheckCircle2, X, Loader2, Plus, Minus, Package, Sparkles, FileText, Pencil, Check, FileDown, ClipboardPaste } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { WorkOrderStatusBadge, WORK_ORDER_STATUSES, type WorkOrderStatus } from "@/lib/work-order-status";
 import { DEFAULT_HOURLY_RATE, computeLaborPrice } from "@/lib/labor";
 
@@ -122,7 +123,36 @@ export default function WorkOrderDetail() {
   // Invoice import dialog
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [invoiceFiles, setInvoiceFiles] = useState<File[]>([]);
+  const [invoiceDragActive, setInvoiceDragActive] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+
+  useEffect(() => {
+    if (!invoiceOpen) return;
+    function onPaste(e: ClipboardEvent) {
+      if (!e.clipboardData) return;
+      const items = Array.from(e.clipboardData.items);
+      const imageFiles: File[] = [];
+      for (const it of items) {
+        if (it.kind === "file" && it.type.startsWith("image/")) {
+          const f = it.getAsFile();
+          if (f) {
+            const ext = f.type.split("/")[1] ?? "png";
+            const named = f.name && f.name !== "image.png"
+              ? f
+              : new File([f], `faktura-${Date.now()}.${ext}`, { type: f.type });
+            imageFiles.push(named);
+          }
+        }
+      }
+      if (imageFiles.length > 0) {
+        e.preventDefault();
+        setInvoiceFiles((prev) => [...prev, ...imageFiles].slice(0, 4));
+        toast({ title: "Snímek vložen", description: `Přidáno ${imageFiles.length} ze schránky.` });
+      }
+    }
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [invoiceOpen, toast]);
 
   const matchedCatalog = useMemo(() => {
     const q = matName.trim().toLowerCase();
@@ -287,10 +317,20 @@ export default function WorkOrderDetail() {
     });
   }
 
+  function addInvoiceFiles(list: File[]) {
+    const imgs = list.filter((f) => f.type.startsWith("image/"));
+    if (imgs.length === 0) return;
+    setInvoiceFiles((prev) => [...prev, ...imgs].slice(0, 4));
+  }
   function handleInvoiceFiles(files: FileList | null) {
     if (!files) return;
-    const list = Array.from(files).slice(0, 4 - invoiceFiles.length);
-    setInvoiceFiles((prev) => [...prev, ...list].slice(0, 4));
+    addInvoiceFiles(Array.from(files));
+  }
+  function onInvoiceDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setInvoiceDragActive(false);
+    const dropped = e.dataTransfer?.files;
+    if (dropped && dropped.length > 0) addInvoiceFiles(Array.from(dropped));
   }
 
   async function handleRunInvoiceImport() {
@@ -886,6 +926,25 @@ export default function WorkOrderDetail() {
               ref={invoiceInputRef} type="file" accept="image/*" multiple className="hidden"
               onChange={(e) => { handleInvoiceFiles(e.target.files); e.target.value = ""; }}
             />
+
+            <div
+              onDragOver={(e) => { e.preventDefault(); if (invoiceFiles.length < 4 && !importInvoice.isPending) setInvoiceDragActive(true); }}
+              onDragLeave={() => setInvoiceDragActive(false)}
+              onDrop={onInvoiceDrop}
+              className={cn(
+                "border-2 border-dashed rounded-lg p-6 text-center transition-colors",
+                invoiceDragActive ? "border-primary bg-primary/5" : "border-muted-foreground/30 bg-muted/20",
+                (invoiceFiles.length >= 4 || importInvoice.isPending) && "opacity-60",
+              )}
+            >
+              <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+              <p className="text-sm font-medium">Přetáhněte obrázky sem</p>
+              <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-1">
+                <ClipboardPaste className="h-3 w-3" />
+                nebo vložte snímek klávesovou zkratkou <kbd className="px-1.5 py-0.5 bg-muted rounded border text-[10px] font-mono">Ctrl</kbd> + <kbd className="px-1.5 py-0.5 bg-muted rounded border text-[10px] font-mono">V</kbd>
+              </p>
+            </div>
+
             <div className="flex gap-2">
               <Button
                 type="button" variant="outline" className="flex-1"
