@@ -45,7 +45,7 @@ export default function NewVehicle() {
     engineDisplacement: "", registrationDate: "",
     transmission: "manual" as "manual" | "automatic",
     ownerType: "private" as "private" | "company",
-    ownerName: "", ownerAddress: "", ownerIco: "", ownerDic: "",
+    ownerName: "", ownerAddress: "", ownerIco: "", ownerDic: "", ownerPhone: "", ownerEmail: "",
     currentKm: "", notes: "", stkValidUntil: "",
     lastOilChangeKm: "", lastOilChangeDate: "", lastBrakesDate: "", lastTimingDate: "",
     lastTransmissionOilDate: "", lastTransmissionOilKm: "",
@@ -97,6 +97,8 @@ export default function NewVehicle() {
         ownerAddress: form.ownerAddress || null,
         ownerIco: isCompany ? (form.ownerIco || null) : null,
         ownerDic: isCompany ? (form.ownerDic || null) : null,
+        ownerPhone: form.ownerPhone || null,
+        ownerEmail: form.ownerEmail || null,
         currentKm: toInt(form.currentKm),
         notes: form.notes || null,
         stkValidUntil: form.stkValidUntil || null,
@@ -212,6 +214,24 @@ export default function NewVehicle() {
                     value={form.ownerAddress}
                     onChange={e => setForm(f => ({ ...f, ownerAddress: e.target.value }))}
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label>Telefon</Label>
+                    <Input
+                      type="tel" placeholder="+420 777 123 456"
+                      value={form.ownerPhone}
+                      onChange={e => setForm(f => ({ ...f, ownerPhone: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>E-mail</Label>
+                    <Input
+                      type="email" placeholder="jan.novak@email.cz"
+                      value={form.ownerEmail}
+                      onChange={e => setForm(f => ({ ...f, ownerEmail: e.target.value }))}
+                    />
+                  </div>
                 </div>
                 {isCompany && (
                   <div className="space-y-3">

@@ -738,6 +738,10 @@ components:
           type: ["string", "null"]
         ownerDic:
           type: ["string", "null"]
+        ownerPhone:
+          type: ["string", "null"]
+        ownerEmail:
+          type: ["string", "null"]
         currentKm:
           type: ["integer", "null"]
         notes:
@@ -809,6 +813,10 @@ components:
         ownerIco:
           type: ["string", "null"]
         ownerDic:
+          type: ["string", "null"]
+        ownerPhone:
+          type: ["string", "null"]
+        ownerEmail:
           type: ["string", "null"]
         currentKm:
           type: ["integer", "null"]
@@ -891,6 +899,10 @@ components:
           type: ["string", "null"]
         ownerDic:
           type: ["string", "null"]
+        ownerPhone:
+          type: ["string", "null"]
+        ownerEmail:
+          type: ["string", "null"]
         currentKm:
           type: ["integer", "null"]
         notes:
@@ -956,6 +968,10 @@ components:
         ownerIco:
           type: ["string", "null"]
         ownerDic:
+          type: ["string", "null"]
+        ownerPhone:
+          type: ["string", "null"]
+        ownerEmail:
           type: ["string", "null"]
         currentKm:
           type: ["integer", "null"]

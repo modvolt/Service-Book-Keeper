@@ -55,6 +55,10 @@ export interface Vehicle {
   /** @nullable */
   ownerDic?: string | null;
   /** @nullable */
+  ownerPhone?: string | null;
+  /** @nullable */
+  ownerEmail?: string | null;
+  /** @nullable */
   currentKm?: number | null;
   /** @nullable */
   notes?: string | null;
@@ -216,6 +220,10 @@ export interface VehicleDetail {
   /** @nullable */
   ownerDic?: string | null;
   /** @nullable */
+  ownerPhone?: string | null;
+  /** @nullable */
+  ownerEmail?: string | null;
+  /** @nullable */
   currentKm?: number | null;
   /** @nullable */
   notes?: string | null;
@@ -304,6 +312,10 @@ export interface VehicleInput {
   /** @nullable */
   ownerDic?: string | null;
   /** @nullable */
+  ownerPhone?: string | null;
+  /** @nullable */
+  ownerEmail?: string | null;
+  /** @nullable */
   currentKm?: number | null;
   /** @nullable */
   notes?: string | null;
@@ -385,6 +397,10 @@ export interface VehicleUpdate {
   ownerIco?: string | null;
   /** @nullable */
   ownerDic?: string | null;
+  /** @nullable */
+  ownerPhone?: string | null;
+  /** @nullable */
+  ownerEmail?: string | null;
   /** @nullable */
   currentKm?: number | null;
   /** @nullable */

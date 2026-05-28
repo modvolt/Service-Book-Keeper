@@ -38,6 +38,10 @@ export interface VehicleInput {
   /** @nullable */
   ownerDic?: string | null;
   /** @nullable */
+  ownerPhone?: string | null;
+  /** @nullable */
+  ownerEmail?: string | null;
+  /** @nullable */
   currentKm?: number | null;
   /** @nullable */
   notes?: string | null;

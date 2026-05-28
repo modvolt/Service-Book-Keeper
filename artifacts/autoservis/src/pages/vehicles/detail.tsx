@@ -115,7 +115,7 @@ export default function VehicleDetail() {
     engineDisplacement: "", registrationDate: "",
     transmission: "manual" as "manual" | "automatic",
     ownerType: "private" as "private" | "company",
-    ownerName: "", ownerAddress: "", ownerIco: "", ownerDic: "",
+    ownerName: "", ownerAddress: "", ownerIco: "", ownerDic: "", ownerPhone: "", ownerEmail: "",
     lastOilChangeKm: "", lastOilChangeDate: "", lastBrakesDate: "", lastTimingDate: "",
     lastTransmissionOilDate: "", lastTransmissionOilKm: "",
     oilChangeIntervalKm: "", oilChangeIntervalMonths: "",
@@ -153,6 +153,8 @@ export default function VehicleDetail() {
       ownerAddress: vehicle.ownerAddress ?? "",
       ownerIco: vehicle.ownerIco ?? "",
       ownerDic: vehicle.ownerDic ?? "",
+      ownerPhone: vehicle.ownerPhone ?? "",
+      ownerEmail: vehicle.ownerEmail ?? "",
       lastOilChangeKm: vehicle.lastOilChangeKm?.toString() ?? "",
       lastOilChangeDate: vehicle.lastOilChangeDate ?? "", lastBrakesDate: vehicle.lastBrakesDate ?? "",
       lastTimingDate: vehicle.lastTimingDate ?? "",
@@ -189,6 +191,8 @@ export default function VehicleDetail() {
         ownerAddress: editForm.ownerAddress || null,
         ownerIco: editIsCompany ? (editForm.ownerIco || null) : null,
         ownerDic: editIsCompany ? (editForm.ownerDic || null) : null,
+        ownerPhone: editForm.ownerPhone || null,
+        ownerEmail: editForm.ownerEmail || null,
         lastOilChangeKm: toInt(editForm.lastOilChangeKm),
         stkValidUntil: editForm.stkValidUntil || null,
         lastOilChangeDate: editForm.lastOilChangeDate || null,
@@ -334,7 +338,7 @@ export default function VehicleDetail() {
           </CardContent>
         </Card>
 
-        {(vehicle.ownerName || vehicle.ownerAddress || vehicle.ownerIco || vehicle.ownerDic) && (
+        {(vehicle.ownerName || vehicle.ownerAddress || vehicle.ownerIco || vehicle.ownerDic || vehicle.ownerPhone || vehicle.ownerEmail) && (
           <Card>
             <CardHeader><CardTitle className="flex items-center gap-2"><User className="h-4 w-4" />{isCompany ? "Firma" : "Vlastník"}</CardTitle></CardHeader>
             <CardContent className="space-y-2 text-sm">
@@ -342,6 +346,8 @@ export default function VehicleDetail() {
               {vehicle.ownerAddress && <div><span className="text-muted-foreground block text-xs">{isCompany ? "Sídlo" : "Adresa"}</span><span>{vehicle.ownerAddress}</span></div>}
               {isCompany && vehicle.ownerIco && <div><span className="text-muted-foreground block text-xs">IČO</span><span className="font-mono">{vehicle.ownerIco}</span></div>}
               {isCompany && vehicle.ownerDic && <div><span className="text-muted-foreground block text-xs">DIČ</span><span className="font-mono">{vehicle.ownerDic}</span></div>}
+              {vehicle.ownerPhone && <div><span className="text-muted-foreground block text-xs">Telefon</span><a className="font-medium hover:text-primary" href={`tel:${vehicle.ownerPhone}`}>{vehicle.ownerPhone}</a></div>}
+              {vehicle.ownerEmail && <div><span className="text-muted-foreground block text-xs">E-mail</span><a className="font-medium hover:text-primary break-all" href={`mailto:${vehicle.ownerEmail}`}>{vehicle.ownerEmail}</a></div>}
             </CardContent>
           </Card>
         )}
@@ -541,6 +547,10 @@ export default function VehicleDetail() {
               <div className="grid grid-cols-1 gap-3">
                 <div className="space-y-1"><Label>{editForm.ownerType === "company" ? "Název firmy" : "Jméno"}</Label><Input value={editForm.ownerName} onChange={e => setEditForm(f => ({ ...f, ownerName: e.target.value }))} /></div>
                 <div className="space-y-1"><Label>{editForm.ownerType === "company" ? "Sídlo" : "Adresa"}</Label><Input value={editForm.ownerAddress} onChange={e => setEditForm(f => ({ ...f, ownerAddress: e.target.value }))} /></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1"><Label>Telefon</Label><Input type="tel" placeholder="+420 777 123 456" value={editForm.ownerPhone} onChange={e => setEditForm(f => ({ ...f, ownerPhone: e.target.value }))} /></div>
+                  <div className="space-y-1"><Label>E-mail</Label><Input type="email" placeholder="jan.novak@email.cz" value={editForm.ownerEmail} onChange={e => setEditForm(f => ({ ...f, ownerEmail: e.target.value }))} /></div>
+                </div>
                 {editForm.ownerType === "company" && (
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">

@@ -18,6 +18,8 @@ export const vehiclesTable = pgTable("vehicles", {
   ownerAddress: text("owner_address"),
   ownerIco: text("owner_ico"),
   ownerDic: text("owner_dic"),
+  ownerPhone: text("owner_phone"),
+  ownerEmail: text("owner_email"),
   currentKm: integer("current_km"),
   notes: text("notes"),
   stkValidUntil: date("stk_valid_until", { mode: "string" }),
