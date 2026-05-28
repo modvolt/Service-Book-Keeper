@@ -133,6 +133,8 @@ function buildHtml(opts: {
     .btn.secondary { background: white; color: #1f2937; border: 1px solid #d1d5db; }
 
     .brand { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; padding-bottom: 12px; border-bottom: 3px solid #b91c1c; margin-bottom: 16px; }
+    .brand .shop { display: flex; align-items: center; gap: 14px; }
+    .brand .logo { max-height: 56px; max-width: 140px; object-fit: contain; display: block; }
     .brand .name { font-size: 18pt; font-weight: 700; color: #0f172a; letter-spacing: -0.01em; margin-bottom: 4px; }
     .brand .lines { font-size: 9pt; color: #6b7280; line-height: 1.55; }
     .brand .badge { text-align: right; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.08em; color: #b91c1c; font-weight: 600; padding-top: 4px; }
@@ -203,15 +205,19 @@ function buildHtml(opts: {
     .lp-lg .lp-num { padding:0 12pt; font-size:18pt; }
   `;
 
+  const logoImg = settings?.logoUrl ? `<img class="logo" src="/api${esc(settings.logoUrl)}" alt="" />` : "";
   const shopHeader = options.shopHeader && settings ? `
-    <div>
-      ${settings.companyName ? `<div class="name">${esc(settings.companyName)}</div>` : ""}
-      <div class="lines">
-        ${settings.companyAddress ? `${esc(settings.companyAddress)}<br/>` : ""}
-        ${[settings.companyPhone, settings.companyEmail].filter(Boolean).map((v) => esc(v as string)).join(" · ")}
-        ${(settings.companyIco || settings.companyDic) ? `<br/>${[settings.companyIco ? `IČO: ${esc(settings.companyIco)}` : null, settings.companyDic ? `DIČ: ${esc(settings.companyDic)}` : null].filter(Boolean).join(" · ")}` : ""}
+    <div class="shop">
+      ${logoImg}
+      <div>
+        ${settings.companyName ? `<div class="name">${esc(settings.companyName)}</div>` : ""}
+        <div class="lines">
+          ${settings.companyAddress ? `${esc(settings.companyAddress)}<br/>` : ""}
+          ${[settings.companyPhone, settings.companyEmail].filter(Boolean).map((v) => esc(v as string)).join(" · ")}
+          ${(settings.companyIco || settings.companyDic) ? `<br/>${[settings.companyIco ? `IČO: ${esc(settings.companyIco)}` : null, settings.companyDic ? `DIČ: ${esc(settings.companyDic)}` : null].filter(Boolean).join(" · ")}` : ""}
+        </div>
       </div>
-    </div>` : `<div><div class="name">AutoServis</div></div>`;
+    </div>` : `<div class="shop">${logoImg}<div><div class="name">AutoServis</div></div></div>`;
 
   const vehicleBlock = options.vehicleInfo && vehicle ? `
     <div class="info-card">

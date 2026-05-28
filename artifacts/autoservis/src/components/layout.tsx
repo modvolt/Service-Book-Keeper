@@ -68,13 +68,19 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const logoUrl = settings?.logoUrl ? `/api${settings.logoUrl}` : null;
 
   const Brand = ({ large }: { large?: boolean }) => (
-    <div className="flex items-center gap-2 font-semibold">
+    <div className="flex items-center gap-2 font-semibold min-w-0">
       {logoUrl ? (
-        <img src={logoUrl} alt={companyName} className={large ? "h-8 max-w-[140px] object-contain" : "h-6 max-w-[100px] object-contain"} />
+        <img
+          src={logoUrl}
+          alt={companyName}
+          className={large ? "h-12 max-h-12 w-auto max-w-full object-contain" : "h-9 max-h-9 w-auto max-w-full object-contain"}
+        />
       ) : (
-        <Wrench className={large ? "h-6 w-6 text-primary" : "h-5 w-5 text-primary"} />
+        <>
+          <Wrench className={large ? "h-6 w-6 text-primary shrink-0" : "h-5 w-5 text-primary shrink-0"} />
+          <span className={large ? "text-xl truncate" : "text-lg truncate"}>{companyName}</span>
+        </>
       )}
-      <span className={large ? "text-xl" : "text-lg"}>{companyName}</span>
     </div>
   );
 
