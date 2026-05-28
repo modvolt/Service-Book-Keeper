@@ -2,10 +2,12 @@ import { useMemo, useState } from "react";
 import {
   useListVehicles,
   useListWorkOrders,
+  useGetSettings,
   listWorkOrderMaterials,
   getVehicle,
 } from "@workspace/api-client-react";
-import type { WorkOrder, Vehicle } from "@workspace/api-client-react";
+import type { WorkOrder, Vehicle, Settings } from "@workspace/api-client-react";
+import ExcelJS from "exceljs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,20 +53,15 @@ const SERVICE_FLAGS: Array<{ key: keyof WorkOrder; label: string }> = [
   { key: "stk", label: "STK" },
 ];
 
-function csvEscape(v: unknown): string {
+function sanitizeCell(v: unknown): string {
   if (v == null) return "";
   let s = String(v);
-  // Neutralize formula-injection attempts (Excel/Sheets treat = + - @ as formulas)
+  // Neutralize formula-injection attempts (Excel treats = + - @ as formulas)
   if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
-  if (s.includes(";") || s.includes("\n") || s.includes("\"")) {
-    return `"${s.replace(/"/g, '""')}"`;
-  }
   return s;
 }
 
-function downloadCsv(filename: string, rows: string[][]) {
-  const csv = "\uFEFF" + rows.map((r) => r.map(csvEscape).join(";")).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+function downloadBlob(filename: string, blob: Blob) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url; a.download = filename;
@@ -77,10 +74,292 @@ function formatCzk(n: number | null | undefined): string {
   return new Intl.NumberFormat("cs-CZ").format(n) + " Kč";
 }
 
+type FieldsState = {
+  date: boolean; status: boolean; km: boolean; description: boolean; services: boolean;
+  otherWork: boolean; labor: boolean; materials: boolean; materialsTotal: boolean; total: boolean; photos: boolean;
+};
+
+const BRAND = {
+  primary: "FFB91C1C",      // red-700
+  primaryDark: "FF7F1D1D",  // red-900
+  accent: "FFF59E0B",       // amber-500
+  headerBg: "FF111827",     // gray-900
+  headerText: "FFFFFFFF",
+  zebra: "FFF9FAFB",        // gray-50
+  border: "FFE5E7EB",       // gray-200
+  muted: "FF6B7280",        // gray-500
+  totalBg: "FFFEF3C7",      // amber-100
+};
+
+async function buildXlsx(opts: {
+  vehicle: Vehicle;
+  orders: WorkOrder[];
+  materialsMap: Map<number, Awaited<ReturnType<typeof listWorkOrderMaterials>>>;
+  fields: FieldsState;
+  settings: Settings | null;
+}): Promise<Blob> {
+  const { vehicle, orders, materialsMap, fields, settings } = opts;
+  const wb = new ExcelJS.Workbook();
+  wb.creator = settings?.companyName ?? "AutoServis";
+  wb.created = new Date();
+
+  const ws = wb.addWorksheet("Servisní historie", {
+    pageSetup: { paperSize: 9, orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0, margins: { left: 0.5, right: 0.5, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 } },
+    properties: { defaultRowHeight: 18 },
+    views: [{ state: "frozen", ySplit: 0 }],
+  });
+
+  // ---------- Build column definitions based on selected fields ----------
+  type Col = { header: string; key: string; width: number; align?: "left" | "right" | "center"; money?: boolean; numeric?: boolean };
+  const cols: Col[] = [];
+  const idx: Record<string, number> = {};
+  const add = (c: Col) => { cols.push(c); idx[c.key] = cols.length; };
+
+  if (fields.date) add({ header: "Datum", key: "date", width: 13, align: "center" });
+  if (fields.status) add({ header: "Stav", key: "status", width: 14 });
+  if (fields.km) add({ header: "Najeto km", key: "km", width: 11, align: "right", numeric: true });
+  if (fields.description) add({ header: "Popis zakázky", key: "description", width: 32 });
+  if (fields.services) add({ header: "Servisní úkony", key: "services", width: 26 });
+  if (fields.otherWork) add({ header: "Další práce / poznámky", key: "otherWork", width: 28 });
+  if (fields.labor) {
+    add({ header: "Hodiny", key: "laborHours", width: 9, align: "right", numeric: true });
+    add({ header: "Cena práce", key: "laborPrice", width: 13, align: "right", money: true });
+  }
+  if (fields.materials) add({ header: "Materiály", key: "materials", width: 38 });
+  if (fields.materialsTotal) add({ header: "Materiál celkem", key: "materialsTotal", width: 15, align: "right", money: true });
+  if (fields.total) add({ header: "Celkem zakázka", key: "total", width: 16, align: "right", money: true });
+  if (fields.photos) add({ header: "Fotky", key: "photos", width: 8, align: "center", numeric: true });
+
+  ws.columns = cols.map((c) => ({ key: c.key, width: c.width }));
+  const lastCol = cols.length;
+  const lastColLetter = ws.getColumn(lastCol).letter;
+
+  // ---------- 1) Brand header ----------
+  ws.mergeCells(1, 1, 1, lastCol);
+  const titleCell = ws.getCell(1, 1);
+  titleCell.value = settings?.companyName ?? "AutoServis";
+  titleCell.font = { name: "Calibri", size: 22, bold: true, color: { argb: BRAND.headerText } };
+  titleCell.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+  titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND.headerBg } };
+  ws.getRow(1).height = 38;
+
+  // Shop sub-line
+  const shopLine = [settings?.companyAddress, settings?.companyPhone, settings?.companyEmail].filter(Boolean).join(" · ");
+  const idLine = [settings?.companyIco ? `IČO: ${settings.companyIco}` : null, settings?.companyDic ? `DIČ: ${settings.companyDic}` : null].filter(Boolean).join(" · ");
+  ws.mergeCells(2, 1, 2, lastCol);
+  const sub = ws.getCell(2, 1);
+  sub.value = [shopLine, idLine].filter(Boolean).join("    ");
+  sub.font = { size: 10, color: { argb: BRAND.headerText }, italic: true };
+  sub.alignment = { vertical: "middle", horizontal: "left", indent: 1 };
+  sub.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND.primaryDark } };
+  ws.getRow(2).height = 20;
+
+  // ---------- 2) Document title row ----------
+  ws.mergeCells(3, 1, 3, lastCol);
+  const docTitle = ws.getCell(3, 1);
+  docTitle.value = "SERVISNÍ HISTORIE VOZIDLA";
+  docTitle.font = { size: 16, bold: true, color: { argb: BRAND.primary } };
+  docTitle.alignment = { vertical: "middle", horizontal: "center" };
+  ws.getRow(3).height = 30;
+
+  // ---------- 3) Vehicle + owner info box (two columns) ----------
+  const infoRowStart = 4;
+  const mid = Math.max(1, Math.floor(lastCol / 2));
+  const vehInfo = [
+    ["SPZ:", vehicle.licensePlate],
+    ["Vozidlo:", `${vehicle.make} ${vehicle.model}${vehicle.year ? `, ${vehicle.year}` : ""}`],
+    vehicle.vin ? ["VIN:", vehicle.vin] : null,
+    vehicle.currentKm != null ? ["Aktuálně najeto:", `${vehicle.currentKm.toLocaleString("cs-CZ")} km`] : null,
+  ].filter(Boolean) as string[][];
+  const ownInfo = [
+    vehicle.ownerName ? ["Vlastník:", vehicle.ownerName] : null,
+    vehicle.ownerAddress ? ["Adresa:", vehicle.ownerAddress] : null,
+    vehicle.ownerPhone ? ["Telefon:", vehicle.ownerPhone] : null,
+    vehicle.ownerEmail ? ["E-mail:", vehicle.ownerEmail] : null,
+  ].filter(Boolean) as string[][];
+
+  const infoLines = Math.max(vehInfo.length, ownInfo.length, 1);
+  for (let i = 0; i < infoLines; i++) {
+    const r = infoRowStart + i;
+    const row = ws.getRow(r);
+    row.height = 18;
+    if (mid >= 2) ws.mergeCells(r, 2, r, mid);
+    if (lastCol >= mid + 2) ws.mergeCells(r, mid + 2, r, lastCol);
+
+    const lk = ws.getCell(r, 1);
+    lk.value = vehInfo[i]?.[0] ?? "";
+    lk.font = { size: 10, bold: true, color: { argb: BRAND.muted } };
+    lk.alignment = { horizontal: "right", vertical: "middle" };
+
+    const lv = ws.getCell(r, 2);
+    lv.value = sanitizeCell(vehInfo[i]?.[1] ?? "");
+    lv.font = { size: 11, bold: i === 0 };
+    lv.alignment = { horizontal: "left", vertical: "middle", indent: 1 };
+
+    if (lastCol >= mid + 2) {
+      const rk = ws.getCell(r, mid + 1);
+      rk.value = ownInfo[i]?.[0] ?? "";
+      rk.font = { size: 10, bold: true, color: { argb: BRAND.muted } };
+      rk.alignment = { horizontal: "right", vertical: "middle" };
+
+      const rv = ws.getCell(r, mid + 2);
+      rv.value = sanitizeCell(ownInfo[i]?.[1] ?? "");
+      rv.font = { size: 11, bold: i === 0 };
+      rv.alignment = { horizontal: "left", vertical: "middle", indent: 1 };
+    }
+  }
+
+  // Generated line
+  const genRow = infoRowStart + infoLines;
+  ws.mergeCells(genRow, 1, genRow, lastCol);
+  const genCell = ws.getCell(genRow, 1);
+  genCell.value = `Vygenerováno: ${format(new Date(), "d. M. yyyy HH:mm", { locale: cs })}    ·    Počet zakázek: ${orders.length}`;
+  genCell.font = { size: 9, italic: true, color: { argb: BRAND.muted } };
+  genCell.alignment = { horizontal: "right", vertical: "middle" };
+  ws.getRow(genRow).height = 16;
+
+  // Spacer row
+  const headerRowIdx = genRow + 2;
+
+  // ---------- 4) Table header ----------
+  const headerRow = ws.getRow(headerRowIdx);
+  cols.forEach((c, i) => {
+    const cell = headerRow.getCell(i + 1);
+    cell.value = c.header;
+    cell.font = { bold: true, color: { argb: BRAND.headerText }, size: 11 };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND.primary } };
+    cell.alignment = { horizontal: c.align ?? "left", vertical: "middle", wrapText: true };
+    cell.border = {
+      top: { style: "thin", color: { argb: BRAND.primaryDark } },
+      bottom: { style: "medium", color: { argb: BRAND.primaryDark } },
+      left: { style: "thin", color: { argb: BRAND.primaryDark } },
+      right: { style: "thin", color: { argb: BRAND.primaryDark } },
+    };
+  });
+  headerRow.height = 28;
+
+  // ---------- 5) Data rows ----------
+  let grandLabor = 0, grandMaterial = 0;
+  let r = headerRowIdx + 1;
+  orders.forEach((o, i) => {
+    const mats = materialsMap.get(o.id) ?? [];
+    const matTotal = mats.reduce((s, m) => s + (m.unitPrice ?? 0) * (parseFloat(m.quantity) || 0), 0);
+    const labor = o.laborPrice ?? 0;
+    grandLabor += labor;
+    grandMaterial += matTotal;
+    const date = o.serviceDate ?? o.completedAt ?? o.createdAt;
+
+    const data: Record<string, any> = {};
+    if (fields.date) data.date = date ? format(new Date(date), "d. M. yyyy", { locale: cs }) : "";
+    if (fields.status) data.status = STATUS_LABEL[o.status] ?? o.status;
+    if (fields.km) data.km = o.km ?? null;
+    if (fields.description) data.description = sanitizeCell(o.description ?? "");
+    if (fields.services) data.services = SERVICE_FLAGS.filter((f) => o[f.key]).map((f) => f.label).join(", ");
+    if (fields.otherWork) data.otherWork = sanitizeCell([o.otherWork, o.otherServices].filter(Boolean).join(" — "));
+    if (fields.labor) {
+      data.laborHours = o.laborHours ? Number(o.laborHours) || sanitizeCell(o.laborHours) : null;
+      data.laborPrice = labor || null;
+    }
+    if (fields.materials) {
+      data.materials = sanitizeCell(mats.map((m) => {
+        const qty = m.quantity;
+        const unit = m.unit ? ` ${m.unit}` : "";
+        const price = m.unitPrice != null ? ` (${m.unitPrice} Kč/ks)` : "";
+        return `${m.name} — ${qty}${unit}${price}`;
+      }).join("; "));
+    }
+    if (fields.materialsTotal) data.materialsTotal = matTotal || null;
+    if (fields.total) data.total = Math.round(labor + matTotal) || null;
+    if (fields.photos) data.photos = o.photos?.length ?? 0;
+
+    const row = ws.getRow(r);
+    cols.forEach((c, ci) => {
+      const cell = row.getCell(ci + 1);
+      cell.value = data[c.key] ?? "";
+      cell.alignment = { horizontal: c.align ?? "left", vertical: "top", wrapText: !c.numeric && !c.money };
+      cell.font = { size: 10 };
+      if (c.money) cell.numFmt = '#,##0" Kč"';
+      else if (c.numeric) cell.numFmt = "#,##0";
+      if (i % 2 === 1) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND.zebra } };
+      cell.border = {
+        top: { style: "thin", color: { argb: BRAND.border } },
+        bottom: { style: "thin", color: { argb: BRAND.border } },
+        left: { style: "thin", color: { argb: BRAND.border } },
+        right: { style: "thin", color: { argb: BRAND.border } },
+      };
+    });
+    // Auto-ish row height based on longest wrap field
+    const wrapLengths = ["description", "services", "otherWork", "materials"]
+      .filter((k) => idx[k])
+      .map((k) => String(data[k] ?? "").length);
+    const maxLen = wrapLengths.length ? Math.max(...wrapLengths) : 0;
+    row.height = Math.min(80, Math.max(20, Math.ceil(maxLen / 40) * 16));
+    r++;
+  });
+
+  // ---------- 6) Totals row ----------
+  const showTotals = (fields.labor || fields.materialsTotal || fields.total) && orders.length > 0;
+  if (showTotals) {
+    const totalRow = ws.getRow(r);
+    cols.forEach((c, ci) => {
+      const cell = totalRow.getCell(ci + 1);
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND.totalBg } };
+      cell.font = { bold: true, size: 11 };
+      cell.border = {
+        top: { style: "medium", color: { argb: BRAND.primary } },
+        bottom: { style: "medium", color: { argb: BRAND.primary } },
+        left: { style: "thin", color: { argb: BRAND.border } },
+        right: { style: "thin", color: { argb: BRAND.border } },
+      };
+      cell.alignment = { horizontal: c.align ?? "left", vertical: "middle" };
+      if (c.money) cell.numFmt = '#,##0" Kč"';
+    });
+    totalRow.getCell(1).value = "CELKEM";
+    if (idx.laborPrice) totalRow.getCell(idx.laborPrice).value = grandLabor || null;
+    if (idx.materialsTotal) totalRow.getCell(idx.materialsTotal).value = Math.round(grandMaterial) || null;
+    if (idx.total) totalRow.getCell(idx.total).value = Math.round(grandLabor + grandMaterial) || null;
+    totalRow.height = 24;
+    r++;
+  }
+
+  // ---------- 7) Footer / signature area ----------
+  r += 1;
+  ws.mergeCells(r, 1, r, lastCol);
+  const note = ws.getCell(r, 1);
+  note.value = "Tento dokument je výpisem servisních záznamů a slouží jako příloha k fakturaci.";
+  note.font = { size: 9, italic: true, color: { argb: BRAND.muted } };
+  note.alignment = { horizontal: "left", vertical: "middle" };
+  r += 3;
+
+  if (lastCol >= 4) {
+    const half = Math.max(2, Math.floor(lastCol / 2));
+    ws.mergeCells(r, 1, r, half);
+    ws.mergeCells(r, half + 1, r, lastCol);
+    const s1 = ws.getCell(r, 1);
+    const s2 = ws.getCell(r, half + 1);
+    [s1, s2].forEach((c) => {
+      c.border = { top: { style: "thin", color: { argb: "FF000000" } } };
+      c.font = { size: 9, color: { argb: BRAND.muted } };
+      c.alignment = { horizontal: "center", vertical: "top" };
+    });
+    s1.value = "Podpis zákazníka, datum";
+    s2.value = "Podpis mechanika, datum";
+  }
+
+  // Print area
+  ws.pageSetup.printArea = `A1:${lastColLetter}${r}`;
+  // Repeat header rows when printing
+  ws.pageSetup.printTitlesRow = `${headerRowIdx}:${headerRowIdx}`;
+
+  const buf = await wb.xlsx.writeBuffer();
+  return new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+}
+
 export default function StatisticsPage() {
   const { toast } = useToast();
   const { data: vehicles = [] } = useListVehicles({});
   const { data: workOrders = [] } = useListWorkOrders({});
+  const { data: settings } = useGetSettings();
 
   // ---------- Aggregate stats ----------
   const stats = useMemo(() => {
@@ -177,82 +456,16 @@ export default function StatisticsPage() {
         );
       }
 
-      const header: string[] = [];
-      // Track column indices for summary row placement
-      const idx: { laborPrice?: number; materialsTotal?: number; total?: number; first?: number } = {};
-      const push = (label: string) => { const i = header.length; header.push(label); return i; };
-      idx.first = 0;
-      if (fields.date) push("Datum");
-      if (fields.status) push("Stav");
-      if (fields.km) push("Najeto km");
-      if (fields.description) push("Popis");
-      if (fields.services) push("Servisní úkony");
-      if (fields.otherWork) push("Další práce");
-      if (fields.labor) { push("Hodiny práce"); idx.laborPrice = push("Cena práce (Kč)"); }
-      if (fields.materials) push("Materiály");
-      if (fields.materialsTotal) idx.materialsTotal = push("Materiál celkem (Kč)");
-      if (fields.total) idx.total = push("Celkem (Kč)");
-      if (fields.photos) push("Počet fotek");
-
-      const rows: string[][] = [];
-      rows.push([`Servisní historie — ${selectedVehicle.licensePlate} ${selectedVehicle.make} ${selectedVehicle.model}`]);
-      if (selectedVehicle.ownerName) rows.push([`Vlastník: ${selectedVehicle.ownerName}`]);
-      rows.push([`Vygenerováno: ${format(new Date(), "d. M. yyyy HH:mm", { locale: cs })}`]);
-      rows.push([]);
-      rows.push(header);
-
-      let grandLabor = 0, grandMaterial = 0;
-      for (const o of allOrders) {
-        const mats = materialsMap.get(o.id) ?? [];
-        const matTotal = mats.reduce((s, m) => s + (m.unitPrice ?? 0) * (parseFloat(m.quantity) || 0), 0);
-        const labor = o.laborPrice ?? 0;
-        grandLabor += labor;
-        grandMaterial += matTotal;
-
-        const row: string[] = [];
-        const date = o.serviceDate ?? o.completedAt ?? o.createdAt;
-        if (fields.date) row.push(date ? format(new Date(date), "d. M. yyyy", { locale: cs }) : "");
-        if (fields.status) row.push(STATUS_LABEL[o.status] ?? o.status);
-        if (fields.km) row.push(o.km != null ? String(o.km) : "");
-        if (fields.description) row.push(o.description ?? "");
-        if (fields.services) {
-          const svc = SERVICE_FLAGS.filter((f) => o[f.key]).map((f) => f.label).join(", ");
-          row.push(svc);
-        }
-        if (fields.otherWork) row.push([o.otherWork, o.otherServices].filter(Boolean).join(" — "));
-        if (fields.labor) {
-          row.push(o.laborHours ?? "");
-          row.push(labor ? String(labor) : "");
-        }
-        if (fields.materials) {
-          const ms = mats.map((m) => {
-            const qty = m.quantity;
-            const unit = m.unit ? ` ${m.unit}` : "";
-            const price = m.unitPrice != null ? ` (${m.unitPrice} Kč/ks)` : "";
-            return `${m.name} — ${qty}${unit}${price}`;
-          }).join("; ");
-          row.push(ms);
-        }
-        if (fields.materialsTotal) row.push(matTotal ? String(Math.round(matTotal)) : "");
-        if (fields.total) row.push(String(Math.round(labor + matTotal)));
-        if (fields.photos) row.push(String(o.photos?.length ?? 0));
-        rows.push(row);
-      }
-
-      const hasAnyTotal = idx.laborPrice != null || idx.materialsTotal != null || idx.total != null;
-      if (hasAnyTotal) {
-        rows.push([]);
-        const summary: string[] = Array(header.length).fill("");
-        summary[0] = "CELKEM";
-        if (idx.laborPrice != null) summary[idx.laborPrice] = String(grandLabor);
-        if (idx.materialsTotal != null) summary[idx.materialsTotal] = String(Math.round(grandMaterial));
-        if (idx.total != null) summary[idx.total] = String(Math.round(grandLabor + grandMaterial));
-        rows.push(summary);
-      }
-
-      const fname = `servisni-historie_${selectedVehicle.licensePlate.replace(/\s+/g, "")}_${format(new Date(), "yyyy-MM-dd")}.csv`;
-      downloadCsv(fname, rows);
-      toast({ title: "Export hotov", description: `${allOrders.length} zakázek exportováno do CSV.` });
+      const blob = await buildXlsx({
+        vehicle: selectedVehicle,
+        orders: allOrders,
+        materialsMap,
+        fields,
+        settings: settings ?? null,
+      });
+      const fname = `servisni-historie_${selectedVehicle.licensePlate.replace(/\s+/g, "")}_${format(new Date(), "yyyy-MM-dd")}.xlsx`;
+      downloadBlob(fname, blob);
+      toast({ title: "Export hotov", description: `${allOrders.length} zakázek exportováno do Excelu.` });
     } catch (e: any) {
       toast({ title: "Chyba exportu", description: String(e?.message ?? e), variant: "destructive" });
     } finally {
@@ -389,7 +602,7 @@ export default function StatisticsPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><FileSpreadsheet className="h-5 w-5" /> Export servisní historie</CardTitle>
           <CardDescription>
-            Vyberte vozidlo a položky, které chcete v exportu. Soubor se stáhne jako CSV (otevřít v Excelu nebo Google Sheets).
+            Vyberte vozidlo a položky, které chcete v exportu. Soubor se stáhne jako formátovaný Excel (.xlsx) s hlavičkou dílny, barevnými řádky a souhrnem.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
@@ -455,7 +668,7 @@ export default function StatisticsPage() {
               {selectedFieldCount === 0 ? "Vyberte alespoň jednu položku." : `Vybráno: ${selectedFieldCount}`}
             </span>
             <Button onClick={handleExport} disabled={!selectedVehicle || exporting || selectedFieldCount === 0}>
-              {exporting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Připravuji…</> : <><Download className="h-4 w-4 mr-2" />Stáhnout CSV</>}
+              {exporting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Připravuji…</> : <><Download className="h-4 w-4 mr-2" />Stáhnout Excel</>}
             </Button>
           </div>
         </CardContent>
