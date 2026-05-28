@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { Link, useLocation, useSearch } from "wouter";
 import { useCreateWorkOrder, useGetVehicleByPlate, useListVehicles, getListWorkOrdersQueryKey } from "@workspace/api-client-react";
+import { DEFAULT_HOURLY_RATE, computeLaborPrice } from "@/lib/labor";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,21 @@ export default function NewWorkOrder() {
     timing: false, stk: false, otherWork: "", otherServices: "", notes: "",
     laborHours: "", laborPrice: ""
   });
+  const [priceManual, setPriceManual] = useState(false);
+
+  function handleHoursChange(value: string) {
+    const cleaned = value.replace(",", ".");
+    setForm(f => ({
+      ...f,
+      laborHours: cleaned,
+      laborPrice: priceManual ? f.laborPrice : computeLaborPrice(cleaned),
+    }));
+  }
+
+  function handlePriceChange(value: string) {
+    setForm(f => ({ ...f, laborPrice: value }));
+    setPriceManual(value.trim() !== "");
+  }
 
   function handleSpzChange(value: string) {
     setSpz(value);
@@ -203,15 +219,15 @@ export default function NewWorkOrder() {
                 <Input
                   type="text" inputMode="decimal" placeholder="2.5"
                   value={form.laborHours}
-                  onChange={e => setForm(f => ({ ...f, laborHours: e.target.value.replace(",", ".") }))}
+                  onChange={e => handleHoursChange(e.target.value)}
                 />
               </div>
               <div className="space-y-1">
-                <Label>Cena za práci (Kč)</Label>
+                <Label>Cena za práci (Kč) <span className="text-xs text-muted-foreground font-normal">— sazba {DEFAULT_HOURLY_RATE} Kč/h</span></Label>
                 <Input
                   type="number" placeholder="1500"
                   value={form.laborPrice}
-                  onChange={e => setForm(f => ({ ...f, laborPrice: e.target.value }))}
+                  onChange={e => handlePriceChange(e.target.value)}
                 />
               </div>
             </div>

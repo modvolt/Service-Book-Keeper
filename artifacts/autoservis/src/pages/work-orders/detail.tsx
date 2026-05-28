@@ -22,6 +22,7 @@ import { format, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { WorkOrderStatusBadge, WORK_ORDER_STATUSES, type WorkOrderStatus } from "@/lib/work-order-status";
+import { DEFAULT_HOURLY_RATE, computeLaborPrice } from "@/lib/labor";
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -69,6 +70,30 @@ export default function WorkOrderDetail() {
   const [laborEditing, setLaborEditing] = useState(false);
   const [laborHoursInput, setLaborHoursInput] = useState("");
   const [laborPriceInput, setLaborPriceInput] = useState("");
+  const [laborPriceManual, setLaborPriceManual] = useState(false);
+  const [editPriceManual, setEditPriceManual] = useState(false);
+
+  function handleInlineHoursChange(value: string) {
+    const cleaned = value.replace(",", ".");
+    setLaborHoursInput(cleaned);
+    if (!laborPriceManual) setLaborPriceInput(computeLaborPrice(cleaned));
+  }
+  function handleInlinePriceChange(value: string) {
+    setLaborPriceInput(value);
+    setLaborPriceManual(value.trim() !== "");
+  }
+  function handleEditHoursChange(value: string) {
+    const cleaned = value.replace(",", ".");
+    setEditForm(f => ({
+      ...f,
+      laborHours: cleaned,
+      laborPrice: editPriceManual ? f.laborPrice : computeLaborPrice(cleaned),
+    }));
+  }
+  function handleEditPriceChange(value: string) {
+    setEditForm(f => ({ ...f, laborPrice: value }));
+    setEditPriceManual(value.trim() !== "");
+  }
 
   // Material add form
   const [matName, setMatName] = useState("");
@@ -96,6 +121,7 @@ export default function WorkOrderDetail() {
       otherWork: order.otherWork ?? "", otherServices: order.otherServices ?? "", notes: order.notes ?? "",
       laborHours: order.laborHours ?? "", laborPrice: order.laborPrice != null ? String(order.laborPrice) : "",
     });
+    setEditPriceManual(order.laborPrice != null);
     setEditMode(true);
   }
 
@@ -108,6 +134,7 @@ export default function WorkOrderDetail() {
     if (!order) return;
     setLaborHoursInput(order.laborHours ?? "");
     setLaborPriceInput(order.laborPrice != null ? String(order.laborPrice) : "");
+    setLaborPriceManual(order.laborPrice != null);
     setLaborEditing(true);
   }
 
@@ -502,15 +529,15 @@ export default function WorkOrderDetail() {
                 <Input
                   type="text" inputMode="decimal" placeholder="2.5"
                   value={editForm.laborHours}
-                  onChange={e => setEditForm(f => ({ ...f, laborHours: e.target.value.replace(",", ".") }))}
+                  onChange={e => handleEditHoursChange(e.target.value)}
                 />
               </div>
               <div className="space-y-1">
-                <Label>Cena za práci (Kč)</Label>
+                <Label>Cena za práci (Kč) <span className="text-xs text-muted-foreground font-normal">— sazba {DEFAULT_HOURLY_RATE} Kč/h</span></Label>
                 <Input
                   type="number" placeholder="1500"
                   value={editForm.laborPrice}
-                  onChange={e => setEditForm(f => ({ ...f, laborPrice: e.target.value }))}
+                  onChange={e => handleEditPriceChange(e.target.value)}
                 />
               </div>
             </div>
@@ -521,17 +548,17 @@ export default function WorkOrderDetail() {
                 <Input
                   type="text" inputMode="decimal" placeholder="2.5"
                   value={laborHoursInput}
-                  onChange={e => setLaborHoursInput(e.target.value.replace(",", "."))}
+                  onChange={e => handleInlineHoursChange(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") saveLabor(); if (e.key === "Escape") setLaborEditing(false); }}
                   autoFocus
                 />
               </div>
               <div className="space-y-1">
-                <Label className="text-xs text-muted-foreground">Cena práce (Kč)</Label>
+                <Label className="text-xs text-muted-foreground">Cena práce (Kč) — sazba {DEFAULT_HOURLY_RATE} Kč/h</Label>
                 <Input
                   type="number" placeholder="1500"
                   value={laborPriceInput}
-                  onChange={e => setLaborPriceInput(e.target.value)}
+                  onChange={e => handleInlinePriceChange(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") saveLabor(); if (e.key === "Escape") setLaborEditing(false); }}
                 />
               </div>
