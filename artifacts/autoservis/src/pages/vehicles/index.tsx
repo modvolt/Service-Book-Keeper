@@ -43,7 +43,7 @@ export default function VehiclesList() {
           <div className="relative mb-6">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Hledat podle SPZ, značky nebo modelu..."
+              placeholder="Hledat podle SPZ, značky, modelu nebo vlastníka..."
               className="pl-9"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -62,6 +62,7 @@ export default function VehiclesList() {
                     <tr>
                       <th className="px-4 py-3">SPZ</th>
                       <th className="px-4 py-3">Vozidlo</th>
+                      <th className="px-4 py-3">Vlastník</th>
                       <th className="px-4 py-3">Rok</th>
                       <th className="px-4 py-3">Najeto</th>
                       <th className="px-4 py-3">STK stav</th>
@@ -79,6 +80,9 @@ export default function VehiclesList() {
                         </td>
                         <td className="px-4 py-3 font-medium">
                           {v.make} {v.model}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {v.ownerName || "-"}
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {v.year || "-"}

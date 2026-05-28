@@ -32,6 +32,7 @@ router.get("/vehicles", async (req, res): Promise<void> => {
           ilike(vehiclesTable.licensePlate, s),
           ilike(vehiclesTable.make, s),
           ilike(vehiclesTable.model, s),
+          ilike(vehiclesTable.ownerName, s),
         ),
       )
       .orderBy(vehiclesTable.licensePlate);
