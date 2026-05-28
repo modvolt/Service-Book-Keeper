@@ -15,6 +15,7 @@ import {
   DeletePhotoParams,
 } from "@workspace/api-zod";
 import { normalizeSpz } from "../lib/spz";
+import { recomputeVehicleServiceStatus } from "../lib/vehicleStatus";
 
 const router: IRouter = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -28,53 +29,12 @@ async function getWorkOrderWithPhotos(id: number) {
 }
 
 /**
- * Propagate completed/recorded service items from a work order into the vehicle's
- * status fields (current km, last service dates, last oil km).
- * Only overwrites when the new date is strictly newer or the field is empty.
+ * Recompute vehicle status fields from full service history (records + completed orders).
  */
 async function propagateWorkOrderToVehicle(orderId: number): Promise<void> {
   const [order] = await db.select().from(workOrdersTable).where(eq(workOrdersTable.id, orderId));
   if (!order || !order.vehicleId) return;
-  const [vehicle] = await db.select().from(vehiclesTable).where(eq(vehiclesTable.id, order.vehicleId));
-  if (!vehicle) return;
-
-  const today = new Date().toISOString().slice(0, 10);
-  const serviceDate = order.serviceDate ?? today;
-
-  const updates: Partial<typeof vehiclesTable.$inferInsert> = {};
-  const isNewer = (existing: string | null) => !existing || serviceDate >= existing;
-
-  if (order.km != null && (vehicle.currentKm == null || order.km > vehicle.currentKm)) {
-    updates.currentKm = order.km;
-  }
-  if (order.oilChange && isNewer(vehicle.lastOilChangeDate)) {
-    updates.lastOilChangeDate = serviceDate;
-    if (order.km != null) updates.lastOilChangeKm = order.km;
-  }
-  if (order.transmissionOil && isNewer(vehicle.lastTransmissionOilDate)) {
-    updates.lastTransmissionOilDate = serviceDate;
-    if (order.km != null) updates.lastTransmissionOilKm = order.km;
-  }
-  if (order.brakes && isNewer(vehicle.lastBrakesDate)) {
-    updates.lastBrakesDate = serviceDate;
-  }
-  if (order.timing && isNewer(vehicle.lastTimingDate)) {
-    updates.lastTimingDate = serviceDate;
-  }
-  if (order.brakeFluid && isNewer(vehicle.lastBrakeFluidDate)) {
-    updates.lastBrakeFluidDate = serviceDate;
-  }
-  if (order.stk && order.status === "completed") {
-    const d = new Date(serviceDate + "T00:00:00Z");
-    d.setUTCMonth(d.getUTCMonth() + 24);
-    const newStk = d.toISOString().slice(0, 10);
-    if (!vehicle.stkValidUntil || newStk > vehicle.stkValidUntil) {
-      updates.stkValidUntil = newStk;
-    }
-  }
-
-  if (Object.keys(updates).length === 0) return;
-  await db.update(vehiclesTable).set(updates).where(eq(vehiclesTable.id, vehicle.id));
+  await recomputeVehicleServiceStatus(order.vehicleId);
 }
 
 router.get("/work-orders", async (req, res): Promise<void> => {
@@ -199,6 +159,7 @@ router.delete("/work-orders/:id", async (req, res): Promise<void> => {
 
   const [order] = await db.delete(workOrdersTable).where(eq(workOrdersTable.id, params.data.id)).returning();
   if (!order) { res.status(404).json({ error: "Zakázka nenalezena" }); return; }
+  if (order.vehicleId) await recomputeVehicleServiceStatus(order.vehicleId);
   res.sendStatus(204);
 });
 

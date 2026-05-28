@@ -8,6 +8,7 @@ import {
   GetServiceRecordParams,
   DeleteServiceRecordParams,
 } from "@workspace/api-zod";
+import { recomputeVehicleServiceStatus } from "../lib/vehicleStatus";
 
 const router: IRouter = Router();
 
@@ -65,35 +66,7 @@ router.post("/vehicles/:id/service-records", async (req, res): Promise<void> => 
     .values({ ...parsed.data, vehicleId: params.data.id })
     .returning();
 
-  // Update vehicle service fields. Only overwrite when the new date is
-  // strictly newer (so a backdated record can't clobber a newer service),
-  // and only bump currentKm when the new km is higher than what we have.
-  const updates: Partial<typeof vehiclesTable.$inferInsert> = {};
-  const isNewer = (existing: string | null) => !existing || parsed.data.date >= existing;
-  if (parsed.data.km != null && (vehicle.currentKm == null || parsed.data.km > vehicle.currentKm)) {
-    updates.currentKm = parsed.data.km;
-  }
-  if (parsed.data.oilChanged && isNewer(vehicle.lastOilChangeDate)) {
-    updates.lastOilChangeDate = parsed.data.date;
-    if (parsed.data.km != null) updates.lastOilChangeKm = parsed.data.km;
-  }
-  if (parsed.data.brakesServiced && isNewer(vehicle.lastBrakesDate)) {
-    updates.lastBrakesDate = parsed.data.date;
-  }
-  if (parsed.data.timingServiced && isNewer(vehicle.lastTimingDate)) {
-    updates.lastTimingDate = parsed.data.date;
-  }
-  if (parsed.data.transmissionOilChanged && isNewer(vehicle.lastTransmissionOilDate)) {
-    updates.lastTransmissionOilDate = parsed.data.date;
-    if (parsed.data.km != null) updates.lastTransmissionOilKm = parsed.data.km;
-  }
-  if (parsed.data.brakeFluidChanged && isNewer(vehicle.lastBrakeFluidDate)) {
-    updates.lastBrakeFluidDate = parsed.data.date;
-  }
-
-  if (Object.keys(updates).length > 0) {
-    await db.update(vehiclesTable).set(updates).where(eq(vehiclesTable.id, params.data.id));
-  }
+  await recomputeVehicleServiceStatus(params.data.id);
 
   res.status(201).json(record);
 });
@@ -148,6 +121,8 @@ router.delete("/service-records/:id", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Záznam nenalezen" });
     return;
   }
+
+  await recomputeVehicleServiceStatus(record.vehicleId);
 
   res.sendStatus(204);
 });
