@@ -18,6 +18,9 @@ const NAV_ITEMS = [
   { href: "/sklad", label: "Sklad", icon: Package, color: "text-amber-600 dark:text-amber-400", bg: "hover:bg-amber-50 dark:hover:bg-amber-950/40" },
   { href: "/statistiky", label: "Statistiky", icon: BarChart3, color: "text-cyan-600 dark:text-cyan-400", bg: "hover:bg-cyan-50 dark:hover:bg-cyan-950/40" },
   { href: "/nacteni-tp", label: "Načtení TP", icon: ScanLine, color: "text-teal-600 dark:text-teal-400", bg: "hover:bg-teal-50 dark:hover:bg-teal-950/40" },
+];
+
+const BOTTOM_NAV_ITEMS = [
   { href: "/nastaveni", label: "Nastavení", icon: SettingsIcon, color: "text-slate-600 dark:text-slate-400", bg: "hover:bg-slate-100 dark:hover:bg-slate-800/50" },
 ];
 
@@ -75,28 +78,32 @@ export function Layout({ children }: { children: React.ReactNode }) {
     </div>
   );
 
-  const NavLinks = () => (
-    <div className="flex flex-col space-y-1">
-      {NAV_ITEMS.map((item) => {
-        const active = location === item.href || (item.href !== "/" && location.startsWith(item.href));
-        return (
-          <Link key={item.href} href={item.href}>
-            <div
-              className={cn(
-                "flex items-center px-3 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer",
-                active
-                  ? "bg-primary text-primary-foreground"
-                  : cn("text-foreground/80", item.bg)
-              )}
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              <item.icon className={cn("h-4 w-4 mr-3", active ? "" : item.color)} />
-              {item.label}
-            </div>
-          </Link>
-        );
-      })}
-    </div>
+  const renderItem = (item: typeof NAV_ITEMS[number]) => {
+    const active = location === item.href || (item.href !== "/" && location.startsWith(item.href));
+    return (
+      <Link key={item.href} href={item.href}>
+        <div
+          className={cn(
+            "flex items-center px-3 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer",
+            active
+              ? "bg-primary text-primary-foreground"
+              : cn("text-foreground/80", item.bg)
+          )}
+          onClick={() => setMobileMenuOpen(false)}
+        >
+          <item.icon className={cn("h-4 w-4 mr-3", active ? "" : item.color)} />
+          {item.label}
+        </div>
+      </Link>
+    );
+  };
+
+  const NavLinksTop = () => (
+    <div className="flex flex-col space-y-1">{NAV_ITEMS.map(renderItem)}</div>
+  );
+
+  const NavLinksBottom = () => (
+    <div className="flex flex-col space-y-1">{BOTTOM_NAV_ITEMS.map(renderItem)}</div>
   );
 
   return (
@@ -109,13 +116,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="left" className="w-64 p-0">
+          <SheetContent side="left" className="w-64 p-0 flex flex-col">
             <div className="px-6 py-6 border-b">
               <Brand large />
             </div>
             <ScrollArea className="flex-1 px-4 py-4">
-              <NavLinks />
+              <NavLinksTop />
             </ScrollArea>
+            <div className="px-4 py-3 border-t">
+              <NavLinksBottom />
+            </div>
           </SheetContent>
         </Sheet>
       </header>
@@ -125,8 +135,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <Brand large />
         </div>
         <ScrollArea className="flex-1 px-4 py-4">
-          <NavLinks />
+          <NavLinksTop />
         </ScrollArea>
+        <div className="px-4 py-3 border-t">
+          <NavLinksBottom />
+        </div>
         <div className="p-4 border-t text-xs text-muted-foreground">
           AutoServis v1.0
         </div>
