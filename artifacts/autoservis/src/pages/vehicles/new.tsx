@@ -12,8 +12,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Sparkles, Upload, X, Loader2, Camera } from "lucide-react";
+import { ArrowLeft, Sparkles, Upload, X, Loader2, Camera, ClipboardPaste } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -56,6 +57,7 @@ export default function NewVehicle() {
 
   const [importOpen, setImportOpen] = useState(false);
   const [importFiles, setImportFiles] = useState<File[]>([]);
+  const [dragActive, setDragActive] = useState(false);
 
   useEffect(() => {
     const pre = takeTpPrefill();
@@ -128,10 +130,41 @@ export default function NewVehicle() {
     });
   }
 
-  function handleAddFiles(files: FileList | null) {
+  function handleAddFiles(files: FileList | File[] | null) {
     if (!files) return;
-    const list = Array.from(files).slice(0, 4 - importFiles.length);
-    setImportFiles((prev) => [...prev, ...list].slice(0, 4));
+    const arr = Array.from(files).filter((f) => f.type.startsWith("image/"));
+    setImportFiles((prev) => [...prev, ...arr].slice(0, 4));
+  }
+
+  useEffect(() => {
+    if (!importOpen) return;
+    function onPaste(e: ClipboardEvent) {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      const files: File[] = [];
+      for (const it of Array.from(items)) {
+        if (it.kind === "file" && it.type.startsWith("image/")) {
+          const f = it.getAsFile();
+          if (f) {
+            const ext = (f.type.split("/")[1] || "png").split("+")[0];
+            files.push(new File([f], f.name && f.name !== "image.png" ? f.name : `snimek-${Date.now()}.${ext}`, { type: f.type }));
+          }
+        }
+      }
+      if (files.length > 0) {
+        e.preventDefault();
+        handleAddFiles(files);
+        toast({ title: "Snímek vložen", description: `Přidáno ${files.length} ${files.length === 1 ? "obrázek" : "obrázků"}.` });
+      }
+    }
+    window.addEventListener("paste", onPaste);
+    return () => window.removeEventListener("paste", onPaste);
+  }, [importOpen, toast]);
+
+  function onDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragActive(false);
+    handleAddFiles(e.dataTransfer.files);
   }
 
   async function handleImport() {
@@ -438,6 +471,25 @@ export default function NewVehicle() {
               className="hidden"
               onChange={(e) => { handleAddFiles(e.target.files); e.target.value = ""; }}
             />
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+              onDragLeave={(e) => { e.preventDefault(); setDragActive(false); }}
+              onDrop={onDrop}
+              className={cn(
+                "rounded-lg border-2 border-dashed p-6 text-center transition-colors",
+                dragActive ? "border-primary bg-primary/5" : "border-muted-foreground/30 bg-muted/30",
+              )}
+            >
+              <Upload className="h-6 w-6 mx-auto text-muted-foreground mb-2" />
+              <p className="text-sm font-medium">Přetáhněte obrázky sem</p>
+              <p className="text-xs text-muted-foreground mt-1 flex items-center justify-center gap-1">
+                <ClipboardPaste className="h-3 w-3" />
+                nebo vložte snímek klávesovou zkratkou{" "}
+                <kbd className="px-1 py-0.5 bg-background border rounded text-[10px] font-mono">Ctrl</kbd>
+                +
+                <kbd className="px-1 py-0.5 bg-background border rounded text-[10px] font-mono">V</kbd>
+              </p>
+            </div>
             <div className="flex gap-2">
               <Button
                 type="button"
