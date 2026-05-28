@@ -1,14 +1,13 @@
 import { Link, useLocation } from "wouter";
-import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar, Settings as SettingsIcon, ScanLine, AlertTriangle, Sun, Moon, Palette, Check } from "lucide-react";
+import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar, Settings as SettingsIcon, ScanLine, AlertTriangle } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useGetSettings } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useTheme } from "@/hooks/use-theme";
-import { usePalette, applyCurrentPalette } from "@/hooks/use-palette";
+import { applyCurrentPalette, usePalette } from "@/hooks/use-palette";
 
 const NAV_ITEMS = [
   { href: "/", label: "Přehled", icon: LayoutDashboard, color: "text-sky-600 dark:text-sky-400", bg: "hover:bg-sky-50 dark:hover:bg-sky-950/40" },
@@ -48,44 +47,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { data: settings } = useGetSettings();
-  const { theme, toggleTheme } = useTheme();
-  const { palette, setPalette, palettes } = usePalette();
+  const { theme } = useTheme();
+  usePalette();
 
   useEffect(() => { applyCurrentPalette(); }, [theme]);
-
-  const PalettePicker = ({ align = "end" as "end" | "start" }) => (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Barva pozadí">
-          <Palette className="h-4 w-4" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align={align} className="w-56 p-2">
-        <div className="text-xs font-medium text-muted-foreground px-2 py-1.5">Barva pozadí</div>
-        <div className="grid grid-cols-3 gap-1.5 p-1">
-          {palettes.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => setPalette(p.id)}
-              className={cn(
-                "flex flex-col items-center gap-1 rounded-md p-2 transition-colors hover:bg-muted",
-                palette === p.id && "ring-2 ring-primary",
-              )}
-              title={p.label}
-            >
-              <span className="relative w-8 h-8 rounded-full border" style={{ background: p.swatch }}>
-                {palette === p.id && (
-                  <Check className="absolute inset-0 m-auto h-4 w-4 text-foreground/80" />
-                )}
-              </span>
-              <span className="text-[10px]">{p.label}</span>
-            </button>
-          ))}
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
 
   const themeStyle = useMemo(() => {
     if (!settings?.primaryColor) return undefined;
@@ -137,11 +102,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen flex flex-col md:flex-row bg-muted/30" style={themeStyle}>
       <header className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-card">
         <Brand />
-        <div className="flex items-center gap-1">
-          <PalettePicker />
-          <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Přepnout tmavý režim">
-            {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </Button>
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -157,7 +117,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </ScrollArea>
           </SheetContent>
         </Sheet>
-        </div>
       </header>
 
       <aside className="hidden md:flex w-64 flex-col border-r bg-card h-screen sticky top-0">
@@ -167,15 +126,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <ScrollArea className="flex-1 px-4 py-4">
           <NavLinks />
         </ScrollArea>
-        <div className="p-4 border-t flex items-center justify-between gap-2">
-          <span className="text-xs text-muted-foreground">AutoServis v1.0</span>
-          <div className="flex items-center gap-1">
-            <PalettePicker />
-            <Button variant="ghost" size="sm" onClick={toggleTheme} className="h-8 px-2" aria-label="Přepnout tmavý režim">
-              {theme === "dark" ? <Sun className="h-4 w-4 mr-1.5" /> : <Moon className="h-4 w-4 mr-1.5" />}
-              <span className="text-xs">{theme === "dark" ? "Světlý" : "Tmavý"}</span>
-            </Button>
-          </div>
+        <div className="p-4 border-t text-xs text-muted-foreground">
+          AutoServis v1.0
         </div>
       </aside>
 

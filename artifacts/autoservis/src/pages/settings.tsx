@@ -9,9 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Upload, Image as ImageIcon, Mail, Palette, Building2, Trash2 } from "lucide-react";
+import { Upload, Image as ImageIcon, Mail, Palette, Building2, Trash2, Sun, Moon, Check, Monitor } from "lucide-react";
 import { AresButton } from "@/components/ares-button";
 import { useToast } from "@/hooks/use-toast";
+import { useTheme } from "@/hooks/use-theme";
+import { usePalette } from "@/hooks/use-palette";
+import { cn } from "@/lib/utils";
 
 type Form = {
   companyName: string;
@@ -42,6 +45,8 @@ export default function SettingsPage() {
   const updateSettings = useUpdateSettings();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const { theme, setTheme } = useTheme();
+  const { palette, setPalette, palettes } = usePalette();
 
   const [form, setForm] = useState<Form>({
     companyName: "", companyAddress: "", companyPhone: "", companyEmail: "",
@@ -204,8 +209,54 @@ export default function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Palette className="h-5 w-5" /> Vzhled</CardTitle>
-          <CardDescription>Hlavní barva aplikace (tlačítka, odkazy, zvýraznění)</CardDescription>
+          <CardTitle className="flex items-center gap-2"><Monitor className="h-5 w-5" /> Motiv aplikace</CardTitle>
+          <CardDescription>Tmavý režim a barva pozadí (uloženo lokálně v tomto prohlížeči)</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div>
+            <Label className="text-sm">Režim</Label>
+            <div className="flex gap-2 mt-2">
+              <button type="button" onClick={() => setTheme("light")}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-md border text-sm transition-colors",
+                  theme === "light" ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-accent",
+                )}>
+                <Sun className="h-4 w-4" /> Světlý
+              </button>
+              <button type="button" onClick={() => setTheme("dark")}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2 rounded-md border text-sm transition-colors",
+                  theme === "dark" ? "border-primary bg-primary/5 ring-1 ring-primary" : "hover:bg-accent",
+                )}>
+                <Moon className="h-4 w-4" /> Tmavý
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-sm">Barva pozadí</Label>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mt-2">
+              {palettes.map((p) => (
+                <button key={p.id} type="button" onClick={() => setPalette(p.id)}
+                  className={cn(
+                    "flex flex-col items-center gap-1.5 rounded-md border p-3 transition-colors hover:bg-accent",
+                    palette === p.id && "border-primary bg-primary/5 ring-1 ring-primary",
+                  )}>
+                  <span className="relative w-10 h-10 rounded-full border shadow-inner" style={{ background: p.swatch }}>
+                    {palette === p.id && <Check className="absolute inset-0 m-auto h-5 w-5 text-foreground/80" />}
+                  </span>
+                  <span className="text-xs">{p.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Palette className="h-5 w-5" /> Hlavní barva</CardTitle>
+          <CardDescription>Barva tlačítek, odkazů a zvýraznění (sdílená pro všechny uživatele)</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-3">
