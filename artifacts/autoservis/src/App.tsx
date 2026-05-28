@@ -14,6 +14,7 @@ import WorkOrderNew from "@/pages/work-orders/new";
 import WorkOrderDetail from "@/pages/work-orders/detail";
 import MaterialsPage from "@/pages/materials/index";
 import CalendarPage from "@/pages/calendar";
+import SettingsPage from "@/pages/settings";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ function Router() {
         <Route path="/work-orders/:id" component={WorkOrderDetail} />
         <Route path="/sklad" component={MaterialsPage} />
         <Route path="/kalendar" component={CalendarPage} />
+        <Route path="/nastaveni" component={SettingsPage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

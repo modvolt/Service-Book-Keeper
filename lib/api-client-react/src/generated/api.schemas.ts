@@ -671,6 +671,53 @@ export interface AppointmentUpdate {
   notes?: string | null;
 }
 
+export interface Settings {
+  /** @nullable */
+  companyName?: string | null;
+  /** @nullable */
+  companyAddress?: string | null;
+  /** @nullable */
+  companyPhone?: string | null;
+  /** @nullable */
+  companyEmail?: string | null;
+  /** @nullable */
+  companyIco?: string | null;
+  /** @nullable */
+  companyDic?: string | null;
+  /** @nullable */
+  logoUrl?: string | null;
+  /** @nullable */
+  primaryColor?: string | null;
+  emailRemindersEnabled: boolean;
+  reminderStkDays: number;
+  reminderServiceDays: number;
+}
+
+export interface SettingsInput {
+  /** @nullable */
+  companyName?: string | null;
+  /** @nullable */
+  companyAddress?: string | null;
+  /** @nullable */
+  companyPhone?: string | null;
+  /** @nullable */
+  companyEmail?: string | null;
+  /** @nullable */
+  companyIco?: string | null;
+  /** @nullable */
+  companyDic?: string | null;
+  /** @nullable */
+  logoUrl?: string | null;
+  /** @nullable */
+  primaryColor?: string | null;
+  /** @nullable */
+  emailRemindersEnabled?: boolean | null;
+  /** @nullable */
+  reminderStkDays?: number | null;
+  /** @nullable */
+  reminderServiceDays?: number | null;
+}
+
 export interface DashboardSummary {
   totalVehicles: number;
   openWorkOrders: number;

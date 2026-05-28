@@ -809,6 +809,56 @@ export const DeleteAppointmentParams = zod.object({
 
 
 /**
+ * @summary Get application settings
+ */
+export const GetSettingsResponse = zod.object({
+  "companyName": zod.string().nullish(),
+  "companyAddress": zod.string().nullish(),
+  "companyPhone": zod.string().nullish(),
+  "companyEmail": zod.string().nullish(),
+  "companyIco": zod.string().nullish(),
+  "companyDic": zod.string().nullish(),
+  "logoUrl": zod.string().nullish(),
+  "primaryColor": zod.string().nullish(),
+  "emailRemindersEnabled": zod.boolean(),
+  "reminderStkDays": zod.number(),
+  "reminderServiceDays": zod.number()
+})
+
+
+/**
+ * @summary Update application settings
+ */
+export const UpdateSettingsBody = zod.object({
+  "companyName": zod.string().nullish(),
+  "companyAddress": zod.string().nullish(),
+  "companyPhone": zod.string().nullish(),
+  "companyEmail": zod.string().nullish(),
+  "companyIco": zod.string().nullish(),
+  "companyDic": zod.string().nullish(),
+  "logoUrl": zod.string().nullish(),
+  "primaryColor": zod.string().nullish(),
+  "emailRemindersEnabled": zod.boolean().nullish(),
+  "reminderStkDays": zod.number().nullish(),
+  "reminderServiceDays": zod.number().nullish()
+})
+
+export const UpdateSettingsResponse = zod.object({
+  "companyName": zod.string().nullish(),
+  "companyAddress": zod.string().nullish(),
+  "companyPhone": zod.string().nullish(),
+  "companyEmail": zod.string().nullish(),
+  "companyIco": zod.string().nullish(),
+  "companyDic": zod.string().nullish(),
+  "logoUrl": zod.string().nullish(),
+  "primaryColor": zod.string().nullish(),
+  "emailRemindersEnabled": zod.boolean(),
+  "reminderStkDays": zod.number(),
+  "reminderServiceDays": zod.number()
+})
+
+
+/**
  * @summary Dashboard summary statistics
  */
 export const GetDashboardSummaryResponse = zod.object({

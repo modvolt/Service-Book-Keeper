@@ -30,6 +30,8 @@ export * from './materialCatalogItem';
 export * from './photo';
 export * from './serviceRecord';
 export * from './serviceRecordInput';
+export * from './settings';
+export * from './settingsInput';
 export * from './vehicle';
 export * from './vehicleDetail';
 export * from './vehicleDetailOwnerType';

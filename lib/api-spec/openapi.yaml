@@ -628,6 +628,36 @@ paths:
         "204":
           description: Deleted
 
+  /settings:
+    get:
+      operationId: getSettings
+      tags: [settings]
+      summary: Get application settings
+      responses:
+        "200":
+          description: Settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+    put:
+      operationId: updateSettings
+      tags: [settings]
+      summary: Update application settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SettingsInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Settings"
+
   /dashboard/summary:
     get:
       operationId: getDashboardSummary
@@ -1320,6 +1350,59 @@ components:
           enum: [planned, done, cancelled, null]
         notes:
           type: ["string", "null"]
+
+    Settings:
+      type: object
+      required: [emailRemindersEnabled, reminderStkDays, reminderServiceDays]
+      properties:
+        companyName:
+          type: ["string", "null"]
+        companyAddress:
+          type: ["string", "null"]
+        companyPhone:
+          type: ["string", "null"]
+        companyEmail:
+          type: ["string", "null"]
+        companyIco:
+          type: ["string", "null"]
+        companyDic:
+          type: ["string", "null"]
+        logoUrl:
+          type: ["string", "null"]
+        primaryColor:
+          type: ["string", "null"]
+        emailRemindersEnabled:
+          type: boolean
+        reminderStkDays:
+          type: integer
+        reminderServiceDays:
+          type: integer
+
+    SettingsInput:
+      type: object
+      properties:
+        companyName:
+          type: ["string", "null"]
+        companyAddress:
+          type: ["string", "null"]
+        companyPhone:
+          type: ["string", "null"]
+        companyEmail:
+          type: ["string", "null"]
+        companyIco:
+          type: ["string", "null"]
+        companyDic:
+          type: ["string", "null"]
+        logoUrl:
+          type: ["string", "null"]
+        primaryColor:
+          type: ["string", "null"]
+        emailRemindersEnabled:
+          type: ["boolean", "null"]
+        reminderStkDays:
+          type: ["integer", "null"]
+        reminderServiceDays:
+          type: ["integer", "null"]
 
     DashboardSummary:
       type: object
