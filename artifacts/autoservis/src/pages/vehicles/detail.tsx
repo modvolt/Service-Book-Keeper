@@ -24,6 +24,29 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { computeServiceStatus, type ServiceStatus } from "@/lib/service-status";
 
+type ServiceCategory =
+  | "oil" | "transmissionOil" | "brakes" | "brakeFluid" | "timing"
+  | "stk" | "tires" | "diagnostics" | "lights" | "axle" | "shocks" | "geometry";
+
+const SERVICE_BADGE_STYLES: Record<ServiceCategory, string> = {
+  oil:             "bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-100",
+  transmissionOil: "bg-yellow-100 text-yellow-900 border-yellow-300 hover:bg-yellow-100",
+  brakes:          "bg-red-100 text-red-900 border-red-300 hover:bg-red-100",
+  brakeFluid:      "bg-rose-100 text-rose-900 border-rose-300 hover:bg-rose-100",
+  timing:          "bg-purple-100 text-purple-900 border-purple-300 hover:bg-purple-100",
+  stk:             "bg-emerald-100 text-emerald-900 border-emerald-300 hover:bg-emerald-100",
+  tires:           "bg-cyan-100 text-cyan-900 border-cyan-300 hover:bg-cyan-100",
+  diagnostics:     "bg-blue-100 text-blue-900 border-blue-300 hover:bg-blue-100",
+  lights:          "bg-sky-100 text-sky-900 border-sky-300 hover:bg-sky-100",
+  axle:            "bg-indigo-100 text-indigo-900 border-indigo-300 hover:bg-indigo-100",
+  shocks:          "bg-violet-100 text-violet-900 border-violet-300 hover:bg-violet-100",
+  geometry:        "bg-teal-100 text-teal-900 border-teal-300 hover:bg-teal-100",
+};
+
+function ServiceBadge({ category, children }: { category: ServiceCategory; children: React.ReactNode }) {
+  return <Badge variant="outline" className={cn("text-xs", SERVICE_BADGE_STYLES[category])}>{children}</Badge>;
+}
+
 function StkBadge({ date }: { date?: string | null }) {
   if (!date) return <span className="text-muted-foreground">-</span>;
   const d = parseISO(date);
@@ -538,21 +561,21 @@ export default function VehicleDetail() {
                         <span className="font-semibold">{dateStr(wo.serviceDate ?? wo.createdAt)}</span>
                         {wo.km != null && <span className="text-sm text-muted-foreground">{wo.km.toLocaleString('cs-CZ')} km</span>}
                         <Badge variant="secondary" className="text-xs">Zakázka #{wo.id}</Badge>
-                        {wo.oilChange && <Badge variant="outline" className="text-xs">Olej</Badge>}
-                        {wo.transmissionOil && <Badge variant="outline" className="text-xs">Olej převodovky</Badge>}
-                        {wo.brakes && <Badge variant="outline" className="text-xs">Brzdy</Badge>}
-                        {wo.timing && <Badge variant="outline" className="text-xs">Rozvody</Badge>}
-                        {wo.brakeFluid && <Badge variant="outline" className="text-xs">Brzd. kapalina</Badge>}
-                        {wo.tireChange && <Badge variant="outline" className="text-xs">Přezutí</Badge>}
-                        {wo.diagnostics && <Badge variant="outline" className="text-xs">Diagnostika</Badge>}
-                        {wo.lightsCheck && <Badge variant="outline" className="text-xs">Osvětlení</Badge>}
-                        {wo.frontAxleCheck && <Badge variant="outline" className="text-xs">Přední náprava</Badge>}
-                        {wo.rearAxleCheck && <Badge variant="outline" className="text-xs">Zadní náprava</Badge>}
-                        {wo.frontShocksCheck && <Badge variant="outline" className="text-xs">Přední tlumiče</Badge>}
-                        {wo.rearShocksCheck && <Badge variant="outline" className="text-xs">Zadní tlumiče</Badge>}
-                        {wo.geometry && <Badge variant="outline" className="text-xs">Geometrie</Badge>}
-                        {wo.headlightAlignment && <Badge variant="outline" className="text-xs">Světlomety</Badge>}
-                        {wo.stk && <Badge variant="outline" className="text-xs">STK</Badge>}
+                        {wo.oilChange && <ServiceBadge category="oil">Olej</ServiceBadge>}
+                        {wo.transmissionOil && <ServiceBadge category="transmissionOil">Olej převodovky</ServiceBadge>}
+                        {wo.brakes && <ServiceBadge category="brakes">Brzdy</ServiceBadge>}
+                        {wo.timing && <ServiceBadge category="timing">Rozvody</ServiceBadge>}
+                        {wo.brakeFluid && <ServiceBadge category="brakeFluid">Brzd. kapalina</ServiceBadge>}
+                        {wo.tireChange && <ServiceBadge category="tires">Přezutí</ServiceBadge>}
+                        {wo.diagnostics && <ServiceBadge category="diagnostics">Diagnostika</ServiceBadge>}
+                        {wo.lightsCheck && <ServiceBadge category="lights">Osvětlení</ServiceBadge>}
+                        {wo.frontAxleCheck && <ServiceBadge category="axle">Přední náprava</ServiceBadge>}
+                        {wo.rearAxleCheck && <ServiceBadge category="axle">Zadní náprava</ServiceBadge>}
+                        {wo.frontShocksCheck && <ServiceBadge category="shocks">Přední tlumiče</ServiceBadge>}
+                        {wo.rearShocksCheck && <ServiceBadge category="shocks">Zadní tlumiče</ServiceBadge>}
+                        {wo.geometry && <ServiceBadge category="geometry">Geometrie</ServiceBadge>}
+                        {wo.headlightAlignment && <ServiceBadge category="lights">Světlomety</ServiceBadge>}
+                        {wo.stk && <ServiceBadge category="stk">STK</ServiceBadge>}
                       </div>
                       {wo.description && <p className="text-sm text-muted-foreground">{wo.description}</p>}
                       {wo.otherServices && <p className="text-sm text-muted-foreground">{wo.otherServices}</p>}
@@ -567,12 +590,12 @@ export default function VehicleDetail() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold">{dateStr(record.date)}</span>
                       {record.km && <span className="text-sm text-muted-foreground">{record.km.toLocaleString('cs-CZ')} km</span>}
-                      {record.oilChanged && <Badge variant="outline" className="text-xs">Olej</Badge>}
-                      {record.transmissionOilChanged && <Badge variant="outline" className="text-xs">Olej převodovky</Badge>}
-                      {record.brakesServiced && <Badge variant="outline" className="text-xs">Brzdy</Badge>}
-                      {record.timingServiced && <Badge variant="outline" className="text-xs">Rozvody</Badge>}
-                      {record.brakeFluidChanged && <Badge variant="outline" className="text-xs">Brzd. kapalina</Badge>}
-                      {record.stkPassed && <Badge variant="outline" className="text-xs">STK</Badge>}
+                      {record.oilChanged && <ServiceBadge category="oil">Olej</ServiceBadge>}
+                      {record.transmissionOilChanged && <ServiceBadge category="transmissionOil">Olej převodovky</ServiceBadge>}
+                      {record.brakesServiced && <ServiceBadge category="brakes">Brzdy</ServiceBadge>}
+                      {record.timingServiced && <ServiceBadge category="timing">Rozvody</ServiceBadge>}
+                      {record.brakeFluidChanged && <ServiceBadge category="brakeFluid">Brzd. kapalina</ServiceBadge>}
+                      {record.stkPassed && <ServiceBadge category="stk">STK</ServiceBadge>}
                     </div>
                     {record.description && <p className="text-sm text-muted-foreground">{record.description}</p>}
                     {record.otherWork && <p className="text-sm text-muted-foreground">{record.otherWork}</p>}
