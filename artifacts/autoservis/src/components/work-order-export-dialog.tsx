@@ -119,7 +119,7 @@ function buildHtml(opts: {
   const photoUrls = (photos ?? [])
     .map((p) => p.url)
     .filter(Boolean)
-    .map((u) => (u!.startsWith("http") || u!.startsWith("/api/") ? u! : `/api/storage${u}`));
+    .map((u) => (u!.startsWith("http") ? u! : u!.startsWith("/api/") ? `${window.location.origin}${u}` : `${window.location.origin}/api/storage${u}`));
 
   const css = `
     @page { size: A4 portrait; margin: 14mm 12mm 16mm; }
@@ -205,7 +205,7 @@ function buildHtml(opts: {
     .lp-lg .lp-num { padding:0 12pt; font-size:18pt; }
   `;
 
-  const logoImg = settings?.logoUrl ? `<img class="logo" src="/api/storage${esc(settings.logoUrl)}" alt="" />` : "";
+  const logoImg = settings?.logoUrl ? `<img class="logo" src="${esc(window.location.origin)}/api/storage${esc(settings.logoUrl)}" alt="" />` : "";
   const shopHeader = options.shopHeader && settings ? `
     <div class="shop">
       ${logoImg}
@@ -309,7 +309,7 @@ function buildHtml(opts: {
     </div>
   ` : "";
 
-  const sigImg = settings?.signatureImageUrl ? `<img src="/api/storage${esc(settings.signatureImageUrl)}" alt="" style="max-height:50px;max-width:180px;object-fit:contain;display:block;margin:0 auto 4px" />` : "";
+  const sigImg = settings?.signatureImageUrl ? `<img src="${esc(window.location.origin)}/api/storage${esc(settings.signatureImageUrl)}" alt="" style="max-height:50px;max-width:180px;object-fit:contain;display:block;margin:0 auto 4px" />` : "";
   const sigName = settings?.signatureName ? `<div style="text-align:center;font-size:12px;margin-bottom:4px">${esc(settings.signatureName)}</div>` : "";
   const signatureHtml = options.signature ? `
     <div class="sig">
