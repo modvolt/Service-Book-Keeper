@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link, useLocation, useSearch } from "wouter";
-import { useCreateWorkOrder, useGetVehicleByPlate, getListWorkOrdersQueryKey } from "@workspace/api-client-react";
+import { useCreateWorkOrder, useGetVehicleByPlate, useListVehicles, getListWorkOrdersQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,10 +23,24 @@ export default function NewWorkOrder() {
 
   const [spz, setSpz] = useState(initialSpz);
   const [spzQuery, setSpzQuery] = useState(initialSpz);
+  const [showSuggest, setShowSuggest] = useState(false);
 
   const { data: foundVehicle } = useGetVehicleByPlate(spzQuery, {
     query: { enabled: spzQuery.length >= 3 } as any
   });
+
+  const searchTerm = spz.trim();
+  const { data: vehicleMatches = [] } = useListVehicles(
+    { search: searchTerm },
+    { query: { enabled: searchTerm.length >= 1 } as any }
+  );
+
+  const suggestions = useMemo(() => {
+    const normalized = searchTerm.toUpperCase();
+    return vehicleMatches
+      .filter((v) => v.licensePlate.toUpperCase() !== normalized)
+      .slice(0, 6);
+  }, [vehicleMatches, searchTerm]);
 
   const [form, setForm] = useState({
     km: "", description: "", oilChange: false, brakes: false,
@@ -36,8 +50,15 @@ export default function NewWorkOrder() {
 
   function handleSpzChange(value: string) {
     setSpz(value);
+    setShowSuggest(true);
     if (value.length >= 3) setSpzQuery(value.toUpperCase().trim());
     else setSpzQuery("");
+  }
+
+  function pickSuggestion(plate: string) {
+    setSpz(plate);
+    setSpzQuery(plate.toUpperCase().trim());
+    setShowSuggest(false);
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -98,8 +119,28 @@ export default function NewWorkOrder() {
                   className="pl-9 font-mono uppercase text-lg"
                   value={spz}
                   onChange={e => handleSpzChange(e.target.value)}
+                  onFocus={() => setShowSuggest(true)}
+                  onBlur={() => setTimeout(() => setShowSuggest(false), 150)}
+                  autoComplete="off"
                   required
                 />
+                {showSuggest && suggestions.length > 0 && (
+                  <div className="absolute z-20 mt-1 w-full bg-popover border rounded-md shadow-md max-h-64 overflow-auto">
+                    {suggestions.map((v) => (
+                      <button
+                        type="button"
+                        key={v.id}
+                        onMouseDown={(e) => { e.preventDefault(); pickSuggestion(v.licensePlate); }}
+                        className="w-full text-left px-3 py-2 hover:bg-accent flex items-center justify-between gap-3"
+                      >
+                        <span className="font-mono font-semibold uppercase">{v.licensePlate}</span>
+                        <span className="text-xs text-muted-foreground truncate">
+                          {v.make} {v.model}{v.year ? ` (${v.year})` : ""}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
 
