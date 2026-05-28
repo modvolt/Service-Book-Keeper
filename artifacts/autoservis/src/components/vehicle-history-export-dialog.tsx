@@ -78,69 +78,119 @@ function buildHtml(opts: {
   const { vehicle, orders, materialsByOrder, serviceRecords, settings, options } = opts;
 
   const css = `
+    @page { size: A4 portrait; margin: 14mm 12mm 16mm; }
     * { box-sizing: border-box; }
-    body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; color: #111; margin: 0; padding: 24px; font-size: 11pt; line-height: 1.4; }
-    h1 { font-size: 20pt; margin: 0 0 4px; }
-    h2 { font-size: 13pt; margin: 18px 0 6px; padding-bottom: 4px; border-bottom: 1px solid #d4d4d8; }
-    h3 { font-size: 11.5pt; margin: 8px 0 4px; }
-    .row { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; }
-    .muted { color: #6b7280; font-size: 9.5pt; }
-    .meta { text-align: right; }
-    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .box { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px; }
-    .box .label { font-size: 9pt; text-transform: uppercase; color: #6b7280; letter-spacing: 0.04em; margin-bottom: 2px; }
-    .order { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px; margin: 10px 0; page-break-inside: avoid; }
-    .order .order-head { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; border-bottom: 1px solid #e5e7eb; padding-bottom: 6px; margin-bottom: 6px; }
-    .order .order-head .left { font-weight: 600; font-size: 11.5pt; }
-    .order .order-head .right { color: #6b7280; font-size: 10pt; white-space: nowrap; }
-    table { width: 100%; border-collapse: collapse; margin: 4px 0 6px; }
-    th, td { padding: 4px 6px; text-align: left; border-bottom: 1px solid #f1f5f9; vertical-align: top; font-size: 10pt; }
-    th { background: #f3f4f6; font-size: 9.5pt; }
-    td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-    ul.checks { list-style: none; padding: 0; margin: 4px 0; }
-    ul.checks li { display: inline-block; padding: 1px 8px 1px 0; }
-    ul.checks li::before { content: "✓ "; color: #16a34a; font-weight: bold; }
-    .order-total { text-align: right; font-weight: 600; margin-top: 4px; }
-    .totals { margin-top: 12px; width: 360px; margin-left: auto; }
-    .totals td { border: none; padding: 4px 8px; }
-    .totals tr.grand td { border-top: 2px solid #111; font-weight: bold; font-size: 13pt; padding-top: 8px; }
-    .sig { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; margin-top: 32px; }
-    .sig .line { border-top: 1px solid #111; margin-top: 48px; padding-top: 4px; font-size: 10pt; color: #6b7280; }
+    html, body { margin: 0; padding: 0; background: #f3f4f6; }
+    body { font-family: "Segoe UI", -apple-system, "Helvetica Neue", Roboto, Arial, sans-serif; color: #1f2937; font-size: 10.5pt; line-height: 1.5; }
+    .page { max-width: 210mm; margin: 0 auto; background: white; padding: 22px 26px 30px; box-shadow: 0 2px 18px rgba(15, 23, 42, 0.08); }
+
+    .toolbar { position: sticky; top: 0; z-index: 20; background: rgba(255,255,255,0.95); backdrop-filter: blur(6px); border-bottom: 1px solid #e5e7eb; padding: 10px 16px; margin: -22px -26px 18px; display: flex; gap: 8px; justify-content: flex-end; }
+    .btn { background: #b91c1c; color: white; border: 0; padding: 8px 16px; border-radius: 6px; font-size: 10.5pt; cursor: pointer; font-weight: 500; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+    .btn.secondary { background: white; color: #1f2937; border: 1px solid #d1d5db; }
+
+    .brand { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; padding-bottom: 12px; border-bottom: 3px solid #b91c1c; margin-bottom: 16px; }
+    .brand .name { font-size: 18pt; font-weight: 700; color: #0f172a; letter-spacing: -0.01em; margin-bottom: 4px; }
+    .brand .lines { font-size: 9pt; color: #6b7280; line-height: 1.55; }
+    .brand .badge { text-align: right; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.08em; color: #b91c1c; font-weight: 600; padding-top: 4px; }
+    .brand .badge .date { display: block; margin-top: 6px; color: #6b7280; font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 9pt; }
+
+    .doc-title { text-align: center; margin: 18px 0 14px; }
+    .doc-title h1 { font-size: 17pt; font-weight: 700; margin: 0; color: #0f172a; letter-spacing: 0.02em; }
+    .doc-title .subtitle { font-size: 10pt; color: #6b7280; margin-top: 4px; }
+
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0; }
+    .info-card { background: #f9fafb; border: 1px solid #e5e7eb; border-left: 3px solid #b91c1c; border-radius: 8px; padding: 12px 14px; }
+    .info-card .label { font-size: 8pt; text-transform: uppercase; color: #9ca3af; letter-spacing: 0.1em; margin-bottom: 6px; font-weight: 600; }
+    .info-card .primary { font-size: 12.5pt; font-weight: 700; color: #0f172a; margin-bottom: 3px; }
+    .info-card .secondary { font-size: 10pt; color: #374151; margin-bottom: 2px; }
+    .info-card .muted { font-size: 9pt; color: #6b7280; }
+
+    h2.section { font-size: 11pt; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.08em; margin: 22px 0 10px; padding-left: 10px; border-left: 3px solid #b91c1c; }
+
+    .status-table { width: 100%; border-collapse: collapse; background: #fafafa; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+    .status-table td { padding: 7px 12px; border-bottom: 1px solid #f1f5f9; font-size: 10pt; }
+    .status-table tr:last-child td { border-bottom: none; }
+    .status-table td:first-child { color: #6b7280; width: 45%; }
+    .status-table td:last-child { color: #1f2937; font-weight: 500; text-align: right; }
+
+    .order { border: 1px solid #e5e7eb; border-radius: 8px; margin: 12px 0; page-break-inside: avoid; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+    .order .order-head { background: linear-gradient(to right, #fef2f2, #fafafa); padding: 10px 14px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+    .order .order-head .left { font-weight: 700; font-size: 11pt; color: #0f172a; }
+    .order .order-head .left .label { color: #b91c1c; text-transform: uppercase; font-size: 8.5pt; letter-spacing: 0.08em; display: block; font-weight: 600; margin-bottom: 1px; }
+    .order .order-head .right { font-size: 9.5pt; color: #6b7280; white-space: nowrap; text-align: right; }
+    .order .order-head .right .pill { display: inline-block; background: white; border: 1px solid #d1d5db; color: #374151; padding: 1px 8px; border-radius: 10px; font-size: 8.5pt; font-weight: 500; margin-left: 6px; }
+    .order .body { padding: 10px 14px 12px; }
+    .order .desc { font-size: 10pt; color: #1f2937; margin: 2px 0 8px; }
+
+    ul.checks { list-style: none; padding: 0; margin: 6px 0; }
+    ul.checks li { display: inline-block; margin: 2px 6px 2px 0; padding: 2px 9px 2px 7px; background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; border-radius: 12px; font-size: 9pt; font-weight: 500; }
+    ul.checks li::before { content: "✓ "; }
+
+    .meta-line { font-size: 9pt; color: #6b7280; margin: 3px 0; }
+    .meta-line strong { color: #374151; font-weight: 600; }
+
+    table.mat { width: 100%; border-collapse: collapse; margin: 8px 0 4px; border: 1px solid #e5e7eb; border-radius: 4px; overflow: hidden; }
+    table.mat th { background: #f3f4f6; padding: 5px 8px; text-align: left; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280; font-weight: 600; border-bottom: 1px solid #e5e7eb; }
+    table.mat td { padding: 5px 8px; border-bottom: 1px solid #f1f5f9; font-size: 9.5pt; vertical-align: top; }
+    table.mat tbody tr:last-child td { border-bottom: none; }
+    table.mat td.num, table.mat th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+    .order-total { text-align: right; font-size: 10.5pt; font-weight: 700; color: #0f172a; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #d1d5db; }
+    .order-total .sum { color: #b91c1c; font-size: 11pt; }
+
+    .totals { margin: 18px 0 0 auto; width: 320px; background: #fef3c7; border: 2px solid #f59e0b; border-radius: 8px; padding: 8px 14px; }
+    .totals table { width: 100%; border-collapse: collapse; }
+    .totals td { padding: 4px 0; font-size: 10pt; color: #78350f; }
+    .totals td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+    .totals tr.grand td { border-top: 2px solid #f59e0b; padding-top: 8px; margin-top: 4px; font-size: 13pt; font-weight: 700; color: #78350f; }
+
+    .records-table { width: 100%; border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+    .records-table th { background: #f3f4f6; padding: 7px 10px; text-align: left; font-size: 9pt; text-transform: uppercase; letter-spacing: 0.04em; color: #6b7280; font-weight: 600; border-bottom: 1px solid #e5e7eb; }
+    .records-table td { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; font-size: 9.5pt; vertical-align: top; }
+    .records-table tbody tr:nth-child(even) td { background: #fafafa; }
+    .records-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+    .footer-note { margin-top: 24px; padding: 10px 14px; background: #f9fafb; border-left: 3px solid #d1d5db; border-radius: 4px; font-size: 8.5pt; color: #6b7280; font-style: italic; }
+    .sig { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; margin-top: 34px; }
+    .sig .line { border-top: 1px solid #1f2937; margin-top: 42px; padding-top: 6px; font-size: 9pt; color: #6b7280; text-align: center; }
+
     @media print {
-      body { padding: 14mm; font-size: 10.5pt; }
-      .no-print { display: none; }
-      h2 { page-break-after: avoid; }
+      html, body { background: white; }
+      .page { box-shadow: none; max-width: none; padding: 0; }
+      .no-print { display: none !important; }
+      h2.section { page-break-after: avoid; }
+      .order { page-break-inside: avoid; box-shadow: none; }
+      .totals { page-break-inside: avoid; }
     }
-    .toolbar { position: sticky; top: 0; background: #f9fafb; border-bottom: 1px solid #e5e7eb; padding: 10px 16px; margin: -24px -24px 16px; display: flex; gap: 8px; justify-content: flex-end; }
-    .btn { background: #111; color: white; border: 0; padding: 8px 14px; border-radius: 6px; font-size: 11pt; cursor: pointer; }
-    .btn.secondary { background: white; color: #111; border: 1px solid #d4d4d8; }
   `;
 
   const shopHeader = options.shopHeader && settings ? `
     <div>
-      ${settings.companyName ? `<div style="font-weight:600">${esc(settings.companyName)}</div>` : ""}
-      ${settings.companyAddress ? `<div class="muted">${esc(settings.companyAddress)}</div>` : ""}
-      <div class="muted">${[settings.companyPhone, settings.companyEmail].filter(Boolean).map((v) => esc(v as string)).join(" · ")}</div>
-      <div class="muted">${[settings.companyIco ? `IČO: ${esc(settings.companyIco)}` : null, settings.companyDic ? `DIČ: ${esc(settings.companyDic)}` : null].filter(Boolean).join(" · ")}</div>
-    </div>` : "<div></div>";
+      ${settings.companyName ? `<div class="name">${esc(settings.companyName)}</div>` : ""}
+      <div class="lines">
+        ${settings.companyAddress ? `${esc(settings.companyAddress)}<br/>` : ""}
+        ${[settings.companyPhone, settings.companyEmail].filter(Boolean).map((v) => esc(v as string)).join(" · ")}
+        ${(settings.companyIco || settings.companyDic) ? `<br/>${[settings.companyIco ? `IČO: ${esc(settings.companyIco)}` : null, settings.companyDic ? `DIČ: ${esc(settings.companyDic)}` : null].filter(Boolean).join(" · ")}` : ""}
+      </div>
+    </div>` : `<div><div class="name">AutoServis</div></div>`;
 
   const vehicleBlock = options.vehicleInfo ? `
-    <div class="box">
+    <div class="info-card">
       <div class="label">Vozidlo</div>
-      <div style="font-size:13pt;font-weight:600">${esc(vehicle.licensePlate)}</div>
-      <div>${esc(vehicle.make)} ${esc(vehicle.model)}${vehicle.year ? `, ${vehicle.year}` : ""}</div>
+      <div class="primary">${esc(vehicle.licensePlate)}</div>
+      <div class="secondary">${esc(vehicle.make)} ${esc(vehicle.model)}${vehicle.year ? `, ${vehicle.year}` : ""}</div>
       ${vehicle.vin ? `<div class="muted">VIN: ${esc(vehicle.vin)}</div>` : ""}
       ${vehicle.engineDisplacement ? `<div class="muted">Objem: ${vehicle.engineDisplacement} cm³</div>` : ""}
       ${vehicle.currentKm != null ? `<div class="muted">Najeto: ${vehicle.currentKm.toLocaleString("cs-CZ")} km</div>` : ""}
     </div>` : "";
 
   const ownerBlock = options.ownerInfo && (vehicle.ownerName || vehicle.ownerAddress) ? `
-    <div class="box">
+    <div class="info-card">
       <div class="label">Vlastník</div>
-      ${vehicle.ownerName ? `<div style="font-weight:600">${esc(vehicle.ownerName)}</div>` : ""}
-      ${vehicle.ownerAddress ? `<div class="muted">${esc(vehicle.ownerAddress)}</div>` : ""}
-      <div class="muted">${[vehicle.ownerPhone, vehicle.ownerEmail].filter(Boolean).map((v) => esc(v as string)).join(" · ")}</div>
-      <div class="muted">${[vehicle.ownerIco ? `IČO: ${esc(vehicle.ownerIco)}` : null, vehicle.ownerDic ? `DIČ: ${esc(vehicle.ownerDic)}` : null].filter(Boolean).join(" · ")}</div>
+      ${vehicle.ownerName ? `<div class="primary">${esc(vehicle.ownerName)}</div>` : ""}
+      ${vehicle.ownerAddress ? `<div class="secondary">${esc(vehicle.ownerAddress)}</div>` : ""}
+      ${(vehicle.ownerPhone || vehicle.ownerEmail) ? `<div class="muted">${[vehicle.ownerPhone, vehicle.ownerEmail].filter(Boolean).map((v) => esc(v as string)).join(" · ")}</div>` : ""}
+      ${(vehicle.ownerIco || vehicle.ownerDic) ? `<div class="muted">${[vehicle.ownerIco ? `IČO: ${esc(vehicle.ownerIco)}` : null, vehicle.ownerDic ? `DIČ: ${esc(vehicle.ownerDic)}` : null].filter(Boolean).join(" · ")}</div>` : ""}
     </div>` : "";
 
   const dateOnly = (s?: string | null) => {
@@ -149,13 +199,13 @@ function buildHtml(opts: {
   };
 
   const statusHtml = options.serviceStatus ? `
-    <h2>Aktuální stav servisu</h2>
-    <table>
-      <tr><td>STK platná do</td><td>${dateOnly(vehicle.stkValidUntil) || "-"}</td></tr>
-      <tr><td>Poslední výměna oleje</td><td>${dateOnly(vehicle.lastOilChangeDate) || "-"}${vehicle.lastOilChangeKm != null ? ` (${vehicle.lastOilChangeKm.toLocaleString("cs-CZ")} km)` : ""}</td></tr>
-      <tr><td>Poslední servis brzd</td><td>${dateOnly(vehicle.lastBrakesDate) || "-"}</td></tr>
-      <tr><td>Poslední výměna rozvodů</td><td>${dateOnly(vehicle.lastTimingDate) || "-"}</td></tr>
-      ${vehicle.transmission === "automatic" ? `<tr><td>Poslední olej v převodovce</td><td>${dateOnly(vehicle.lastTransmissionOilDate) || "-"}${vehicle.lastTransmissionOilKm != null ? ` (${vehicle.lastTransmissionOilKm.toLocaleString("cs-CZ")} km)` : ""}</td></tr>` : ""}
+    <h2 class="section">Aktuální stav servisu</h2>
+    <table class="status-table">
+      <tr><td>STK platná do</td><td>${dateOnly(vehicle.stkValidUntil) || "—"}</td></tr>
+      <tr><td>Poslední výměna oleje</td><td>${dateOnly(vehicle.lastOilChangeDate) || "—"}${vehicle.lastOilChangeKm != null ? ` (${vehicle.lastOilChangeKm.toLocaleString("cs-CZ")} km)` : ""}</td></tr>
+      <tr><td>Poslední servis brzd</td><td>${dateOnly(vehicle.lastBrakesDate) || "—"}</td></tr>
+      <tr><td>Poslední výměna rozvodů</td><td>${dateOnly(vehicle.lastTimingDate) || "—"}</td></tr>
+      ${vehicle.transmission === "automatic" ? `<tr><td>Poslední olej v převodovce</td><td>${dateOnly(vehicle.lastTransmissionOilDate) || "—"}${vehicle.lastTransmissionOilKm != null ? ` (${vehicle.lastTransmissionOilKm.toLocaleString("cs-CZ")} km)` : ""}</td></tr>` : ""}
     </table>
   ` : "";
 
@@ -174,47 +224,57 @@ function buildHtml(opts: {
     return `
       <div class="order">
         <div class="order-head">
-          <div class="left">Zakázka #${o.id} · ${dateOnly(date)}</div>
-          <div class="right">${STATUS_LABEL[o.status] ?? o.status}${o.km != null ? ` · ${o.km.toLocaleString("cs-CZ")} km` : ""}</div>
+          <div class="left">
+            <span class="label">Zakázkový list</span>
+            č. ${o.id} · ${dateOnly(date)}
+          </div>
+          <div class="right">
+            ${o.km != null ? `${o.km.toLocaleString("cs-CZ")} km` : ""}
+            <span class="pill">${STATUS_LABEL[o.status] ?? o.status}</span>
+          </div>
         </div>
-        ${o.description ? `<div style="margin-bottom:4px">${esc(o.description)}</div>` : ""}
-        ${options.serviceItems && performed.length > 0 ? `<ul class="checks">${performed.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>` : ""}
-        ${options.serviceItems && o.otherServices ? `<div class="muted"><strong>Další úkony:</strong> ${esc(o.otherServices)}</div>` : ""}
-        ${options.serviceItems && o.otherWork ? `<div class="muted"><strong>Ostatní práce:</strong> ${esc(o.otherWork)}</div>` : ""}
-        ${options.materials && mats.length > 0 ? `
-          <table>
-            <thead><tr><th>Materiál</th><th class="num">Množství</th>${options.materialPrices ? `<th class="num">Cena / ks</th><th class="num">Celkem</th>` : ""}</tr></thead>
-            <tbody>
-              ${mats.map((m) => {
-                const qty = parseFloat(m.quantity) || 0;
-                const total = (m.unitPrice ?? 0) * qty;
-                return `<tr>
-                  <td>${esc(m.name)}</td>
-                  <td class="num">${esc(m.quantity)}${m.unit ? ` ${esc(m.unit)}` : ""}</td>
-                  ${options.materialPrices ? `<td class="num">${m.unitPrice != null ? fmtCzk(m.unitPrice) : "-"}</td><td class="num">${fmtCzk(total)}</td>` : ""}
-                </tr>`;
-              }).join("")}
-            </tbody>
-          </table>` : ""}
-        ${options.labor && (o.laborHours || laborPrice) ? `<div class="muted">Práce: ${o.laborHours ?? "-"} h${laborPrice ? ` · ${fmtCzk(laborPrice)}` : ""}</div>` : ""}
-        ${options.perOrderTotal && orderTotal > 0 ? `<div class="order-total">Celkem za zakázku: ${fmtCzk(orderTotal)}</div>` : ""}
+        <div class="body">
+          ${o.description ? `<div class="desc">${esc(o.description)}</div>` : ""}
+          ${options.serviceItems && performed.length > 0 ? `<ul class="checks">${performed.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>` : ""}
+          ${options.serviceItems && o.otherServices ? `<div class="meta-line"><strong>Další úkony:</strong> ${esc(o.otherServices)}</div>` : ""}
+          ${options.serviceItems && o.otherWork ? `<div class="meta-line"><strong>Ostatní práce:</strong> ${esc(o.otherWork)}</div>` : ""}
+          ${options.materials && mats.length > 0 ? `
+            <table class="mat">
+              <thead><tr><th>Materiál</th><th class="num">Množství</th>${options.materialPrices ? `<th class="num">Cena / ks</th><th class="num">Celkem</th>` : ""}</tr></thead>
+              <tbody>
+                ${mats.map((m) => {
+                  const qty = parseFloat(m.quantity) || 0;
+                  const total = (m.unitPrice ?? 0) * qty;
+                  return `<tr>
+                    <td>${esc(m.name)}</td>
+                    <td class="num">${esc(m.quantity)}${m.unit ? ` ${esc(m.unit)}` : ""}</td>
+                    ${options.materialPrices ? `<td class="num">${m.unitPrice != null ? fmtCzk(m.unitPrice) : "—"}</td><td class="num">${fmtCzk(total)}</td>` : ""}
+                  </tr>`;
+                }).join("")}
+              </tbody>
+            </table>` : ""}
+          ${options.labor && (o.laborHours || laborPrice) ? `<div class="meta-line"><strong>Práce:</strong> ${o.laborHours ?? "—"} h${laborPrice ? ` · ${fmtCzk(laborPrice)}` : ""}</div>` : ""}
+          ${options.perOrderTotal && orderTotal > 0 ? `<div class="order-total">Celkem za zakázkový list: <span class="sum">${fmtCzk(orderTotal)}</span></div>` : ""}
+        </div>
       </div>
     `;
-  }).join("") : `<p class="muted">Žádné zakázky.</p>`;
+  }).join("") : `<p class="meta-line" style="text-align:center;padding:16px">Žádné zakázkové listy.</p>`;
 
   const grandTotal = grandLabor + grandMaterial;
   const totalsHtml = options.grandTotal && grandTotal > 0 ? `
-    <table class="totals">
-      ${options.materials && grandMaterial > 0 ? `<tr><td>Materiál celkem</td><td class="num">${fmtCzk(grandMaterial)}</td></tr>` : ""}
-      ${options.labor && grandLabor > 0 ? `<tr><td>Práce celkem</td><td class="num">${fmtCzk(grandLabor)}</td></tr>` : ""}
-      <tr class="grand"><td>Celkem za období</td><td class="num">${fmtCzk(grandTotal)}</td></tr>
-    </table>
+    <div class="totals">
+      <table>
+        ${options.materials && grandMaterial > 0 ? `<tr><td>Materiál celkem</td><td class="num">${fmtCzk(grandMaterial)}</td></tr>` : ""}
+        ${options.labor && grandLabor > 0 ? `<tr><td>Práce celkem</td><td class="num">${fmtCzk(grandLabor)}</td></tr>` : ""}
+        <tr class="grand"><td>Celkem za období</td><td class="num">${fmtCzk(grandTotal)}</td></tr>
+      </table>
+    </div>
   ` : "";
 
   const recordsHtml = options.serviceRecords && serviceRecords.length > 0 ? `
-    <h2>Další servisní záznamy</h2>
-    <table>
-      <thead><tr><th>Datum</th><th>Km</th><th>Popis / úkony</th><th>Technik</th></tr></thead>
+    <h2 class="section">Další servisní záznamy</h2>
+    <table class="records-table">
+      <thead><tr><th>Datum</th><th class="num">Km</th><th>Popis / úkony</th><th>Technik</th></tr></thead>
       <tbody>
         ${serviceRecords.map((r) => {
           const ops = [
@@ -227,9 +287,9 @@ function buildHtml(opts: {
           const text = [r.description, ops, r.otherWork].filter(Boolean).join(" — ");
           return `<tr>
             <td>${dateOnly(r.date)}</td>
-            <td class="num">${r.km != null ? r.km.toLocaleString("cs-CZ") : "-"}</td>
+            <td class="num">${r.km != null ? r.km.toLocaleString("cs-CZ") : "—"}</td>
             <td>${esc(text)}</td>
-            <td>${r.technician ? esc(r.technician) : "-"}</td>
+            <td>${r.technician ? esc(r.technician) : "—"}</td>
           </tr>`;
         }).join("")}
       </tbody>
@@ -250,23 +310,29 @@ function buildHtml(opts: {
   <style>${css}</style>
 </head>
 <body>
-  <div class="toolbar no-print">
-    <button class="btn secondary" onclick="window.close()">Zavřít</button>
-    <button class="btn" onclick="window.print()">Tisk / Uložit jako PDF</button>
-  </div>
-  <div class="row">
-    ${shopHeader}
-    <div class="meta">
-      <h1>Servisní historie</h1>
-      <div class="muted">${esc(vehicle.licensePlate)} · ${esc(vehicle.make)} ${esc(vehicle.model)}</div>
-      <div class="muted">Vygenerováno: ${format(new Date(), "d. M. yyyy", { locale: cs })}</div>
+  <div class="page">
+    <div class="toolbar no-print">
+      <button class="btn secondary" onclick="window.close()">Zavřít</button>
+      <button class="btn" onclick="window.print()">Tisk / Uložit jako PDF</button>
     </div>
+    <div class="brand">
+      ${shopHeader}
+      <div class="badge">
+        Servisní dokumentace
+        <span class="date">${format(new Date(), "d. M. yyyy", { locale: cs })}</span>
+      </div>
+    </div>
+    <div class="doc-title">
+      <h1>Servisní historie vozidla</h1>
+      <div class="subtitle">${esc(vehicle.licensePlate)} · ${esc(vehicle.make)} ${esc(vehicle.model)}${vehicle.year ? `, ${vehicle.year}` : ""}</div>
+    </div>
+    ${(vehicleBlock || ownerBlock) ? `<div class="grid2">${vehicleBlock}${ownerBlock}</div>` : ""}
+    ${statusHtml}
+    ${options.workOrders ? `<h2 class="section">Servisní zakázkové listy (${orders.length})</h2>${ordersHtml}${totalsHtml}` : ""}
+    ${recordsHtml}
+    <div class="footer-note">Tento dokument je výpisem servisních záznamů vozidla a slouží jako příloha k fakturaci. Vydáno ${format(new Date(), "d. M. yyyy", { locale: cs })}.</div>
+    ${signatureHtml}
   </div>
-  ${(vehicleBlock || ownerBlock) ? `<div class="grid2" style="margin-top:16px">${vehicleBlock}${ownerBlock}</div>` : ""}
-  ${statusHtml}
-  ${options.workOrders ? `<h2>Servisní zakázky (${orders.length})</h2>${ordersHtml}${totalsHtml}` : ""}
-  ${recordsHtml}
-  ${signatureHtml}
 </body>
 </html>`;
 }
