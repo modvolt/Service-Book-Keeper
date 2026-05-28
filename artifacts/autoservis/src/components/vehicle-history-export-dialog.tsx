@@ -129,7 +129,7 @@ function buildHtml(opts: {
 
     .brand { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; padding-bottom: 12px; border-bottom: 3px solid #b91c1c; margin-bottom: 16px; }
     .brand .shop { display: flex; align-items: center; gap: 14px; }
-    .brand .logo { max-height: 90px; max-width: 220px; object-fit: contain; display: block; }
+    .brand .logo { max-height: 130px; max-width: 300px; object-fit: contain; display: block; }
     .brand .name { font-size: 18pt; font-weight: 700; color: #0f172a; letter-spacing: -0.01em; margin-bottom: 4px; }
     .brand .lines { font-size: 9pt; color: #6b7280; line-height: 1.55; }
     .brand .badge { text-align: right; font-size: 8.5pt; text-transform: uppercase; letter-spacing: 0.08em; color: #b91c1c; font-weight: 600; padding-top: 4px; }
