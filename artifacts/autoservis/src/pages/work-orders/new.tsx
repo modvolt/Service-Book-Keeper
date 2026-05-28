@@ -51,7 +51,7 @@ export default function NewWorkOrder() {
     tireChange: false, diagnostics: false, lightsCheck: false, brakeFluid: false,
     frontAxleCheck: false, rearAxleCheck: false,
     frontShocksCheck: false, rearShocksCheck: false, geometry: false, headlightAlignment: false,
-    otherWork: "", otherServices: "", notes: "",
+    otherServices: "", notes: "",
     serviceDate: today,
   });
 
@@ -97,7 +97,6 @@ export default function NewWorkOrder() {
         geometry: form.geometry,
         headlightAlignment: form.headlightAlignment,
         serviceDate: form.serviceDate || null,
-        otherWork: form.otherWork || null,
         otherServices: form.otherServices || null,
         notes: form.notes || null,
       }
@@ -230,10 +229,6 @@ export default function NewWorkOrder() {
             <div className="space-y-1">
               <Label>Ostatní servisní úkony</Label>
               <Textarea placeholder="Další servisní úkony mimo standardní položky..." value={form.otherServices} onChange={e => setForm(f => ({ ...f, otherServices: e.target.value }))} />
-            </div>
-            <div className="space-y-1">
-              <Label>Ostatní práce</Label>
-              <Input placeholder="Výměna žárovky, korekce geometrie..." value={form.otherWork} onChange={e => setForm(f => ({ ...f, otherWork: e.target.value }))} />
             </div>
           </CardContent>
         </Card>
