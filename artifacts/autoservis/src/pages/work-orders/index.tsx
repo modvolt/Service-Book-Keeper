@@ -16,9 +16,10 @@ const STATUS_OPTIONS = [
   ...WORK_ORDER_STATUSES.map((s) => ({ value: s.value, label: s.label })),
 ];
 
-function ServiceIcons({ order }: { order: { oilChange?: boolean; brakes?: boolean; timing?: boolean; stk?: boolean; otherWork?: string | null; otherServices?: string | null } }) {
+function ServiceIcons({ order }: { order: { oilChange?: boolean; transmissionOil?: boolean; brakes?: boolean; timing?: boolean; stk?: boolean; otherWork?: string | null; otherServices?: string | null } }) {
   const items = [
     order.oilChange && "Olej",
+    order.transmissionOil && "Olej převodovky",
     order.brakes && "Brzdy",
     order.timing && "Rozvody",
     order.stk && "STK",
@@ -117,7 +118,7 @@ export default function WorkOrdersList() {
                       {wo.description && <p className="text-sm text-muted-foreground mt-1 truncate">{wo.description}</p>}
                     </div>
                     <div className="text-right shrink-0">
-                      <p className="text-sm text-muted-foreground">{dateStr(wo.createdAt)}</p>
+                      <p className="text-sm text-muted-foreground">{dateStr(wo.serviceDate ?? wo.createdAt)}</p>
                       {wo.km && <p className="text-xs text-muted-foreground">{wo.km.toLocaleString('cs-CZ')} km</p>}
                     </div>
                   </div>

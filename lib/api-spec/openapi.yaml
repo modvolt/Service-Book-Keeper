@@ -574,7 +574,7 @@ components:
 
     Vehicle:
       type: object
-      required: [id, licensePlate, make, model, createdAt]
+      required: [id, licensePlate, make, model, ownerType, createdAt]
       properties:
         id:
           type: integer
@@ -594,9 +594,19 @@ components:
           type: ["integer", "null"]
         registrationDate:
           type: ["string", "null"]
+        transmission:
+          type: ["string", "null"]
+          enum: [manual, automatic, null]
+        ownerType:
+          type: string
+          enum: [private, company]
         ownerName:
           type: ["string", "null"]
         ownerAddress:
+          type: ["string", "null"]
+        ownerIco:
+          type: ["string", "null"]
+        ownerDic:
           type: ["string", "null"]
         currentKm:
           type: ["integer", "null"]
@@ -612,13 +622,31 @@ components:
           type: ["string", "null"]
         lastTimingDate:
           type: ["string", "null"]
+        lastTransmissionOilDate:
+          type: ["string", "null"]
+        lastTransmissionOilKm:
+          type: ["integer", "null"]
+        oilChangeIntervalKm:
+          type: ["integer", "null"]
+        oilChangeIntervalMonths:
+          type: ["integer", "null"]
+        transmissionOilIntervalKm:
+          type: ["integer", "null"]
+        transmissionOilIntervalMonths:
+          type: ["integer", "null"]
+        brakesIntervalMonths:
+          type: ["integer", "null"]
+        timingIntervalKm:
+          type: ["integer", "null"]
+        timingIntervalMonths:
+          type: ["integer", "null"]
         createdAt:
           type: string
           format: date-time
 
     VehicleDetail:
       type: object
-      required: [id, licensePlate, make, model, createdAt, serviceRecords, openWorkOrders]
+      required: [id, licensePlate, make, model, ownerType, createdAt, serviceRecords, openWorkOrders]
       properties:
         id:
           type: integer
@@ -638,9 +666,19 @@ components:
           type: ["integer", "null"]
         registrationDate:
           type: ["string", "null"]
+        transmission:
+          type: ["string", "null"]
+          enum: [manual, automatic, null]
+        ownerType:
+          type: string
+          enum: [private, company]
         ownerName:
           type: ["string", "null"]
         ownerAddress:
+          type: ["string", "null"]
+        ownerIco:
+          type: ["string", "null"]
+        ownerDic:
           type: ["string", "null"]
         currentKm:
           type: ["integer", "null"]
@@ -656,6 +694,24 @@ components:
           type: ["string", "null"]
         lastTimingDate:
           type: ["string", "null"]
+        lastTransmissionOilDate:
+          type: ["string", "null"]
+        lastTransmissionOilKm:
+          type: ["integer", "null"]
+        oilChangeIntervalKm:
+          type: ["integer", "null"]
+        oilChangeIntervalMonths:
+          type: ["integer", "null"]
+        transmissionOilIntervalKm:
+          type: ["integer", "null"]
+        transmissionOilIntervalMonths:
+          type: ["integer", "null"]
+        brakesIntervalMonths:
+          type: ["integer", "null"]
+        timingIntervalKm:
+          type: ["integer", "null"]
+        timingIntervalMonths:
+          type: ["integer", "null"]
         createdAt:
           type: string
           format: date-time
@@ -691,9 +747,19 @@ components:
           type: ["integer", "null"]
         registrationDate:
           type: ["string", "null"]
+        transmission:
+          type: ["string", "null"]
+          enum: [manual, automatic, null]
+        ownerType:
+          type: ["string", "null"]
+          enum: [private, company, null]
         ownerName:
           type: ["string", "null"]
         ownerAddress:
+          type: ["string", "null"]
+        ownerIco:
+          type: ["string", "null"]
+        ownerDic:
           type: ["string", "null"]
         currentKm:
           type: ["integer", "null"]
@@ -709,6 +775,24 @@ components:
           type: ["string", "null"]
         lastTimingDate:
           type: ["string", "null"]
+        lastTransmissionOilDate:
+          type: ["string", "null"]
+        lastTransmissionOilKm:
+          type: ["integer", "null"]
+        oilChangeIntervalKm:
+          type: ["integer", "null"]
+        oilChangeIntervalMonths:
+          type: ["integer", "null"]
+        transmissionOilIntervalKm:
+          type: ["integer", "null"]
+        transmissionOilIntervalMonths:
+          type: ["integer", "null"]
+        brakesIntervalMonths:
+          type: ["integer", "null"]
+        timingIntervalKm:
+          type: ["integer", "null"]
+        timingIntervalMonths:
+          type: ["integer", "null"]
 
     VehicleUpdate:
       type: object
@@ -729,9 +813,19 @@ components:
           type: ["integer", "null"]
         registrationDate:
           type: ["string", "null"]
+        transmission:
+          type: ["string", "null"]
+          enum: [manual, automatic, null]
+        ownerType:
+          type: ["string", "null"]
+          enum: [private, company, null]
         ownerName:
           type: ["string", "null"]
         ownerAddress:
+          type: ["string", "null"]
+        ownerIco:
+          type: ["string", "null"]
+        ownerDic:
           type: ["string", "null"]
         currentKm:
           type: ["integer", "null"]
@@ -747,6 +841,24 @@ components:
           type: ["string", "null"]
         lastTimingDate:
           type: ["string", "null"]
+        lastTransmissionOilDate:
+          type: ["string", "null"]
+        lastTransmissionOilKm:
+          type: ["integer", "null"]
+        oilChangeIntervalKm:
+          type: ["integer", "null"]
+        oilChangeIntervalMonths:
+          type: ["integer", "null"]
+        transmissionOilIntervalKm:
+          type: ["integer", "null"]
+        transmissionOilIntervalMonths:
+          type: ["integer", "null"]
+        brakesIntervalMonths:
+          type: ["integer", "null"]
+        timingIntervalKm:
+          type: ["integer", "null"]
+        timingIntervalMonths:
+          type: ["integer", "null"]
 
     ServiceRecord:
       type: object
@@ -767,6 +879,8 @@ components:
         brakesServiced:
           type: boolean
         timingServiced:
+          type: boolean
+        transmissionOilChanged:
           type: boolean
         stkPassed:
           type: boolean
@@ -794,6 +908,8 @@ components:
           type: boolean
         timingServiced:
           type: boolean
+        transmissionOilChanged:
+          type: boolean
         stkPassed:
           type: boolean
         otherWork:
@@ -820,12 +936,17 @@ components:
           type: ["string", "null"]
         oilChange:
           type: boolean
+        transmissionOil:
+          type: boolean
         brakes:
           type: boolean
         timing:
           type: boolean
         stk:
           type: boolean
+        serviceDate:
+          type: ["string", "null"]
+          description: Date when service was performed (for backdated/historical orders)
         otherWork:
           type: ["string", "null"]
         otherServices:
@@ -862,12 +983,16 @@ components:
           type: ["string", "null"]
         oilChange:
           type: boolean
+        transmissionOil:
+          type: boolean
         brakes:
           type: boolean
         timing:
           type: boolean
         stk:
           type: boolean
+        serviceDate:
+          type: ["string", "null"]
         otherWork:
           type: ["string", "null"]
         otherServices:
@@ -891,12 +1016,16 @@ components:
           type: ["string", "null"]
         oilChange:
           type: boolean
+        transmissionOil:
+          type: boolean
         brakes:
           type: boolean
         timing:
           type: boolean
         stk:
           type: boolean
+        serviceDate:
+          type: ["string", "null"]
         otherWork:
           type: ["string", "null"]
         otherServices:

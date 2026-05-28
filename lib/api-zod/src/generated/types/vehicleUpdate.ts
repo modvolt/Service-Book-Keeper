@@ -5,6 +5,8 @@
  * AutoServis API
  * OpenAPI spec version: 0.1.0
  */
+import type { VehicleUpdateOwnerType } from './vehicleUpdateOwnerType';
+import type { VehicleUpdateTransmission } from './vehicleUpdateTransmission';
 
 export interface VehicleUpdate {
   licensePlate?: string;
@@ -21,9 +23,17 @@ export interface VehicleUpdate {
   /** @nullable */
   registrationDate?: string | null;
   /** @nullable */
+  transmission?: VehicleUpdateTransmission;
+  /** @nullable */
+  ownerType?: VehicleUpdateOwnerType;
+  /** @nullable */
   ownerName?: string | null;
   /** @nullable */
   ownerAddress?: string | null;
+  /** @nullable */
+  ownerIco?: string | null;
+  /** @nullable */
+  ownerDic?: string | null;
   /** @nullable */
   currentKm?: number | null;
   /** @nullable */
@@ -38,4 +48,22 @@ export interface VehicleUpdate {
   lastBrakesDate?: string | null;
   /** @nullable */
   lastTimingDate?: string | null;
+  /** @nullable */
+  lastTransmissionOilDate?: string | null;
+  /** @nullable */
+  lastTransmissionOilKm?: number | null;
+  /** @nullable */
+  oilChangeIntervalKm?: number | null;
+  /** @nullable */
+  oilChangeIntervalMonths?: number | null;
+  /** @nullable */
+  transmissionOilIntervalKm?: number | null;
+  /** @nullable */
+  transmissionOilIntervalMonths?: number | null;
+  /** @nullable */
+  brakesIntervalMonths?: number | null;
+  /** @nullable */
+  timingIntervalKm?: number | null;
+  /** @nullable */
+  timingIntervalMonths?: number | null;
 }

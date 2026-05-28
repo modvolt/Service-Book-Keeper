@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { db, serviceRecordsTable, vehiclesTable } from "@workspace/db";
 import {
   ListServiceRecordsParams,
@@ -29,7 +29,7 @@ router.get("/vehicles/:id/service-records", async (req, res): Promise<void> => {
     .select()
     .from(serviceRecordsTable)
     .where(eq(serviceRecordsTable.vehicleId, params.data.id))
-    .orderBy(serviceRecordsTable.date);
+    .orderBy(desc(serviceRecordsTable.date), desc(serviceRecordsTable.id));
 
   res.json(records);
 });
@@ -74,6 +74,10 @@ router.post("/vehicles/:id/service-records", async (req, res): Promise<void> => 
   }
   if (parsed.data.brakesServiced) updates.lastBrakesDate = parsed.data.date;
   if (parsed.data.timingServiced) updates.lastTimingDate = parsed.data.date;
+  if (parsed.data.transmissionOilChanged) {
+    updates.lastTransmissionOilDate = parsed.data.date;
+    if (parsed.data.km) updates.lastTransmissionOilKm = parsed.data.km;
+  }
 
   if (Object.keys(updates).length > 0) {
     await db.update(vehiclesTable).set(updates).where(eq(vehiclesTable.id, params.data.id));

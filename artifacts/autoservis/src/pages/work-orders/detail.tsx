@@ -3,7 +3,7 @@ import { useRoute, Link } from "wouter";
 import {
   useGetWorkOrder, useUpdateWorkOrder, useListWorkOrderPhotos, useDeletePhoto, useDeleteWorkOrder,
   useListWorkOrderMaterials, useAddWorkOrderMaterial, useDeleteWorkOrderMaterial,
-  useListMaterials, useImportInvoiceForWorkOrder,
+  useListMaterials, useImportInvoiceForWorkOrder, useGetVehicleByPlate,
   getGetWorkOrderQueryKey, getListWorkOrderPhotosQueryKey, getListWorkOrdersQueryKey,
   getListWorkOrderMaterialsQueryKey, getListMaterialsQueryKey
 } from "@workspace/api-client-react";
@@ -48,6 +48,8 @@ export default function WorkOrderDetail() {
   const invoiceInputRef = useRef<HTMLInputElement>(null);
 
   const { data: order, isLoading } = useGetWorkOrder(id, { query: { enabled: !isNaN(id) } as any });
+  const { data: linkedVehicle } = useGetVehicleByPlate(order?.licensePlate ?? "", { query: { enabled: !!order?.licensePlate } as any });
+  const isAutomatic = linkedVehicle?.transmission === "automatic";
   const { data: photos, isLoading: photosLoading } = useListWorkOrderPhotos(id, { query: { enabled: !isNaN(id) } as any });
   const { data: materials = [] } = useListWorkOrderMaterials(id, { query: { enabled: !isNaN(id) } as any });
   const { data: catalog = [] } = useListMaterials();
@@ -61,9 +63,9 @@ export default function WorkOrderDetail() {
   const [uploading, setUploading] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({
-    km: "", description: "", oilChange: false, brakes: false,
+    km: "", description: "", oilChange: false, transmissionOil: false, brakes: false,
     timing: false, stk: false, otherWork: "", otherServices: "", notes: "",
-    laborHours: "", laborPrice: "",
+    laborHours: "", laborPrice: "", serviceDate: "",
   });
 
   // Inline labor edit
@@ -117,9 +119,11 @@ export default function WorkOrderDetail() {
     if (!order) return;
     setEditForm({
       km: order.km?.toString() ?? "", description: order.description ?? "",
-      oilChange: order.oilChange ?? false, brakes: order.brakes ?? false, timing: order.timing ?? false, stk: order.stk ?? false,
+      oilChange: order.oilChange ?? false, transmissionOil: order.transmissionOil ?? false,
+      brakes: order.brakes ?? false, timing: order.timing ?? false, stk: order.stk ?? false,
       otherWork: order.otherWork ?? "", otherServices: order.otherServices ?? "", notes: order.notes ?? "",
       laborHours: order.laborHours ?? "", laborPrice: order.laborPrice != null ? String(order.laborPrice) : "",
+      serviceDate: order.serviceDate ?? "",
     });
     setEditPriceManual(order.laborPrice != null);
     setEditMode(true);
@@ -165,9 +169,11 @@ export default function WorkOrderDetail() {
         km: editForm.km ? parseInt(editForm.km) : null,
         description: editForm.description || null,
         oilChange: editForm.oilChange,
+        transmissionOil: editForm.transmissionOil,
         brakes: editForm.brakes,
         timing: editForm.timing,
         stk: editForm.stk,
+        serviceDate: editForm.serviceDate || null,
         otherWork: editForm.otherWork || null,
         otherServices: editForm.otherServices || null,
         notes: editForm.notes || null,
@@ -344,7 +350,11 @@ export default function WorkOrderDetail() {
             <h1 className="text-3xl font-bold font-mono uppercase tracking-wider">{order.licensePlate}</h1>
             <WorkOrderStatusBadge status={order.status} />
           </div>
-          <p className="text-muted-foreground text-sm mt-1">Zakázka #{order.id} — vytvořena {dateStr(order.createdAt)}</p>
+          <p className="text-muted-foreground text-sm mt-1">
+            Zakázka #{order.id} — {order.serviceDate
+              ? <>servis {format(parseISO(order.serviceDate), 'd. M. yyyy', { locale: cs })} (vytvořena {dateStr(order.createdAt)})</>
+              : <>vytvořena {dateStr(order.createdAt)}</>}
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-2">
@@ -393,9 +403,15 @@ export default function WorkOrderDetail() {
           <CardContent className="space-y-4">
             {editMode ? (
               <div className="space-y-4">
-                <div className="space-y-1">
-                  <Label>Km</Label>
-                  <Input type="number" value={editForm.km} onChange={e => setEditForm(f => ({ ...f, km: e.target.value }))} />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label>Km</Label>
+                    <Input type="number" value={editForm.km} onChange={e => setEditForm(f => ({ ...f, km: e.target.value }))} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Datum servisu</Label>
+                    <Input type="date" value={editForm.serviceDate} onChange={e => setEditForm(f => ({ ...f, serviceDate: e.target.value }))} />
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <Label>Popis</Label>
@@ -440,7 +456,8 @@ export default function WorkOrderDetail() {
             {editMode ? (
               <div className="space-y-3">
                 {[
-                  { key: "oilChange", label: "Výměna oleje" },
+                  { key: "oilChange", label: "Výměna motorového oleje" },
+                  ...(isAutomatic || editForm.transmissionOil ? [{ key: "transmissionOil", label: "Olej v převodovce" }] : []),
                   { key: "brakes", label: "Servis brzd" },
                   { key: "timing", label: "Rozvody" },
                   { key: "stk", label: "STK" },
@@ -466,7 +483,8 @@ export default function WorkOrderDetail() {
             ) : (
               <div className="space-y-2">
                 {[
-                  { checked: order.oilChange, label: "Výměna oleje" },
+                  { checked: order.oilChange, label: "Výměna motorového oleje" },
+                  ...(order.transmissionOil ? [{ checked: true, label: "Olej v převodovce" }] : []),
                   { checked: order.brakes, label: "Servis brzd" },
                   { checked: order.timing, label: "Rozvody" },
                   { checked: order.stk, label: "STK" },

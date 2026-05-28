@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ServiceRecord } from './serviceRecord';
+import type { VehicleDetailOwnerType } from './vehicleDetailOwnerType';
+import type { VehicleDetailTransmission } from './vehicleDetailTransmission';
 import type { WorkOrder } from './workOrder';
 
 export interface VehicleDetail {
@@ -24,9 +26,16 @@ export interface VehicleDetail {
   /** @nullable */
   registrationDate?: string | null;
   /** @nullable */
+  transmission?: VehicleDetailTransmission;
+  ownerType: VehicleDetailOwnerType;
+  /** @nullable */
   ownerName?: string | null;
   /** @nullable */
   ownerAddress?: string | null;
+  /** @nullable */
+  ownerIco?: string | null;
+  /** @nullable */
+  ownerDic?: string | null;
   /** @nullable */
   currentKm?: number | null;
   /** @nullable */
@@ -41,6 +50,24 @@ export interface VehicleDetail {
   lastBrakesDate?: string | null;
   /** @nullable */
   lastTimingDate?: string | null;
+  /** @nullable */
+  lastTransmissionOilDate?: string | null;
+  /** @nullable */
+  lastTransmissionOilKm?: number | null;
+  /** @nullable */
+  oilChangeIntervalKm?: number | null;
+  /** @nullable */
+  oilChangeIntervalMonths?: number | null;
+  /** @nullable */
+  transmissionOilIntervalKm?: number | null;
+  /** @nullable */
+  transmissionOilIntervalMonths?: number | null;
+  /** @nullable */
+  brakesIntervalMonths?: number | null;
+  /** @nullable */
+  timingIntervalKm?: number | null;
+  /** @nullable */
+  timingIntervalMonths?: number | null;
   createdAt: Date;
   serviceRecords: ServiceRecord[];
   openWorkOrders: WorkOrder[];

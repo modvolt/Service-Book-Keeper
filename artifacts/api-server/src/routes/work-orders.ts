@@ -40,7 +40,7 @@ router.get("/work-orders", async (req, res): Promise<void> => {
 
   orders = await db.select().from(workOrdersTable)
     .where(conditions.length ? and(...conditions) : undefined)
-    .orderBy(sql`${workOrdersTable.createdAt} desc`);
+    .orderBy(sql`coalesce(${workOrdersTable.serviceDate}, ${workOrdersTable.createdAt}::date) desc, ${workOrdersTable.createdAt} desc`);
 
   if (query.data.search) {
     const s = query.data.search.toLowerCase();

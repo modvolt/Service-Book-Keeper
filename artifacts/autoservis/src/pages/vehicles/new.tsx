@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ArrowLeft, Sparkles, Upload, X, Loader2, Camera } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +26,10 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+const DEFAULT_OIL_MONTHS = "12";
+const DEFAULT_TRANS_KM = "60000";
+const DEFAULT_TRANS_MONTHS = "48";
+
 export default function NewVehicle() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
@@ -36,9 +41,15 @@ export default function NewVehicle() {
   const [form, setForm] = useState({
     licensePlate: "", make: "", model: "", year: "", color: "", vin: "",
     engineDisplacement: "", registrationDate: "",
-    ownerName: "", ownerAddress: "",
+    transmission: "manual" as "manual" | "automatic",
+    ownerType: "private" as "private" | "company",
+    ownerName: "", ownerAddress: "", ownerIco: "", ownerDic: "",
     currentKm: "", notes: "", stkValidUntil: "",
-    lastOilChangeKm: "", lastOilChangeDate: "", lastBrakesDate: "", lastTimingDate: ""
+    lastOilChangeKm: "", lastOilChangeDate: "", lastBrakesDate: "", lastTimingDate: "",
+    lastTransmissionOilDate: "", lastTransmissionOilKm: "",
+    oilChangeIntervalKm: "", oilChangeIntervalMonths: DEFAULT_OIL_MONTHS,
+    transmissionOilIntervalKm: DEFAULT_TRANS_KM, transmissionOilIntervalMonths: DEFAULT_TRANS_MONTHS,
+    brakesIntervalMonths: "", timingIntervalKm: "", timingIntervalMonths: "",
   });
 
   const [importOpen, setImportOpen] = useState(false);
@@ -50,27 +61,43 @@ export default function NewVehicle() {
     { query: { enabled: form.make.trim().length > 0 } as any }
   );
 
+  const toInt = (s: string) => s.trim() ? parseInt(s, 10) : null;
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const isCompany = form.ownerType === "company";
     createVehicle.mutate({
       data: {
         licensePlate: form.licensePlate.toUpperCase().trim(),
         make: form.make,
         model: form.model,
-        year: form.year ? parseInt(form.year) : null,
+        year: toInt(form.year),
         color: form.color || null,
         vin: form.vin || null,
-        engineDisplacement: form.engineDisplacement ? parseInt(form.engineDisplacement) : null,
+        engineDisplacement: toInt(form.engineDisplacement),
         registrationDate: form.registrationDate || null,
+        transmission: form.transmission,
+        ownerType: form.ownerType,
         ownerName: form.ownerName || null,
         ownerAddress: form.ownerAddress || null,
-        currentKm: form.currentKm ? parseInt(form.currentKm) : null,
+        ownerIco: isCompany ? (form.ownerIco || null) : null,
+        ownerDic: isCompany ? (form.ownerDic || null) : null,
+        currentKm: toInt(form.currentKm),
         notes: form.notes || null,
         stkValidUntil: form.stkValidUntil || null,
-        lastOilChangeKm: form.lastOilChangeKm ? parseInt(form.lastOilChangeKm) : null,
+        lastOilChangeKm: toInt(form.lastOilChangeKm),
         lastOilChangeDate: form.lastOilChangeDate || null,
         lastBrakesDate: form.lastBrakesDate || null,
         lastTimingDate: form.lastTimingDate || null,
+        lastTransmissionOilDate: form.transmission === "automatic" ? (form.lastTransmissionOilDate || null) : null,
+        lastTransmissionOilKm: form.transmission === "automatic" ? toInt(form.lastTransmissionOilKm) : null,
+        oilChangeIntervalKm: toInt(form.oilChangeIntervalKm),
+        oilChangeIntervalMonths: toInt(form.oilChangeIntervalMonths),
+        transmissionOilIntervalKm: form.transmission === "automatic" ? toInt(form.transmissionOilIntervalKm) : null,
+        transmissionOilIntervalMonths: form.transmission === "automatic" ? toInt(form.transmissionOilIntervalMonths) : null,
+        brakesIntervalMonths: toInt(form.brakesIntervalMonths),
+        timingIntervalKm: toInt(form.timingIntervalKm),
+        timingIntervalMonths: toInt(form.timingIntervalMonths),
       }
     }, {
       onSuccess: (vehicle) => {
@@ -116,6 +143,9 @@ export default function NewVehicle() {
     }
   }
 
+  const isCompany = form.ownerType === "company";
+  const isAutomatic = form.transmission === "automatic";
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
@@ -137,15 +167,49 @@ export default function NewVehicle() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
               <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Vlastník</h3>
+              <RadioGroup
+                value={form.ownerType}
+                onValueChange={(v) => setForm(f => ({ ...f, ownerType: v as "private" | "company" }))}
+                className="flex gap-6"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="private" id="own-private" />
+                  <Label htmlFor="own-private" className="cursor-pointer">Soukromá osoba</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="company" id="own-company" />
+                  <Label htmlFor="own-company" className="cursor-pointer">Firma</Label>
+                </div>
+              </RadioGroup>
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-1">
-                  <Label>Jméno vlastníka / provozovatele</Label>
-                  <Input placeholder="Jan Novák" value={form.ownerName} onChange={e => setForm(f => ({ ...f, ownerName: e.target.value }))} />
+                  <Label>{isCompany ? "Název firmy" : "Jméno vlastníka / provozovatele"}</Label>
+                  <Input
+                    placeholder={isCompany ? "AutoFirma s.r.o." : "Jan Novák"}
+                    value={form.ownerName}
+                    onChange={e => setForm(f => ({ ...f, ownerName: e.target.value }))}
+                  />
                 </div>
                 <div className="space-y-1">
-                  <Label>Adresa</Label>
-                  <Input placeholder="Lubočinka 251, 251 68" value={form.ownerAddress} onChange={e => setForm(f => ({ ...f, ownerAddress: e.target.value }))} />
+                  <Label>{isCompany ? "Sídlo" : "Adresa"}</Label>
+                  <Input
+                    placeholder="Lubočinka 251, 251 68"
+                    value={form.ownerAddress}
+                    onChange={e => setForm(f => ({ ...f, ownerAddress: e.target.value }))}
+                  />
                 </div>
+                {isCompany && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label>IČO</Label>
+                      <Input placeholder="12345678" value={form.ownerIco} onChange={e => setForm(f => ({ ...f, ownerIco: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>DIČ</Label>
+                      <Input placeholder="CZ12345678" value={form.ownerDic} onChange={e => setForm(f => ({ ...f, ownerDic: e.target.value }))} />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -202,11 +266,28 @@ export default function NewVehicle() {
                   <Label>Datum první registrace</Label>
                   <Input type="date" value={form.registrationDate} onChange={e => setForm(f => ({ ...f, registrationDate: e.target.value }))} />
                 </div>
+                <div className="space-y-1 col-span-2">
+                  <Label>Převodovka *</Label>
+                  <RadioGroup
+                    value={form.transmission}
+                    onValueChange={(v) => setForm(f => ({ ...f, transmission: v as "manual" | "automatic" }))}
+                    className="flex gap-6 pt-1"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="manual" id="trans-manual" />
+                      <Label htmlFor="trans-manual" className="cursor-pointer">Manuální</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="automatic" id="trans-auto" />
+                      <Label htmlFor="trans-auto" className="cursor-pointer">Automatická</Label>
+                    </div>
+                  </RadioGroup>
+                </div>
               </div>
             </div>
 
             <div className="space-y-4">
-              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Provoz a servis</h3>
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Provoz a poslední servis</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <Label>Aktuální km</Label>
@@ -217,13 +298,25 @@ export default function NewVehicle() {
                   <Input type="date" value={form.stkValidUntil} onChange={e => setForm(f => ({ ...f, stkValidUntil: e.target.value }))} />
                 </div>
                 <div className="space-y-1">
-                  <Label>Datum výměny oleje</Label>
+                  <Label>Datum výměny motorového oleje</Label>
                   <Input type="date" value={form.lastOilChangeDate} onChange={e => setForm(f => ({ ...f, lastOilChangeDate: e.target.value }))} />
                 </div>
                 <div className="space-y-1">
                   <Label>Km při výměně oleje</Label>
                   <Input type="number" value={form.lastOilChangeKm} onChange={e => setForm(f => ({ ...f, lastOilChangeKm: e.target.value }))} />
                 </div>
+                {isAutomatic && (
+                  <>
+                    <div className="space-y-1">
+                      <Label>Datum výměny oleje v převodovce</Label>
+                      <Input type="date" value={form.lastTransmissionOilDate} onChange={e => setForm(f => ({ ...f, lastTransmissionOilDate: e.target.value }))} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Km při výměně oleje v převodovce</Label>
+                      <Input type="number" value={form.lastTransmissionOilKm} onChange={e => setForm(f => ({ ...f, lastTransmissionOilKm: e.target.value }))} />
+                    </div>
+                  </>
+                )}
                 <div className="space-y-1">
                   <Label>Datum servisu brzd</Label>
                   <Input type="date" value={form.lastBrakesDate} onChange={e => setForm(f => ({ ...f, lastBrakesDate: e.target.value }))} />
@@ -231,6 +324,40 @@ export default function NewVehicle() {
                 <div className="space-y-1">
                   <Label>Datum servisu rozvodů</Label>
                   <Input type="date" value={form.lastTimingDate} onChange={e => setForm(f => ({ ...f, lastTimingDate: e.target.value }))} />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Servisní intervaly</h3>
+              <p className="text-xs text-muted-foreground">Nastavte interval v km nebo v měsících. Prázdné pole znamená bez upozornění.</p>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Motorový olej</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input type="number" placeholder="km, např. 15000" value={form.oilChangeIntervalKm} onChange={e => setForm(f => ({ ...f, oilChangeIntervalKm: e.target.value }))} />
+                    <Input type="number" placeholder="měsíců" value={form.oilChangeIntervalMonths} onChange={e => setForm(f => ({ ...f, oilChangeIntervalMonths: e.target.value }))} />
+                  </div>
+                </div>
+                {isAutomatic && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Olej v převodovce</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Input type="number" placeholder="km" value={form.transmissionOilIntervalKm} onChange={e => setForm(f => ({ ...f, transmissionOilIntervalKm: e.target.value }))} />
+                      <Input type="number" placeholder="měsíců" value={form.transmissionOilIntervalMonths} onChange={e => setForm(f => ({ ...f, transmissionOilIntervalMonths: e.target.value }))} />
+                    </div>
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Brzdy</Label>
+                  <Input type="number" placeholder="měsíců" value={form.brakesIntervalMonths} onChange={e => setForm(f => ({ ...f, brakesIntervalMonths: e.target.value }))} />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Rozvody</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input type="number" placeholder="km, např. 120000" value={form.timingIntervalKm} onChange={e => setForm(f => ({ ...f, timingIntervalKm: e.target.value }))} />
+                    <Input type="number" placeholder="měsíců" value={form.timingIntervalMonths} onChange={e => setForm(f => ({ ...f, timingIntervalMonths: e.target.value }))} />
+                  </div>
                 </div>
               </div>
             </div>

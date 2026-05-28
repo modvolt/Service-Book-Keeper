@@ -43,10 +43,13 @@ export default function NewWorkOrder() {
       .slice(0, 6);
   }, [vehicleMatches, searchTerm]);
 
+  const today = new Date().toISOString().split("T")[0];
   const [form, setForm] = useState({
-    km: "", description: "", oilChange: false, brakes: false,
+    km: "", description: "",
+    oilChange: false, transmissionOil: false, brakes: false,
     timing: false, stk: false, otherWork: "", otherServices: "", notes: "",
-    laborHours: "", laborPrice: ""
+    laborHours: "", laborPrice: "",
+    serviceDate: today,
   });
   const [priceManual, setPriceManual] = useState(false);
 
@@ -89,9 +92,11 @@ export default function NewWorkOrder() {
         km: form.km ? parseInt(form.km) : null,
         description: form.description || null,
         oilChange: form.oilChange,
+        transmissionOil: form.transmissionOil,
         brakes: form.brakes,
         timing: form.timing,
         stk: form.stk,
+        serviceDate: form.serviceDate || null,
         otherWork: form.otherWork || null,
         otherServices: form.otherServices || null,
         notes: form.notes || null,
@@ -171,9 +176,18 @@ export default function NewWorkOrder() {
               </div>
             )}
 
-            <div className="space-y-1">
-              <Label>Aktuální km</Label>
-              <Input type="number" placeholder="najeté km" value={form.km} onChange={e => setForm(f => ({ ...f, km: e.target.value }))} />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label>Aktuální km</Label>
+                <Input type="number" placeholder="najeté km" value={form.km} onChange={e => setForm(f => ({ ...f, km: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label>Datum servisu</Label>
+                <Input type="date" max={today} value={form.serviceDate} onChange={e => setForm(f => ({ ...f, serviceDate: e.target.value }))} />
+                {form.serviceDate && form.serviceDate < today && (
+                  <p className="text-xs text-amber-600">Zpětně zadaná zakázka.</p>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -183,7 +197,8 @@ export default function NewWorkOrder() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               {[
-                { key: "oilChange", label: "Výměna oleje" },
+                { key: "oilChange", label: "Výměna motorového oleje" },
+                ...(foundVehicle?.transmission === "automatic" ? [{ key: "transmissionOil", label: "Olej v převodovce" }] : []),
                 { key: "brakes", label: "Servis brzd" },
                 { key: "timing", label: "Rozvody" },
                 { key: "stk", label: "STK" },

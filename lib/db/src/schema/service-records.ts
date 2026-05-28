@@ -12,6 +12,7 @@ export const serviceRecordsTable = pgTable("service_records", {
   oilChanged: boolean("oil_changed").notNull().default(false),
   brakesServiced: boolean("brakes_serviced").notNull().default(false),
   timingServiced: boolean("timing_serviced").notNull().default(false),
+  transmissionOilChanged: boolean("transmission_oil_changed").notNull().default(false),
   stkPassed: boolean("stk_passed").notNull().default(false),
   otherWork: text("other_work"),
   technician: text("technician"),

@@ -12,8 +12,12 @@ export const vehiclesTable = pgTable("vehicles", {
   vin: text("vin"),
   engineDisplacement: integer("engine_displacement"),
   registrationDate: date("registration_date", { mode: "string" }),
+  transmission: text("transmission"), // "manual" | "automatic"
+  ownerType: text("owner_type").notNull().default("private"), // "private" | "company"
   ownerName: text("owner_name"),
   ownerAddress: text("owner_address"),
+  ownerIco: text("owner_ico"),
+  ownerDic: text("owner_dic"),
   currentKm: integer("current_km"),
   notes: text("notes"),
   stkValidUntil: date("stk_valid_until", { mode: "string" }),
@@ -21,6 +25,16 @@ export const vehiclesTable = pgTable("vehicles", {
   lastOilChangeDate: date("last_oil_change_date", { mode: "string" }),
   lastBrakesDate: date("last_brakes_date", { mode: "string" }),
   lastTimingDate: date("last_timing_date", { mode: "string" }),
+  lastTransmissionOilDate: date("last_transmission_oil_date", { mode: "string" }),
+  lastTransmissionOilKm: integer("last_transmission_oil_km"),
+  // Service intervals (km or months per item; nulls mean "no reminder")
+  oilChangeIntervalKm: integer("oil_change_interval_km"),
+  oilChangeIntervalMonths: integer("oil_change_interval_months"),
+  transmissionOilIntervalKm: integer("transmission_oil_interval_km"),
+  transmissionOilIntervalMonths: integer("transmission_oil_interval_months"),
+  brakesIntervalMonths: integer("brakes_interval_months"),
+  timingIntervalKm: integer("timing_interval_km"),
+  timingIntervalMonths: integer("timing_interval_months"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

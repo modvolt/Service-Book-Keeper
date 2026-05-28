@@ -19,9 +19,15 @@ export interface WorkOrder {
   /** @nullable */
   description?: string | null;
   oilChange?: boolean;
+  transmissionOil?: boolean;
   brakes?: boolean;
   timing?: boolean;
   stk?: boolean;
+  /**
+     * Date when service was performed (for backdated/historical orders)
+     * @nullable
+     */
+  serviceDate?: string | null;
   /** @nullable */
   otherWork?: string | null;
   /** @nullable */

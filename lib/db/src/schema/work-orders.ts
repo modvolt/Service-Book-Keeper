@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, boolean, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { vehiclesTable } from "./vehicles";
@@ -11,9 +11,11 @@ export const workOrdersTable = pgTable("work_orders", {
   km: integer("km"),
   description: text("description"),
   oilChange: boolean("oil_change").notNull().default(false),
+  transmissionOil: boolean("transmission_oil").notNull().default(false),
   brakes: boolean("brakes").notNull().default(false),
   timing: boolean("timing").notNull().default(false),
   stk: boolean("stk").notNull().default(false),
+  serviceDate: date("service_date", { mode: "string" }),
   otherWork: text("other_work"),
   otherServices: text("other_services"),
   laborHours: text("labor_hours"),

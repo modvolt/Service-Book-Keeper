@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, ilike, or } from "drizzle-orm";
+import { eq, ilike, or, desc } from "drizzle-orm";
 import { db, vehiclesTable, serviceRecordsTable, workOrdersTable } from "@workspace/db";
 import {
   ListVehiclesQueryParams,
@@ -49,7 +49,12 @@ router.post("/vehicles", async (req, res): Promise<void> => {
     return;
   }
 
-  const values = { ...parsed.data, licensePlate: normalizeSpz(parsed.data.licensePlate) };
+  const { ownerType, ...rest } = parsed.data;
+  const values = {
+    ...rest,
+    licensePlate: normalizeSpz(parsed.data.licensePlate),
+    ...(ownerType ? { ownerType } : {}),
+  };
   const [vehicle] = await db.insert(vehiclesTable).values(values).returning();
   res.status(201).json(vehicle);
 });
@@ -102,7 +107,7 @@ router.get("/vehicles/:id", async (req, res): Promise<void> => {
     .select()
     .from(serviceRecordsTable)
     .where(eq(serviceRecordsTable.vehicleId, params.data.id))
-    .orderBy(serviceRecordsTable.date);
+    .orderBy(desc(serviceRecordsTable.date), desc(serviceRecordsTable.id));
 
   const openWorkOrders = await db
     .select()
@@ -132,9 +137,10 @@ router.patch("/vehicles/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const updates = parsed.data.licensePlate
-    ? { ...parsed.data, licensePlate: normalizeSpz(parsed.data.licensePlate) }
-    : parsed.data;
+  const { ownerType, ...restUpdates } = parsed.data;
+  const updates: Record<string, unknown> = { ...restUpdates };
+  if (parsed.data.licensePlate) updates.licensePlate = normalizeSpz(parsed.data.licensePlate);
+  if (ownerType) updates.ownerType = ownerType;
 
   const [vehicle] = await db
     .update(vehiclesTable)

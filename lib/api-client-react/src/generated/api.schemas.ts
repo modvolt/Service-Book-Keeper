@@ -9,6 +9,25 @@ export interface HealthStatus {
   status: string;
 }
 
+/**
+ * @nullable
+ */
+export type VehicleTransmission = typeof VehicleTransmission[keyof typeof VehicleTransmission] | null;
+
+
+export const VehicleTransmission = {
+  manual: 'manual',
+  automatic: 'automatic',
+} as const;
+
+export type VehicleOwnerType = typeof VehicleOwnerType[keyof typeof VehicleOwnerType];
+
+
+export const VehicleOwnerType = {
+  private: 'private',
+  company: 'company',
+} as const;
+
 export interface Vehicle {
   id: number;
   licensePlate: string;
@@ -25,9 +44,16 @@ export interface Vehicle {
   /** @nullable */
   registrationDate?: string | null;
   /** @nullable */
+  transmission?: VehicleTransmission;
+  ownerType: VehicleOwnerType;
+  /** @nullable */
   ownerName?: string | null;
   /** @nullable */
   ownerAddress?: string | null;
+  /** @nullable */
+  ownerIco?: string | null;
+  /** @nullable */
+  ownerDic?: string | null;
   /** @nullable */
   currentKm?: number | null;
   /** @nullable */
@@ -42,8 +68,45 @@ export interface Vehicle {
   lastBrakesDate?: string | null;
   /** @nullable */
   lastTimingDate?: string | null;
+  /** @nullable */
+  lastTransmissionOilDate?: string | null;
+  /** @nullable */
+  lastTransmissionOilKm?: number | null;
+  /** @nullable */
+  oilChangeIntervalKm?: number | null;
+  /** @nullable */
+  oilChangeIntervalMonths?: number | null;
+  /** @nullable */
+  transmissionOilIntervalKm?: number | null;
+  /** @nullable */
+  transmissionOilIntervalMonths?: number | null;
+  /** @nullable */
+  brakesIntervalMonths?: number | null;
+  /** @nullable */
+  timingIntervalKm?: number | null;
+  /** @nullable */
+  timingIntervalMonths?: number | null;
   createdAt: string;
 }
+
+/**
+ * @nullable
+ */
+export type VehicleDetailTransmission = typeof VehicleDetailTransmission[keyof typeof VehicleDetailTransmission] | null;
+
+
+export const VehicleDetailTransmission = {
+  manual: 'manual',
+  automatic: 'automatic',
+} as const;
+
+export type VehicleDetailOwnerType = typeof VehicleDetailOwnerType[keyof typeof VehicleDetailOwnerType];
+
+
+export const VehicleDetailOwnerType = {
+  private: 'private',
+  company: 'company',
+} as const;
 
 export interface ServiceRecord {
   id: number;
@@ -56,6 +119,7 @@ export interface ServiceRecord {
   oilChanged?: boolean;
   brakesServiced?: boolean;
   timingServiced?: boolean;
+  transmissionOilChanged?: boolean;
   stkPassed?: boolean;
   /** @nullable */
   otherWork?: string | null;
@@ -94,9 +158,15 @@ export interface WorkOrder {
   /** @nullable */
   description?: string | null;
   oilChange?: boolean;
+  transmissionOil?: boolean;
   brakes?: boolean;
   timing?: boolean;
   stk?: boolean;
+  /**
+     * Date when service was performed (for backdated/historical orders)
+     * @nullable
+     */
+  serviceDate?: string | null;
   /** @nullable */
   otherWork?: string | null;
   /** @nullable */
@@ -135,9 +205,16 @@ export interface VehicleDetail {
   /** @nullable */
   registrationDate?: string | null;
   /** @nullable */
+  transmission?: VehicleDetailTransmission;
+  ownerType: VehicleDetailOwnerType;
+  /** @nullable */
   ownerName?: string | null;
   /** @nullable */
   ownerAddress?: string | null;
+  /** @nullable */
+  ownerIco?: string | null;
+  /** @nullable */
+  ownerDic?: string | null;
   /** @nullable */
   currentKm?: number | null;
   /** @nullable */
@@ -152,10 +229,50 @@ export interface VehicleDetail {
   lastBrakesDate?: string | null;
   /** @nullable */
   lastTimingDate?: string | null;
+  /** @nullable */
+  lastTransmissionOilDate?: string | null;
+  /** @nullable */
+  lastTransmissionOilKm?: number | null;
+  /** @nullable */
+  oilChangeIntervalKm?: number | null;
+  /** @nullable */
+  oilChangeIntervalMonths?: number | null;
+  /** @nullable */
+  transmissionOilIntervalKm?: number | null;
+  /** @nullable */
+  transmissionOilIntervalMonths?: number | null;
+  /** @nullable */
+  brakesIntervalMonths?: number | null;
+  /** @nullable */
+  timingIntervalKm?: number | null;
+  /** @nullable */
+  timingIntervalMonths?: number | null;
   createdAt: string;
   serviceRecords: ServiceRecord[];
   openWorkOrders: WorkOrder[];
 }
+
+/**
+ * @nullable
+ */
+export type VehicleInputTransmission = typeof VehicleInputTransmission[keyof typeof VehicleInputTransmission] | null;
+
+
+export const VehicleInputTransmission = {
+  manual: 'manual',
+  automatic: 'automatic',
+} as const;
+
+/**
+ * @nullable
+ */
+export type VehicleInputOwnerType = typeof VehicleInputOwnerType[keyof typeof VehicleInputOwnerType] | null;
+
+
+export const VehicleInputOwnerType = {
+  private: 'private',
+  company: 'company',
+} as const;
 
 export interface VehicleInput {
   /** @minLength 1 */
@@ -175,9 +292,17 @@ export interface VehicleInput {
   /** @nullable */
   registrationDate?: string | null;
   /** @nullable */
+  transmission?: VehicleInputTransmission;
+  /** @nullable */
+  ownerType?: VehicleInputOwnerType;
+  /** @nullable */
   ownerName?: string | null;
   /** @nullable */
   ownerAddress?: string | null;
+  /** @nullable */
+  ownerIco?: string | null;
+  /** @nullable */
+  ownerDic?: string | null;
   /** @nullable */
   currentKm?: number | null;
   /** @nullable */
@@ -192,7 +317,47 @@ export interface VehicleInput {
   lastBrakesDate?: string | null;
   /** @nullable */
   lastTimingDate?: string | null;
+  /** @nullable */
+  lastTransmissionOilDate?: string | null;
+  /** @nullable */
+  lastTransmissionOilKm?: number | null;
+  /** @nullable */
+  oilChangeIntervalKm?: number | null;
+  /** @nullable */
+  oilChangeIntervalMonths?: number | null;
+  /** @nullable */
+  transmissionOilIntervalKm?: number | null;
+  /** @nullable */
+  transmissionOilIntervalMonths?: number | null;
+  /** @nullable */
+  brakesIntervalMonths?: number | null;
+  /** @nullable */
+  timingIntervalKm?: number | null;
+  /** @nullable */
+  timingIntervalMonths?: number | null;
 }
+
+/**
+ * @nullable
+ */
+export type VehicleUpdateTransmission = typeof VehicleUpdateTransmission[keyof typeof VehicleUpdateTransmission] | null;
+
+
+export const VehicleUpdateTransmission = {
+  manual: 'manual',
+  automatic: 'automatic',
+} as const;
+
+/**
+ * @nullable
+ */
+export type VehicleUpdateOwnerType = typeof VehicleUpdateOwnerType[keyof typeof VehicleUpdateOwnerType] | null;
+
+
+export const VehicleUpdateOwnerType = {
+  private: 'private',
+  company: 'company',
+} as const;
 
 export interface VehicleUpdate {
   licensePlate?: string;
@@ -209,9 +374,17 @@ export interface VehicleUpdate {
   /** @nullable */
   registrationDate?: string | null;
   /** @nullable */
+  transmission?: VehicleUpdateTransmission;
+  /** @nullable */
+  ownerType?: VehicleUpdateOwnerType;
+  /** @nullable */
   ownerName?: string | null;
   /** @nullable */
   ownerAddress?: string | null;
+  /** @nullable */
+  ownerIco?: string | null;
+  /** @nullable */
+  ownerDic?: string | null;
   /** @nullable */
   currentKm?: number | null;
   /** @nullable */
@@ -226,6 +399,24 @@ export interface VehicleUpdate {
   lastBrakesDate?: string | null;
   /** @nullable */
   lastTimingDate?: string | null;
+  /** @nullable */
+  lastTransmissionOilDate?: string | null;
+  /** @nullable */
+  lastTransmissionOilKm?: number | null;
+  /** @nullable */
+  oilChangeIntervalKm?: number | null;
+  /** @nullable */
+  oilChangeIntervalMonths?: number | null;
+  /** @nullable */
+  transmissionOilIntervalKm?: number | null;
+  /** @nullable */
+  transmissionOilIntervalMonths?: number | null;
+  /** @nullable */
+  brakesIntervalMonths?: number | null;
+  /** @nullable */
+  timingIntervalKm?: number | null;
+  /** @nullable */
+  timingIntervalMonths?: number | null;
 }
 
 export interface ServiceRecordInput {
@@ -237,6 +428,7 @@ export interface ServiceRecordInput {
   oilChanged?: boolean;
   brakesServiced?: boolean;
   timingServiced?: boolean;
+  transmissionOilChanged?: boolean;
   stkPassed?: boolean;
   /** @nullable */
   otherWork?: string | null;
@@ -252,9 +444,12 @@ export interface WorkOrderInput {
   /** @nullable */
   description?: string | null;
   oilChange?: boolean;
+  transmissionOil?: boolean;
   brakes?: boolean;
   timing?: boolean;
   stk?: boolean;
+  /** @nullable */
+  serviceDate?: string | null;
   /** @nullable */
   otherWork?: string | null;
   /** @nullable */
@@ -285,9 +480,12 @@ export interface WorkOrderUpdate {
   /** @nullable */
   description?: string | null;
   oilChange?: boolean;
+  transmissionOil?: boolean;
   brakes?: boolean;
   timing?: boolean;
   stk?: boolean;
+  /** @nullable */
+  serviceDate?: string | null;
   /** @nullable */
   otherWork?: string | null;
   /** @nullable */

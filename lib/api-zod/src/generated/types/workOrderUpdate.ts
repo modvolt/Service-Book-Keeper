@@ -14,9 +14,12 @@ export interface WorkOrderUpdate {
   /** @nullable */
   description?: string | null;
   oilChange?: boolean;
+  transmissionOil?: boolean;
   brakes?: boolean;
   timing?: boolean;
   stk?: boolean;
+  /** @nullable */
+  serviceDate?: string | null;
   /** @nullable */
   otherWork?: string | null;
   /** @nullable */
