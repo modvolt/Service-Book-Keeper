@@ -14,6 +14,7 @@ import {
   ListWorkOrderPhotosParams,
   DeletePhotoParams,
 } from "@workspace/api-zod";
+import { normalizeSpz } from "../lib/spz";
 
 const router: IRouter = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
@@ -65,7 +66,7 @@ router.post("/work-orders", async (req, res): Promise<void> => {
   }
 
   // Try to link to existing vehicle by plate
-  const plate = parsed.data.licensePlate.toUpperCase().trim();
+  const plate = normalizeSpz(parsed.data.licensePlate);
   const [vehicle] = await db.select().from(vehiclesTable).where(ilike(vehiclesTable.licensePlate, plate));
 
   const [order] = await db.insert(workOrdersTable).values({

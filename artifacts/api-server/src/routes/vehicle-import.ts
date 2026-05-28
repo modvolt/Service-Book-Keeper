@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { getOpenAI } from "@workspace/integrations-openai-ai-server";
 import { ImportVehicleFromTpBody } from "@workspace/api-zod";
+import { normalizeSpzOrNull } from "../lib/spz";
 
 const router: IRouter = Router();
 
@@ -60,16 +61,8 @@ router.post("/vehicles/import-tp", async (req, res): Promise<void> => {
       return;
     }
 
-    // Normalize SPZ to "XXX XXXX" format (3 chars + space + 4 chars)
-    function formatSpz(raw: unknown): string | null {
-      if (typeof raw !== "string") return null;
-      const cleaned = raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
-      if (cleaned.length !== 7) return raw.trim() || null;
-      return `${cleaned.slice(0, 3)} ${cleaned.slice(3)}`;
-    }
-
     res.json({
-      licensePlate: formatSpz(extracted.licensePlate),
+      licensePlate: normalizeSpzOrNull(extracted.licensePlate),
       vin: typeof extracted.vin === "string" && extracted.vin.length === 17 ? extracted.vin : null,
       registrationYear: typeof extracted.registrationYear === "number" ? extracted.registrationYear : null,
       engineDisplacement: typeof extracted.engineDisplacement === "number" ? extracted.engineDisplacement : null,

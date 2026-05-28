@@ -1,0 +1,1 @@
+- [SPZ normalization](spz-normalization.md) — all license-plate writes must run through the server normalizer; never store user-typed SPZ as-is.

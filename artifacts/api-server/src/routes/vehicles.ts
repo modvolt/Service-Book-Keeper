@@ -10,6 +10,7 @@ import {
   UpdateVehicleBody,
   DeleteVehicleParams,
 } from "@workspace/api-zod";
+import { normalizeSpz } from "../lib/spz";
 
 const router: IRouter = Router();
 
@@ -48,7 +49,8 @@ router.post("/vehicles", async (req, res): Promise<void> => {
     return;
   }
 
-  const [vehicle] = await db.insert(vehiclesTable).values(parsed.data).returning();
+  const values = { ...parsed.data, licensePlate: normalizeSpz(parsed.data.licensePlate) };
+  const [vehicle] = await db.insert(vehiclesTable).values(values).returning();
   res.status(201).json(vehicle);
 });
 
@@ -130,9 +132,13 @@ router.patch("/vehicles/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  const updates = parsed.data.licensePlate
+    ? { ...parsed.data, licensePlate: normalizeSpz(parsed.data.licensePlate) }
+    : parsed.data;
+
   const [vehicle] = await db
     .update(vehiclesTable)
-    .set(parsed.data)
+    .set(updates)
     .where(eq(vehiclesTable.id, params.data.id))
     .returning();
 
