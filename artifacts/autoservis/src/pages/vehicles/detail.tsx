@@ -369,7 +369,7 @@ export default function VehicleDetail() {
                 lastKm={vehicle.lastTransmissionOilKm}
                 currentKm={vehicle.currentKm}
                 intervalKm={vehicle.transmissionOilIntervalKm ?? 60000}
-                intervalMonths={vehicle.transmissionOilIntervalMonths ?? 60}
+                intervalMonths={vehicle.transmissionOilIntervalMonths ?? 48}
               />
             )}
             <ServiceRow
