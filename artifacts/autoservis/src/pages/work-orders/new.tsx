@@ -203,15 +203,18 @@ export default function NewWorkOrder() {
                 { key: "timing", label: "Rozvody" },
                 { key: "stk", label: "STK" },
               ].map(item => (
-                <div key={item.key} className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent/30 transition-colors cursor-pointer"
-                  onClick={() => setForm(f => ({ ...f, [item.key]: !f[item.key as keyof typeof f] }))}>
+                <Label
+                  key={item.key}
+                  htmlFor={item.key}
+                  className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-accent/30 transition-colors cursor-pointer font-medium"
+                >
                   <Checkbox
                     id={item.key}
                     checked={form[item.key as keyof typeof form] as boolean}
                     onCheckedChange={v => setForm(f => ({ ...f, [item.key]: !!v }))}
                   />
-                  <Label htmlFor={item.key} className="cursor-pointer font-medium">{item.label}</Label>
-                </div>
+                  <span>{item.label}</span>
+                </Label>
               ))}
             </div>
             <div className="space-y-1">
