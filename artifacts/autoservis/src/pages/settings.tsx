@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Upload, Image as ImageIcon, Mail, Palette, Building2, Trash2, Sun, Moon, Check, Monitor, PenLine, Database, Download, Loader2 } from "lucide-react";
+import { Upload, Image as ImageIcon, Mail, Palette, Building2, Trash2, Sun, Moon, Check, Monitor, PenLine, Database, Download, Loader2, FileText } from "lucide-react";
 import { AresButton } from "@/components/ares-button";
+import { openDataBackupPdf } from "@/lib/data-backup-pdf";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/use-theme";
 import { usePalette } from "@/hooks/use-palette";
@@ -51,6 +52,7 @@ export default function SettingsPage() {
   const [uploadingSignature, setUploadingSignature] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
   const { theme, setTheme } = useTheme();
   const { palette, setPalette, palettes } = usePalette();
 
@@ -205,6 +207,24 @@ export default function SettingsPage() {
       toast({ title: "Chyba", description: String(e?.message ?? e), variant: "destructive" });
     } finally {
       setImporting(false);
+    }
+  }
+
+  async function handleExportPdf() {
+    setPdfBusy(true);
+    try {
+      const ok = await openDataBackupPdf();
+      if (!ok) {
+        toast({
+          title: "Vyskakovací okno blokováno",
+          description: "Povolte vyskakovací okna pro tuto stránku a zkuste to znovu.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({ title: "Chyba", description: "PDF přehled se nepodařilo vytvořit.", variant: "destructive" });
+    } finally {
+      setPdfBusy(false);
     }
   }
 
@@ -477,8 +497,17 @@ export default function SettingsPage() {
               {importing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Obnovuji…</> : <><Upload className="h-4 w-4 mr-2" /> Obnovit ze zálohy</>}
             </Button>
           </div>
+          <div className="rounded-md border p-4 space-y-2">
+            <div className="font-medium">Čitelný přehled (PDF)</div>
+            <p className="text-sm text-muted-foreground">
+              Vytvoří přehledný dokument se všemi vozidly, zakázkami, servisní historií a skladem k vytištění nebo uložení jako PDF. Slouží jako záložní výpis pro případ, že by aplikace přestala fungovat.
+            </p>
+            <Button variant="outline" onClick={handleExportPdf} disabled={pdfBusy}>
+              {pdfBusy ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Připravuji…</> : <><FileText className="h-4 w-4 mr-2" /> Vytvořit PDF přehled</>}
+            </Button>
+          </div>
           <p className="text-xs text-muted-foreground">
-            Poznámka: záloha obsahuje záznamy a odkazy na fotografie. Samotné soubory fotografií zůstávají v úložišti aplikace.
+            Poznámka: PDF přehled je určen jen ke čtení a tisku. Pro úplné obnovení dat zpět do aplikace použijte zálohu ve formátu JSON. Záloha obsahuje záznamy a odkazy na fotografie; samotné soubory fotografií zůstávají v úložišti aplikace.
           </p>
         </CardContent>
       </Card>
