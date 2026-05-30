@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Upload, Image as ImageIcon, Mail, Palette, Building2, Trash2, Sun, Moon, Check, Monitor, PenLine } from "lucide-react";
+import { Upload, Image as ImageIcon, Mail, Palette, Building2, Trash2, Sun, Moon, Check, Monitor, PenLine, Database, Download, Loader2 } from "lucide-react";
 import { AresButton } from "@/components/ares-button";
 import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/use-theme";
@@ -46,8 +46,11 @@ export default function SettingsPage() {
   const updateSettings = useUpdateSettings();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const signatureInputRef = useRef<HTMLInputElement>(null);
+  const backupInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadingSignature, setUploadingSignature] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [importing, setImporting] = useState(false);
   const { theme, setTheme } = useTheme();
   const { palette, setPalette, palettes } = usePalette();
 
@@ -147,6 +150,61 @@ export default function SettingsPage() {
       toast({ title: "Logo odstraněno" });
     } catch (e: any) {
       toast({ title: "Chyba", description: String(e?.message ?? e), variant: "destructive" });
+    }
+  }
+
+  async function handleExportBackup() {
+    setExporting(true);
+    try {
+      const res = await fetch("/api/backup/export");
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const stamp = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `autoservis-zaloha-${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      toast({ title: "Záloha vytvořena", description: "Soubor byl stažen do vašeho zařízení." });
+    } catch {
+      toast({ title: "Chyba", description: "Zálohu se nepodařilo vytvořit.", variant: "destructive" });
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  async function handleImportBackup(file: File) {
+    const ok = confirm(
+      "Obnovením ze zálohy se NAHRADÍ všechna současná data (vozidla, zakázky, servisní historie, materiály, nastavení). Tuto akci nelze vrátit zpět. Pokračovat?",
+    );
+    if (!ok) return;
+    setImporting(true);
+    try {
+      const text = await file.text();
+      let payload: unknown;
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        throw new Error("Soubor není platná záloha (neplatný JSON).");
+      }
+      const res = await fetch("/api/backup/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error ?? "Obnova selhala.");
+      }
+      await queryClient.invalidateQueries();
+      toast({ title: "Data obnovena", description: "Záloha byla úspěšně načtena." });
+    } catch (e: any) {
+      toast({ title: "Chyba", description: String(e?.message ?? e), variant: "destructive" });
+    } finally {
+      setImporting(false);
     }
   }
 
@@ -389,6 +447,39 @@ export default function SettingsPage() {
                 onChange={(e) => setForm({ ...form, reminderServiceDays: e.target.value })} />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Database className="h-5 w-5" /> Zálohování dat</CardTitle>
+          <CardDescription>Stáhněte si zálohu všech dat nebo obnovte data ze zálohy</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-md border p-4 space-y-2">
+            <div className="font-medium">Export zálohy</div>
+            <p className="text-sm text-muted-foreground">
+              Stáhne soubor se všemi vozidly, zakázkami, servisní historií, materiály a nastavením. Soubor si uložte na bezpečné místo.
+            </p>
+            <Button onClick={handleExportBackup} disabled={exporting}>
+              {exporting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Vytvářím…</> : <><Download className="h-4 w-4 mr-2" /> Stáhnout zálohu</>}
+            </Button>
+          </div>
+
+          <div className="rounded-md border p-4 space-y-2">
+            <div className="font-medium">Obnova ze zálohy</div>
+            <p className="text-sm text-muted-foreground">
+              Načte data ze záložního souboru. Pozor: nahradí všechna současná data v aplikaci.
+            </p>
+            <input ref={backupInputRef} type="file" accept="application/json,.json" className="hidden"
+              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImportBackup(f); e.target.value = ""; }} />
+            <Button variant="outline" onClick={() => backupInputRef.current?.click()} disabled={importing}>
+              {importing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Obnovuji…</> : <><Upload className="h-4 w-4 mr-2" /> Obnovit ze zálohy</>}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Poznámka: záloha obsahuje záznamy a odkazy na fotografie. Samotné soubory fotografií zůstávají v úložišti aplikace.
+          </p>
         </CardContent>
       </Card>
 

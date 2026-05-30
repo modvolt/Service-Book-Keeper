@@ -11,6 +11,7 @@ import appointmentsRouter from "./appointments";
 import settingsRouter from "./settings";
 import aresRouter from "./ares";
 import storageRouter from "./storage";
+import backupRouter from "./backup";
 
 const router: IRouter = Router();
 
@@ -25,6 +26,7 @@ router.use(dashboardRouter);
 router.use(appointmentsRouter);
 router.use(settingsRouter);
 router.use(aresRouter);
+router.use(backupRouter);
 router.use("/storage", storageRouter);
 
 export default router;
