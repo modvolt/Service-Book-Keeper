@@ -664,6 +664,34 @@ export interface InvoiceImportResult {
   items: InvoiceImportResultItemsItem[];
 }
 
+export interface LogbookEntry {
+  id: number;
+  entryDate: string;
+  title: string;
+  /** @nullable */
+  content?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LogbookEntryInput {
+  /** @minLength 1 */
+  entryDate: string;
+  /** @minLength 1 */
+  title: string;
+  /** @nullable */
+  content?: string | null;
+}
+
+export interface LogbookEntryUpdate {
+  /** @nullable */
+  entryDate?: string | null;
+  /** @nullable */
+  title?: string | null;
+  /** @nullable */
+  content?: string | null;
+}
+
 export type AppointmentStatus = typeof AppointmentStatus[keyof typeof AppointmentStatus];
 
 
