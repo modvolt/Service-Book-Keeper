@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, ilike, and, sql } from "drizzle-orm";
 import multer from "multer";
 import { db, workOrdersTable, vehiclesTable, photosTable } from "@workspace/db";
-import { ObjectStorageService } from "../lib/objectStorage";
+import { ObjectStorageService } from "../lib/storage";
 import { validateImageUpload } from "../lib/fileValidation";
 import {
   ListWorkOrdersQueryParams,
@@ -198,17 +198,7 @@ router.post("/work-orders/:id/photos", upload.single("photo"), async (req, res):
   if (!order) { res.status(404).json({ error: "Zakázka nenalezena" }); return; }
 
   try {
-    const uploadUrl = await storage.getObjectEntityUploadURL();
-    const uploadResponse = await fetch(uploadUrl, {
-      method: "PUT",
-      body: req.file.buffer,
-      headers: { "Content-Type": req.file.mimetype },
-    });
-
-    if (!uploadResponse.ok) throw new Error("GCS upload failed");
-
-    const url = new URL(uploadUrl);
-    const objectPath = storage.normalizeObjectEntityPath(url.origin + url.pathname);
+    const objectPath = await storage.uploadPrivateObject(req.file.buffer, req.file.mimetype);
 
     const filename = `photo_${Date.now()}${validation.ext}`;
 

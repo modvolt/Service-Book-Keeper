@@ -20,6 +20,10 @@ export const vehiclesTable = pgTable("vehicles", {
   ownerDic: text("owner_dic"),
   ownerPhone: text("owner_phone"),
   ownerEmail: text("owner_email"),
+  // GDPR: recorded consent of the owner (data subject) to store/process their
+  // personal data. Null consentGivenAt means no consent on record.
+  consentGivenAt: timestamp("consent_given_at", { withTimezone: true }),
+  consentNote: text("consent_note"),
   currentKm: integer("current_km"),
   notes: text("notes"),
   stkValidUntil: date("stk_valid_until", { mode: "string" }),

@@ -12,6 +12,7 @@ import settingsRouter from "./settings";
 import aresRouter from "./ares";
 import storageRouter from "./storage";
 import backupRouter from "./backup";
+import gdprRouter from "./gdpr";
 
 const router: IRouter = Router();
 
@@ -27,6 +28,7 @@ router.use(appointmentsRouter);
 router.use(settingsRouter);
 router.use(aresRouter);
 router.use(backupRouter);
+router.use(gdprRouter);
 router.use("/storage", storageRouter);
 
 export default router;

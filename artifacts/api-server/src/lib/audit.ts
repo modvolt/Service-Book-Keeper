@@ -9,6 +9,7 @@ export type AuditAction =
   | "gdpr_export"
   | "gdpr_anonymize"
   | "gdpr_delete"
+  | "gdpr_consent"
   | "vehicle_deleted"
   | "appointment_deleted"
   | "work_order_deleted";

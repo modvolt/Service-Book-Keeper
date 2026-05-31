@@ -22,6 +22,7 @@ import SettingsPage from "@/pages/settings";
 import TpScanPage from "@/pages/tp-scan";
 import AlertsPage from "@/pages/alerts";
 import StatisticsPage from "@/pages/statistics";
+import GdprPage from "@/pages/gdpr";
 
 const queryClient = new QueryClient();
 
@@ -44,6 +45,7 @@ function Router() {
         <Route path="/nacteni-tp" component={TpScanPage} />
         <Route path="/po-terminu" component={AlertsPage} />
         <Route path="/statistiky" component={StatisticsPage} />
+        <Route path="/gdpr" component={GdprPage} />
         <Route component={NotFound} />
       </Switch>
       </ErrorBoundary>

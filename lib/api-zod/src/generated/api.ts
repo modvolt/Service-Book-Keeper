@@ -96,6 +96,8 @@ export const ListVehiclesResponseItem = zod.object({
   "ownerDic": zod.string().nullish(),
   "ownerPhone": zod.string().nullish(),
   "ownerEmail": zod.string().nullish(),
+  "consentGivenAt": zod.string().nullish(),
+  "consentNote": zod.string().nullish(),
   "currentKm": zod.number().nullish(),
   "notes": zod.string().nullish(),
   "stkValidUntil": zod.string().nullish(),
@@ -177,6 +179,7 @@ export const ListMaterialsResponseItem = zod.object({
   "name": zod.string(),
   "unit": zod.string().nullish(),
   "defaultPrice": zod.number().nullish(),
+  "supplier": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 export const ListMaterialsResponse = zod.array(ListMaterialsResponseItem)
@@ -191,7 +194,31 @@ export const ListMaterialsResponse = zod.array(ListMaterialsResponseItem)
 export const CreateMaterialBody = zod.object({
   "name": zod.string().min(1),
   "unit": zod.string().nullish(),
-  "defaultPrice": zod.number().nullish()
+  "defaultPrice": zod.number().nullish(),
+  "supplier": zod.string().nullish()
+})
+
+
+/**
+ * @summary Bulk import catalog materials from a price list (upsert by name)
+ */
+export const importMaterialsBodyItemsMax = 5000;
+
+
+
+export const ImportMaterialsBody = zod.object({
+  "items": zod.array(zod.object({
+  "name": zod.string().describe('Material name. Empty\/blank rows are skipped server-side.'),
+  "unit": zod.string().nullish(),
+  "defaultPrice": zod.number().nullish(),
+  "supplier": zod.string().nullish()
+})).max(importMaterialsBodyItemsMax)
+})
+
+export const ImportMaterialsResponse = zod.object({
+  "imported": zod.number(),
+  "updated": zod.number(),
+  "skipped": zod.number()
 })
 
 
@@ -325,6 +352,8 @@ export const GetVehicleByPlateResponse = zod.object({
   "ownerDic": zod.string().nullish(),
   "ownerPhone": zod.string().nullish(),
   "ownerEmail": zod.string().nullish(),
+  "consentGivenAt": zod.string().nullish(),
+  "consentNote": zod.string().nullish(),
   "currentKm": zod.number().nullish(),
   "notes": zod.string().nullish(),
   "stkValidUntil": zod.string().nullish(),
@@ -372,6 +401,8 @@ export const GetVehicleResponse = zod.object({
   "ownerDic": zod.string().nullish(),
   "ownerPhone": zod.string().nullish(),
   "ownerEmail": zod.string().nullish(),
+  "consentGivenAt": zod.string().nullish(),
+  "consentNote": zod.string().nullish(),
   "currentKm": zod.number().nullish(),
   "notes": zod.string().nullish(),
   "stkValidUntil": zod.string().nullish(),
@@ -556,6 +587,8 @@ export const UpdateVehicleResponse = zod.object({
   "ownerDic": zod.string().nullish(),
   "ownerPhone": zod.string().nullish(),
   "ownerEmail": zod.string().nullish(),
+  "consentGivenAt": zod.string().nullish(),
+  "consentNote": zod.string().nullish(),
   "currentKm": zod.number().nullish(),
   "notes": zod.string().nullish(),
   "stkValidUntil": zod.string().nullish(),
@@ -611,6 +644,8 @@ export const RecomputeVehicleStatusResponse = zod.object({
   "ownerDic": zod.string().nullish(),
   "ownerPhone": zod.string().nullish(),
   "ownerEmail": zod.string().nullish(),
+  "consentGivenAt": zod.string().nullish(),
+  "consentNote": zod.string().nullish(),
   "currentKm": zod.number().nullish(),
   "notes": zod.string().nullish(),
   "stkValidUntil": zod.string().nullish(),
@@ -1173,5 +1208,249 @@ export const GetDashboardSummaryResponse = zod.object({
   "completedAt": zod.coerce.date().nullish()
 })).optional()
 })
+
+
+/**
+ * @summary Search personal data by name, phone, e-mail or license plate
+ */
+export const GdprSearchQueryParams = zod.object({
+  "q": zod.coerce.string()
+})
+
+export const GdprSearchResponse = zod.object({
+  "vehicles": zod.array(zod.object({
+  "id": zod.number(),
+  "licensePlate": zod.string(),
+  "ownerType": zod.string(),
+  "ownerName": zod.string().nullish(),
+  "ownerPhone": zod.string().nullish(),
+  "ownerEmail": zod.string().nullish(),
+  "consentGivenAt": zod.string().nullish(),
+  "serviceRecordCount": zod.number(),
+  "workOrderCount": zod.number(),
+  "appointmentCount": zod.number()
+}))
+})
+
+
+/**
+ * @summary Export all data tied to a vehicle (data subject access request)
+ */
+export const GdprExportVehicleParams = zod.object({
+  "vehicleId": zod.coerce.number()
+})
+
+export const GdprExportVehicleResponse = zod.object({
+  "exportedAt": zod.string(),
+  "vehicle": zod.object({
+  "id": zod.number(),
+  "licensePlate": zod.string(),
+  "make": zod.string(),
+  "model": zod.string(),
+  "year": zod.number().nullish(),
+  "color": zod.string().nullish(),
+  "vin": zod.string().nullish(),
+  "engineDisplacement": zod.number().nullish(),
+  "registrationDate": zod.string().nullish(),
+  "transmission": zod.union([zod.literal('manual'),zod.literal('automatic'),zod.literal(null)]).nullish(),
+  "ownerType": zod.enum(['private', 'company']),
+  "ownerName": zod.string().nullish(),
+  "ownerAddress": zod.string().nullish(),
+  "ownerIco": zod.string().nullish(),
+  "ownerDic": zod.string().nullish(),
+  "ownerPhone": zod.string().nullish(),
+  "ownerEmail": zod.string().nullish(),
+  "consentGivenAt": zod.string().nullish(),
+  "consentNote": zod.string().nullish(),
+  "currentKm": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "stkValidUntil": zod.string().nullish(),
+  "lastOilChangeKm": zod.number().nullish(),
+  "lastOilChangeDate": zod.string().nullish(),
+  "lastBrakesDate": zod.string().nullish(),
+  "lastTimingDate": zod.string().nullish(),
+  "lastTransmissionOilDate": zod.string().nullish(),
+  "lastTransmissionOilKm": zod.number().nullish(),
+  "lastBrakeFluidDate": zod.string().nullish(),
+  "oilChangeIntervalKm": zod.number().nullish(),
+  "oilChangeIntervalMonths": zod.number().nullish(),
+  "transmissionOilIntervalKm": zod.number().nullish(),
+  "transmissionOilIntervalMonths": zod.number().nullish(),
+  "brakesIntervalMonths": zod.number().nullish(),
+  "timingIntervalKm": zod.number().nullish(),
+  "timingIntervalMonths": zod.number().nullish(),
+  "brakeFluidIntervalMonths": zod.number().nullish(),
+  "createdAt": zod.coerce.date()
+}),
+  "serviceRecords": zod.array(zod.object({
+  "id": zod.number(),
+  "vehicleId": zod.number(),
+  "date": zod.string(),
+  "km": zod.number().nullish(),
+  "description": zod.string().nullish(),
+  "oilChanged": zod.boolean().optional(),
+  "brakesServiced": zod.boolean().optional(),
+  "timingServiced": zod.boolean().optional(),
+  "transmissionOilChanged": zod.boolean().optional(),
+  "brakeFluidChanged": zod.boolean().optional(),
+  "stkPassed": zod.boolean().optional(),
+  "otherWork": zod.string().nullish(),
+  "technician": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})),
+  "workOrders": zod.array(zod.object({
+  "id": zod.number(),
+  "vehicleId": zod.number().nullish(),
+  "licensePlate": zod.string(),
+  "make": zod.string().nullish(),
+  "model": zod.string().nullish(),
+  "status": zod.enum(['open', 'in_progress', 'waiting_parts', 'needs_return', 'completed']),
+  "km": zod.number().nullish(),
+  "description": zod.string().nullish(),
+  "oilChange": zod.boolean().optional(),
+  "transmissionOil": zod.boolean().optional(),
+  "brakes": zod.boolean().optional(),
+  "timing": zod.boolean().optional(),
+  "airFilter": zod.boolean().optional(),
+  "cabinFilter": zod.boolean().optional(),
+  "stk": zod.boolean().optional(),
+  "tireChange": zod.boolean().optional(),
+  "diagnostics": zod.boolean().optional(),
+  "lightsCheck": zod.boolean().optional(),
+  "brakeFluid": zod.boolean().optional(),
+  "frontAxleCheck": zod.boolean().optional(),
+  "rearAxleCheck": zod.boolean().optional(),
+  "frontShocksCheck": zod.boolean().optional(),
+  "rearShocksCheck": zod.boolean().optional(),
+  "geometry": zod.boolean().optional(),
+  "headlightAlignment": zod.boolean().optional(),
+  "serviceDate": zod.string().nullish().describe('Date when service was performed (for backdated\/historical orders)'),
+  "otherWork": zod.string().nullish(),
+  "otherServices": zod.string().nullish(),
+  "laborHours": zod.string().nullish().describe('Number of labor hours (decimal as string, e.g. \"2.5\")'),
+  "laborPrice": zod.number().nullish().describe('Labor price in CZK'),
+  "notes": zod.string().nullish(),
+  "photos": zod.array(zod.object({
+  "id": zod.number(),
+  "workOrderId": zod.number(),
+  "url": zod.string(),
+  "filename": zod.string().optional(),
+  "createdAt": zod.coerce.date()
+})).optional(),
+  "createdAt": zod.coerce.date(),
+  "completedAt": zod.coerce.date().nullish()
+})),
+  "appointments": zod.array(zod.object({
+  "id": zod.number(),
+  "vehicleId": zod.number().nullish(),
+  "licensePlate": zod.string().nullish(),
+  "scheduledDate": zod.string(),
+  "scheduledTime": zod.string().nullish(),
+  "customerName": zod.string().nullish(),
+  "customerPhone": zod.string().nullish(),
+  "description": zod.string().nullish(),
+  "status": zod.enum(['planned', 'done', 'cancelled']),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Remove personal data but keep technical service history
+ */
+export const GdprAnonymizeVehicleParams = zod.object({
+  "vehicleId": zod.coerce.number()
+})
+
+export const GdprAnonymizeVehicleResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Permanently delete a vehicle and all linked records
+ */
+export const GdprDeleteVehicleParams = zod.object({
+  "vehicleId": zod.coerce.number()
+})
+
+export const GdprDeleteVehicleResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Record or withdraw the owner's data-processing consent
+ */
+export const SetVehicleConsentParams = zod.object({
+  "vehicleId": zod.coerce.number()
+})
+
+export const SetVehicleConsentBody = zod.object({
+  "given": zod.boolean(),
+  "note": zod.string().nullish()
+})
+
+export const SetVehicleConsentResponse = zod.object({
+  "id": zod.number(),
+  "licensePlate": zod.string(),
+  "make": zod.string(),
+  "model": zod.string(),
+  "year": zod.number().nullish(),
+  "color": zod.string().nullish(),
+  "vin": zod.string().nullish(),
+  "engineDisplacement": zod.number().nullish(),
+  "registrationDate": zod.string().nullish(),
+  "transmission": zod.union([zod.literal('manual'),zod.literal('automatic'),zod.literal(null)]).nullish(),
+  "ownerType": zod.enum(['private', 'company']),
+  "ownerName": zod.string().nullish(),
+  "ownerAddress": zod.string().nullish(),
+  "ownerIco": zod.string().nullish(),
+  "ownerDic": zod.string().nullish(),
+  "ownerPhone": zod.string().nullish(),
+  "ownerEmail": zod.string().nullish(),
+  "consentGivenAt": zod.string().nullish(),
+  "consentNote": zod.string().nullish(),
+  "currentKm": zod.number().nullish(),
+  "notes": zod.string().nullish(),
+  "stkValidUntil": zod.string().nullish(),
+  "lastOilChangeKm": zod.number().nullish(),
+  "lastOilChangeDate": zod.string().nullish(),
+  "lastBrakesDate": zod.string().nullish(),
+  "lastTimingDate": zod.string().nullish(),
+  "lastTransmissionOilDate": zod.string().nullish(),
+  "lastTransmissionOilKm": zod.number().nullish(),
+  "lastBrakeFluidDate": zod.string().nullish(),
+  "oilChangeIntervalKm": zod.number().nullish(),
+  "oilChangeIntervalMonths": zod.number().nullish(),
+  "transmissionOilIntervalKm": zod.number().nullish(),
+  "transmissionOilIntervalMonths": zod.number().nullish(),
+  "brakesIntervalMonths": zod.number().nullish(),
+  "timingIntervalKm": zod.number().nullish(),
+  "timingIntervalMonths": zod.number().nullish(),
+  "brakeFluidIntervalMonths": zod.number().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List recent audit-log entries
+ */
+export const GetAuditLogQueryParams = zod.object({
+  "limit": zod.coerce.number().optional()
+})
+
+export const GetAuditLogResponseItem = zod.object({
+  "id": zod.number(),
+  "action": zod.string(),
+  "entity": zod.string().nullish(),
+  "entityId": zod.string().nullish(),
+  "detail": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const GetAuditLogResponse = zod.array(GetAuditLogResponseItem)
 
 

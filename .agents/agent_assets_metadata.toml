@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "r1PzTo44VfabtA4KU8F6c"
+uri = "file://artifacts/autoservis/assets/icon-master.png"
+type = "image"
+title = "autoservis app icon"

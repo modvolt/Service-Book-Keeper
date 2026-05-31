@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar, Settings as SettingsIcon, ScanLine, AlertTriangle, BarChart3, LogOut } from "lucide-react";
+import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar, Settings as SettingsIcon, ScanLine, AlertTriangle, BarChart3, LogOut, Shield } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGetSettings, useLogout, getGetAuthStatusQueryKey } from "@workspace/api-client-react";
@@ -22,6 +22,7 @@ const NAV_ITEMS = [
 ];
 
 const BOTTOM_NAV_ITEMS = [
+  { href: "/gdpr", label: "GDPR", icon: Shield, color: "text-slate-600 dark:text-slate-400", bg: "hover:bg-slate-100 dark:hover:bg-slate-800/50" },
   { href: "/nastaveni", label: "Nastavení", icon: SettingsIcon, color: "text-slate-600 dark:text-slate-400", bg: "hover:bg-slate-100 dark:hover:bg-slate-800/50" },
 ];
 

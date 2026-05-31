@@ -39,6 +39,10 @@ export interface Vehicle {
   /** @nullable */
   ownerEmail?: string | null;
   /** @nullable */
+  consentGivenAt?: string | null;
+  /** @nullable */
+  consentNote?: string | null;
+  /** @nullable */
   currentKm?: number | null;
   /** @nullable */
   notes?: string | null;

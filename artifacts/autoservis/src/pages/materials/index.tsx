@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Package, Plus, Search, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { MaterialsImportDialog } from "@/components/materials-import-dialog";
 
 export default function MaterialsPage() {
   const { toast } = useToast();
@@ -56,12 +57,15 @@ export default function MaterialsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Package className="h-8 w-8 text-primary" />
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Sklad / katalog materiálu</h1>
-          <p className="text-muted-foreground">Často používaný materiál a díly. Položky se nabízí při zápisu zakázek.</p>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <Package className="h-8 w-8 text-primary" />
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Sklad / katalog materiálu</h1>
+            <p className="text-muted-foreground">Často používaný materiál a díly. Položky se nabízí při zápisu zakázek.</p>
+          </div>
         </div>
+        <MaterialsImportDialog />
       </div>
 
       <div className="grid gap-6 md:grid-cols-[1fr_2fr]">
@@ -119,6 +123,7 @@ export default function MaterialsPage() {
                       <p className="text-xs text-muted-foreground">
                         {it.unit ? `Jednotka: ${it.unit}` : "Bez jednotky"}
                         {it.defaultPrice != null && ` · ${it.defaultPrice.toLocaleString("cs-CZ")} Kč`}
+                        {it.supplier && ` · ${it.supplier}`}
                       </p>
                     </div>
                     <AlertDialog>

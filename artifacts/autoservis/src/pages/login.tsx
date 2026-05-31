@@ -48,6 +48,14 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="space-y-4">
+            <input
+              type="text"
+              name="username"
+              autoComplete="username"
+              value="mechanik"
+              readOnly
+              hidden
+            />
             <div className="space-y-2">
               <Label htmlFor="password">Heslo</Label>
               <Input

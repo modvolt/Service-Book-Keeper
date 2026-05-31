@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTheme } from "@/hooks/use-theme";
 import { usePalette } from "@/hooks/use-palette";
 import { cn } from "@/lib/utils";
+import { uploadFileWithProgress, UploadError } from "@/lib/upload";
 
 type Form = {
   companyName: string;
@@ -104,14 +105,12 @@ export default function SettingsPage() {
   async function handleLogoUpload(file: File) {
     setUploading(true);
     try {
-      const fd = new FormData();
-      fd.append("logo", file);
-      const res = await fetch("/api/settings/logo", { method: "POST", body: fd });
-      if (!res.ok) throw new Error("Upload failed");
+      await uploadFileWithProgress({ url: "/api/settings/logo", field: "logo", file });
       await queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
       toast({ title: "Logo nahráno" });
-    } catch {
-      toast({ title: "Chyba při nahrávání loga", variant: "destructive" });
+    } catch (err) {
+      const description = err instanceof UploadError ? err.message : "Logo se nepodařilo nahrát.";
+      toast({ title: "Chyba při nahrávání loga", description, variant: "destructive" });
     } finally {
       setUploading(false);
     }
@@ -120,14 +119,12 @@ export default function SettingsPage() {
   async function handleSignatureUpload(file: File) {
     setUploadingSignature(true);
     try {
-      const fd = new FormData();
-      fd.append("signature", file);
-      const res = await fetch("/api/settings/signature", { method: "POST", body: fd });
-      if (!res.ok) throw new Error("Upload failed");
+      await uploadFileWithProgress({ url: "/api/settings/signature", field: "signature", file });
       await queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
       toast({ title: "Podpis nahrán" });
-    } catch {
-      toast({ title: "Chyba při nahrávání podpisu", variant: "destructive" });
+    } catch (err) {
+      const description = err instanceof UploadError ? err.message : "Podpis se nepodařilo nahrát.";
+      toast({ title: "Chyba při nahrávání podpisu", description, variant: "destructive" });
     } finally {
       setUploadingSignature(false);
     }

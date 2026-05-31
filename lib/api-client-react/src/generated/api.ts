@@ -24,11 +24,18 @@ import type {
   AppointmentInput,
   AppointmentUpdate,
   AresResult,
+  AuditLogEntry,
   AuthStatus,
   ChangePasswordInput,
   DashboardSummary,
   Error,
+  GdprActionResult,
+  GdprExport,
+  GdprSearchParams,
+  GdprSearchResult,
+  GetAuditLogParams,
   HealthStatus,
+  ImportMaterialsInput,
   ImportTpInput,
   ImportTpResult,
   InvoiceImportInput,
@@ -41,9 +48,11 @@ import type {
   LoginInput,
   MaterialCatalogInput,
   MaterialCatalogItem,
+  MaterialsImportResult,
   Photo,
   ServiceRecord,
   ServiceRecordInput,
+  SetConsentInput,
   Settings,
   SettingsInput,
   Vehicle,
@@ -904,6 +913,77 @@ export const useCreateMaterial = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getCreateMaterialMutationOptions(options));
+    }
+
+export const getImportMaterialsUrl = () => {
+
+
+
+
+  return `/api/materials/import`
+}
+
+/**
+ * @summary Bulk import catalog materials from a price list (upsert by name)
+ */
+export const importMaterials = async (importMaterialsInput: ImportMaterialsInput, options?: RequestInit): Promise<MaterialsImportResult> => {
+
+  return customFetch<MaterialsImportResult>(getImportMaterialsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      importMaterialsInput,)
+  }
+);}
+
+
+
+
+export const getImportMaterialsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importMaterials>>, TError,{data: BodyType<ImportMaterialsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importMaterials>>, TError,{data: BodyType<ImportMaterialsInput>}, TContext> => {
+
+const mutationKey = ['importMaterials'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importMaterials>>, {data: BodyType<ImportMaterialsInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  importMaterials(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportMaterialsMutationResult = NonNullable<Awaited<ReturnType<typeof importMaterials>>>
+    export type ImportMaterialsMutationBody = BodyType<ImportMaterialsInput>
+    export type ImportMaterialsMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Bulk import catalog materials from a price list (upsert by name)
+ */
+export const useImportMaterials = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importMaterials>>, TError,{data: BodyType<ImportMaterialsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof importMaterials>>,
+        TError,
+        {data: BodyType<ImportMaterialsInput>},
+        TContext
+      > => {
+      return useMutation(getImportMaterialsMutationOptions(options));
     }
 
 export const getDeleteMaterialUrl = (id: number,) => {
@@ -3108,6 +3188,463 @@ export function useGetDashboardSummary<TData = Awaited<ReturnType<typeof getDash
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetDashboardSummaryQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGdprSearchUrl = (params: GdprSearchParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/gdpr/search?${stringifiedParams}` : `/api/gdpr/search`
+}
+
+/**
+ * @summary Search personal data by name, phone, e-mail or license plate
+ */
+export const gdprSearch = async (params: GdprSearchParams, options?: RequestInit): Promise<GdprSearchResult> => {
+
+  return customFetch<GdprSearchResult>(getGdprSearchUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGdprSearchQueryKey = (params?: GdprSearchParams,) => {
+    return [
+    `/api/gdpr/search`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGdprSearchQueryOptions = <TData = Awaited<ReturnType<typeof gdprSearch>>, TError = ErrorType<unknown>>(params: GdprSearchParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof gdprSearch>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGdprSearchQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof gdprSearch>>> = ({ signal }) => gdprSearch(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof gdprSearch>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GdprSearchQueryResult = NonNullable<Awaited<ReturnType<typeof gdprSearch>>>
+export type GdprSearchQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Search personal data by name, phone, e-mail or license plate
+ */
+
+export function useGdprSearch<TData = Awaited<ReturnType<typeof gdprSearch>>, TError = ErrorType<unknown>>(
+ params: GdprSearchParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof gdprSearch>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGdprSearchQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGdprExportVehicleUrl = (vehicleId: number,) => {
+
+
+
+
+  return `/api/gdpr/export/${vehicleId}`
+}
+
+/**
+ * @summary Export all data tied to a vehicle (data subject access request)
+ */
+export const gdprExportVehicle = async (vehicleId: number, options?: RequestInit): Promise<GdprExport> => {
+
+  return customFetch<GdprExport>(getGdprExportVehicleUrl(vehicleId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGdprExportVehicleQueryKey = (vehicleId: number,) => {
+    return [
+    `/api/gdpr/export/${vehicleId}`
+    ] as const;
+    }
+
+
+export const getGdprExportVehicleQueryOptions = <TData = Awaited<ReturnType<typeof gdprExportVehicle>>, TError = ErrorType<Error>>(vehicleId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof gdprExportVehicle>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGdprExportVehicleQueryKey(vehicleId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof gdprExportVehicle>>> = ({ signal }) => gdprExportVehicle(vehicleId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(vehicleId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof gdprExportVehicle>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GdprExportVehicleQueryResult = NonNullable<Awaited<ReturnType<typeof gdprExportVehicle>>>
+export type GdprExportVehicleQueryError = ErrorType<Error>
+
+
+/**
+ * @summary Export all data tied to a vehicle (data subject access request)
+ */
+
+export function useGdprExportVehicle<TData = Awaited<ReturnType<typeof gdprExportVehicle>>, TError = ErrorType<Error>>(
+ vehicleId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof gdprExportVehicle>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGdprExportVehicleQueryOptions(vehicleId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGdprAnonymizeVehicleUrl = (vehicleId: number,) => {
+
+
+
+
+  return `/api/gdpr/anonymize/${vehicleId}`
+}
+
+/**
+ * @summary Remove personal data but keep technical service history
+ */
+export const gdprAnonymizeVehicle = async (vehicleId: number, options?: RequestInit): Promise<GdprActionResult> => {
+
+  return customFetch<GdprActionResult>(getGdprAnonymizeVehicleUrl(vehicleId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getGdprAnonymizeVehicleMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gdprAnonymizeVehicle>>, TError,{vehicleId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof gdprAnonymizeVehicle>>, TError,{vehicleId: number}, TContext> => {
+
+const mutationKey = ['gdprAnonymizeVehicle'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof gdprAnonymizeVehicle>>, {vehicleId: number}> = (props) => {
+          const {vehicleId} = props ?? {};
+
+          return  gdprAnonymizeVehicle(vehicleId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GdprAnonymizeVehicleMutationResult = NonNullable<Awaited<ReturnType<typeof gdprAnonymizeVehicle>>>
+
+    export type GdprAnonymizeVehicleMutationError = ErrorType<Error>
+
+    /**
+ * @summary Remove personal data but keep technical service history
+ */
+export const useGdprAnonymizeVehicle = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gdprAnonymizeVehicle>>, TError,{vehicleId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof gdprAnonymizeVehicle>>,
+        TError,
+        {vehicleId: number},
+        TContext
+      > => {
+      return useMutation(getGdprAnonymizeVehicleMutationOptions(options));
+    }
+
+export const getGdprDeleteVehicleUrl = (vehicleId: number,) => {
+
+
+
+
+  return `/api/gdpr/vehicle/${vehicleId}`
+}
+
+/**
+ * @summary Permanently delete a vehicle and all linked records
+ */
+export const gdprDeleteVehicle = async (vehicleId: number, options?: RequestInit): Promise<GdprActionResult> => {
+
+  return customFetch<GdprActionResult>(getGdprDeleteVehicleUrl(vehicleId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getGdprDeleteVehicleMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gdprDeleteVehicle>>, TError,{vehicleId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof gdprDeleteVehicle>>, TError,{vehicleId: number}, TContext> => {
+
+const mutationKey = ['gdprDeleteVehicle'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof gdprDeleteVehicle>>, {vehicleId: number}> = (props) => {
+          const {vehicleId} = props ?? {};
+
+          return  gdprDeleteVehicle(vehicleId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GdprDeleteVehicleMutationResult = NonNullable<Awaited<ReturnType<typeof gdprDeleteVehicle>>>
+
+    export type GdprDeleteVehicleMutationError = ErrorType<Error>
+
+    /**
+ * @summary Permanently delete a vehicle and all linked records
+ */
+export const useGdprDeleteVehicle = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof gdprDeleteVehicle>>, TError,{vehicleId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof gdprDeleteVehicle>>,
+        TError,
+        {vehicleId: number},
+        TContext
+      > => {
+      return useMutation(getGdprDeleteVehicleMutationOptions(options));
+    }
+
+export const getSetVehicleConsentUrl = (vehicleId: number,) => {
+
+
+
+
+  return `/api/gdpr/consent/${vehicleId}`
+}
+
+/**
+ * @summary Record or withdraw the owner's data-processing consent
+ */
+export const setVehicleConsent = async (vehicleId: number,
+    setConsentInput: SetConsentInput, options?: RequestInit): Promise<Vehicle> => {
+
+  return customFetch<Vehicle>(getSetVehicleConsentUrl(vehicleId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      setConsentInput,)
+  }
+);}
+
+
+
+
+export const getSetVehicleConsentMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setVehicleConsent>>, TError,{vehicleId: number;data: BodyType<SetConsentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setVehicleConsent>>, TError,{vehicleId: number;data: BodyType<SetConsentInput>}, TContext> => {
+
+const mutationKey = ['setVehicleConsent'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setVehicleConsent>>, {vehicleId: number;data: BodyType<SetConsentInput>}> = (props) => {
+          const {vehicleId,data} = props ?? {};
+
+          return  setVehicleConsent(vehicleId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetVehicleConsentMutationResult = NonNullable<Awaited<ReturnType<typeof setVehicleConsent>>>
+    export type SetVehicleConsentMutationBody = BodyType<SetConsentInput>
+    export type SetVehicleConsentMutationError = ErrorType<Error>
+
+    /**
+ * @summary Record or withdraw the owner's data-processing consent
+ */
+export const useSetVehicleConsent = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setVehicleConsent>>, TError,{vehicleId: number;data: BodyType<SetConsentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setVehicleConsent>>,
+        TError,
+        {vehicleId: number;data: BodyType<SetConsentInput>},
+        TContext
+      > => {
+      return useMutation(getSetVehicleConsentMutationOptions(options));
+    }
+
+export const getGetAuditLogUrl = (params?: GetAuditLogParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/gdpr/audit-log?${stringifiedParams}` : `/api/gdpr/audit-log`
+}
+
+/**
+ * @summary List recent audit-log entries
+ */
+export const getAuditLog = async (params?: GetAuditLogParams, options?: RequestInit): Promise<AuditLogEntry[]> => {
+
+  return customFetch<AuditLogEntry[]>(getGetAuditLogUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAuditLogQueryKey = (params?: GetAuditLogParams,) => {
+    return [
+    `/api/gdpr/audit-log`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetAuditLogQueryOptions = <TData = Awaited<ReturnType<typeof getAuditLog>>, TError = ErrorType<unknown>>(params?: GetAuditLogParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAuditLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAuditLogQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAuditLog>>> = ({ signal }) => getAuditLog(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAuditLog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAuditLogQueryResult = NonNullable<Awaited<ReturnType<typeof getAuditLog>>>
+export type GetAuditLogQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List recent audit-log entries
+ */
+
+export function useGetAuditLog<TData = Awaited<ReturnType<typeof getAuditLog>>, TError = ErrorType<unknown>>(
+ params?: GetAuditLogParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAuditLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAuditLogQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

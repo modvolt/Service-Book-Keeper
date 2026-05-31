@@ -1,2 +1,5 @@
 - [SPZ normalization](spz-normalization.md) — all license-plate writes must run through the server normalizer; never store user-typed SPZ as-is.
+- [Vite peer-variant split](vite-peer-variant-split.md) — a Vite plugin pulling an optional peer (terser) splits Vite into two TS-incompatible copies; add the peer to catalog + every Vite package.
+- [GDPR erasure ordering](gdpr-erasure.md) — delete storage blobs before DB rows (abort on blob failure); wrap DB deletes in one transaction; appointments/work_orders use set-null not cascade.
+- [connect-pg-simple under esbuild](connect-pg-simple-esbuild.md) — createTableIfMissing silently fails in the bundle (missing table.sql); create session table via Drizzle push instead.
 - [Gray page in prod](gray-page-prod.md) — works in dev but blank/gray in production = uncaught React render error; dev's Vite overlay masks it, prod has no error boundary.

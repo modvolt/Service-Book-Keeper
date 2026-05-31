@@ -79,6 +79,10 @@ export interface Vehicle {
   /** @nullable */
   ownerEmail?: string | null;
   /** @nullable */
+  consentGivenAt?: string | null;
+  /** @nullable */
+  consentNote?: string | null;
+  /** @nullable */
   currentKm?: number | null;
   /** @nullable */
   notes?: string | null;
@@ -264,6 +268,10 @@ export interface VehicleDetail {
   ownerPhone?: string | null;
   /** @nullable */
   ownerEmail?: string | null;
+  /** @nullable */
+  consentGivenAt?: string | null;
+  /** @nullable */
+  consentNote?: string | null;
   /** @nullable */
   currentKm?: number | null;
   /** @nullable */
@@ -623,6 +631,8 @@ export interface MaterialCatalogItem {
   unit?: string | null;
   /** @nullable */
   defaultPrice?: number | null;
+  /** @nullable */
+  supplier?: string | null;
   createdAt: string;
 }
 
@@ -633,6 +643,30 @@ export interface MaterialCatalogInput {
   unit?: string | null;
   /** @nullable */
   defaultPrice?: number | null;
+  /** @nullable */
+  supplier?: string | null;
+}
+
+export type ImportMaterialsInputItemsItem = {
+  /** Material name. Empty/blank rows are skipped server-side. */
+  name: string;
+  /** @nullable */
+  unit?: string | null;
+  /** @nullable */
+  defaultPrice?: number | null;
+  /** @nullable */
+  supplier?: string | null;
+};
+
+export interface ImportMaterialsInput {
+  /** @maxItems 5000 */
+  items: ImportMaterialsInputItemsItem[];
+}
+
+export interface MaterialsImportResult {
+  imported: number;
+  updated: number;
+  skipped: number;
 }
 
 export interface WorkOrderMaterial {
@@ -849,6 +883,58 @@ export interface DashboardSummary {
   recentWorkOrders?: WorkOrder[];
 }
 
+export interface GdprVehicleMatch {
+  id: number;
+  licensePlate: string;
+  ownerType: string;
+  /** @nullable */
+  ownerName?: string | null;
+  /** @nullable */
+  ownerPhone?: string | null;
+  /** @nullable */
+  ownerEmail?: string | null;
+  /** @nullable */
+  consentGivenAt?: string | null;
+  serviceRecordCount: number;
+  workOrderCount: number;
+  appointmentCount: number;
+}
+
+export interface GdprSearchResult {
+  vehicles: GdprVehicleMatch[];
+}
+
+export interface GdprExport {
+  exportedAt: string;
+  vehicle: Vehicle;
+  serviceRecords: ServiceRecord[];
+  workOrders: WorkOrder[];
+  appointments: Appointment[];
+}
+
+export interface SetConsentInput {
+  given: boolean;
+  /** @nullable */
+  note?: string | null;
+}
+
+export interface GdprActionResult {
+  success: boolean;
+  message: string;
+}
+
+export interface AuditLogEntry {
+  id: number;
+  action: string;
+  /** @nullable */
+  entity?: string | null;
+  /** @nullable */
+  entityId?: string | null;
+  /** @nullable */
+  detail?: string | null;
+  createdAt: string;
+}
+
 export type ListVehicleModelsParams = {
 make?: string;
 };
@@ -880,5 +966,13 @@ export const ListWorkOrdersStatus = {
 export type ListAppointmentsParams = {
 from?: string;
 to?: string;
+};
+
+export type GdprSearchParams = {
+q: string;
+};
+
+export type GetAuditLogParams = {
+limit?: number;
 };
 

@@ -24,6 +24,8 @@ import { format, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { uploadFileWithProgress, UploadError } from "@/lib/upload";
+import { Progress } from "@/components/ui/progress";
 import { WorkOrderStatusBadge, WORK_ORDER_STATUSES, type WorkOrderStatus } from "@/lib/work-order-status";
 import { DEFAULT_HOURLY_RATE, computeLaborPrice } from "@/lib/labor";
 
@@ -65,6 +67,7 @@ export default function WorkOrderDetail() {
   const importInvoice = useImportInvoiceForWorkOrder();
 
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [editMode, setEditMode] = useState(false);
   const [editForm, setEditForm] = useState({
     km: "", description: "", oilChange: false, transmissionOil: false, brakes: false,
@@ -257,17 +260,22 @@ export default function WorkOrderDetail() {
 
   async function handlePhotoUpload(file: File) {
     setUploading(true);
+    setUploadProgress(0);
     try {
-      const formData = new FormData();
-      formData.append("photo", file);
-      const res = await fetch(`/api/work-orders/${id}/photos`, { method: "POST", body: formData });
-      if (!res.ok) throw new Error("Upload failed");
+      await uploadFileWithProgress({
+        url: `/api/work-orders/${id}/photos`,
+        field: "photo",
+        file,
+        onProgress: setUploadProgress,
+      });
       queryClient.invalidateQueries({ queryKey: getListWorkOrderPhotosQueryKey(id) });
       toast({ title: "Fotka přidána" });
-    } catch {
-      toast({ title: "Chyba při nahrávání fotky", variant: "destructive" });
+    } catch (err) {
+      const description = err instanceof UploadError ? err.message : "Fotku se nepodařilo nahrát.";
+      toast({ title: "Chyba při nahrávání fotky", description, variant: "destructive" });
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   }
 
@@ -861,6 +869,15 @@ export default function WorkOrderDetail() {
           </div>
         </CardHeader>
         <CardContent>
+          {uploading && (
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-1 text-sm text-muted-foreground">
+                <span>Nahrávání fotky…</span>
+                <span>{uploadProgress}%</span>
+              </div>
+              <Progress value={uploadProgress} />
+            </div>
+          )}
           {photosLoading ? (
             <div className="grid grid-cols-3 gap-3">
               {[1,2,3].map(i => <div key={i} className="aspect-square bg-muted animate-pulse rounded-lg" />)}

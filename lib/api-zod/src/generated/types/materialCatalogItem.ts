@@ -13,5 +13,7 @@ export interface MaterialCatalogItem {
   unit?: string | null;
   /** @nullable */
   defaultPrice?: number | null;
+  /** @nullable */
+  supplier?: string | null;
   createdAt: Date;
 }

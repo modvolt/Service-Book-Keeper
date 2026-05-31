@@ -11,7 +11,10 @@ declare module "express-session" {
 
 const secret = process.env.SESSION_SECRET;
 if (!secret) {
-  logger.error("SESSION_SECRET is not set — sessions are insecure. Set it before production.");
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("SESSION_SECRET must be set in production.");
+  }
+  logger.error("SESSION_SECRET is not set — using an insecure dev fallback. Set it before production.");
 }
 
 const PgStore = connectPgSimple(session);
@@ -19,7 +22,7 @@ const PgStore = connectPgSimple(session);
 export const sessionMiddleware = session({
   store: new PgStore({
     pool,
-    createTableIfMissing: true,
+    createTableIfMissing: false,
     tableName: "user_sessions",
   }),
   secret: secret ?? "insecure-dev-secret-change-me",

@@ -1,4 +1,4 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, json } from "express";
 import { eq, ilike, asc, sql } from "drizzle-orm";
 import { db, materialsCatalogTable, workOrderMaterialsTable, workOrdersTable } from "@workspace/db";
 import { getOpenAI } from "@workspace/integrations-openai-ai-server";
@@ -6,6 +6,7 @@ import {
   CreateMaterialBody,
   AddWorkOrderMaterialBody,
   ImportInvoiceForWorkOrderBody,
+  ImportMaterialsBody,
   ListMaterialsQueryParams,
 } from "@workspace/api-zod";
 
@@ -43,6 +44,67 @@ router.post("/materials", async (req, res): Promise<void> => {
     }
     req.log.error({ err }, "Material insert failed");
     res.status(500).json({ error: "Materiál se nepodařilo uložit." });
+  }
+});
+
+// Bulk import accepts up to 5000 rows, which can exceed the small global body
+// limit; mounted here (after the auth gate) with a larger parser.
+const importJson = json({ limit: "10mb" });
+
+router.post("/materials/import", importJson, async (req, res): Promise<void> => {
+  const parsed = ImportMaterialsBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  let skipped = 0;
+  // Normalize, drop empties, dedupe by lowercased name (last occurrence wins).
+  const byName = new Map<string, { name: string; unit: string | null; defaultPrice: number | null; supplier: string | null }>();
+  for (const raw of parsed.data.items) {
+    const name = raw.name?.trim() ?? "";
+    if (!name) { skipped++; continue; }
+    byName.set(name.toLowerCase(), {
+      name,
+      unit: raw.unit?.trim() || null,
+      defaultPrice: typeof raw.defaultPrice === "number" && Number.isFinite(raw.defaultPrice) ? Math.round(raw.defaultPrice) : null,
+      supplier: raw.supplier?.trim() || null,
+    });
+  }
+
+  const rows = Array.from(byName.values());
+  if (rows.length === 0) { res.json({ imported: 0, updated: 0, skipped }); return; }
+
+  try {
+    const result = await db.transaction(async (tx) => {
+      // Determine which names already exist (case-insensitive) to report accurate counts.
+      const existing = await tx.select({ name: materialsCatalogTable.name }).from(materialsCatalogTable);
+      const existingLower = new Set(existing.map((e) => e.name.toLowerCase()));
+
+      let imported = 0;
+      let updated = 0;
+      for (const row of rows) {
+        const isUpdate = existingLower.has(row.name.toLowerCase());
+        if (isUpdate) {
+          // Match the existing row case-insensitively; only overwrite fields the
+          // import actually provides (coalesce keeps existing values otherwise).
+          await tx.update(materialsCatalogTable)
+            .set({
+              unit: sql`coalesce(${row.unit}, ${materialsCatalogTable.unit})`,
+              defaultPrice: sql`coalesce(${row.defaultPrice}, ${materialsCatalogTable.defaultPrice})`,
+              supplier: sql`coalesce(${row.supplier}, ${materialsCatalogTable.supplier})`,
+            })
+            .where(sql`lower(${materialsCatalogTable.name}) = ${row.name.toLowerCase()}`);
+          updated++;
+        } else {
+          await tx.insert(materialsCatalogTable).values(row);
+          imported++;
+        }
+      }
+      return { imported, updated };
+    });
+
+    res.json({ ...result, skipped });
+  } catch (err) {
+    req.log.error({ err }, "Materials import failed");
+    res.status(500).json({ error: "Import ceníku selhal." });
   }
 });
 

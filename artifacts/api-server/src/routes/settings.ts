@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import multer from "multer";
 import { db, settingsTable } from "@workspace/db";
 import { UpdateSettingsBody } from "@workspace/api-zod";
-import { ObjectStorageService } from "../lib/objectStorage";
+import { ObjectStorageService } from "../lib/storage";
 import { validateImageUpload } from "../lib/fileValidation";
 
 const router: IRouter = Router();
@@ -46,16 +46,7 @@ async function handleImageUpload(req: Express.Request & { file?: Express.Multer.
   const validation = validateImageUpload(req.file);
   if (!validation.ok) { res.status(400).json({ error: validation.error }); return; }
   try {
-    const uploadUrl = await storage.getObjectEntityUploadURL();
-    const uploadResponse = await fetch(uploadUrl, {
-      method: "PUT",
-      body: req.file.buffer,
-      headers: { "Content-Type": req.file.mimetype },
-    });
-    if (!uploadResponse.ok) throw new Error("GCS upload failed");
-
-    const url = new URL(uploadUrl);
-    const objectPath = storage.normalizeObjectEntityPath(url.origin + url.pathname);
+    const objectPath = await storage.uploadPrivateObject(req.file.buffer, req.file.mimetype);
 
     await getOrCreate();
     const [row] = await db.update(settingsTable)

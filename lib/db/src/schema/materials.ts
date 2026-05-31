@@ -1,13 +1,19 @@
-import { pgTable, text, serial, timestamp, integer } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, uniqueIndex } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { workOrdersTable } from "./work-orders";
 
 export const materialsCatalogTable = pgTable("materials_catalog", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
+  name: text("name").notNull(),
   unit: text("unit"),
   defaultPrice: integer("default_price"),
+  supplier: text("supplier"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  // Case-insensitive uniqueness so "Filtr" and "filtr" are the same catalog entry
+  // (import upsert relies on this conflict target).
+  uniqueIndex("materials_catalog_name_lower_unique").on(sql`lower(${table.name})`),
+]);
 
 export const workOrderMaterialsTable = pgTable("work_order_materials", {
   id: serial("id").primaryKey(),

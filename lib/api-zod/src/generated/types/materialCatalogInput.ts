@@ -13,4 +13,6 @@ export interface MaterialCatalogInput {
   unit?: string | null;
   /** @nullable */
   defaultPrice?: number | null;
+  /** @nullable */
+  supplier?: string | null;
 }

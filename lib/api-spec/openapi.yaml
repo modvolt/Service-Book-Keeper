@@ -212,6 +212,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/MaterialCatalogItem"
 
+  /materials/import:
+    post:
+      operationId: importMaterials
+      tags: [materials]
+      summary: Bulk import catalog materials from a price list (upsert by name)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportMaterialsInput"
+      responses:
+        "200":
+          description: Import summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaterialsImportResult"
+
   /materials/{id}:
     delete:
       operationId: deleteMaterial
@@ -781,6 +800,146 @@ paths:
               schema:
                 $ref: "#/components/schemas/DashboardSummary"
 
+  /gdpr/search:
+    get:
+      operationId: gdprSearch
+      tags: [gdpr]
+      summary: Search personal data by name, phone, e-mail or license plate
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matching vehicles holding personal data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GdprSearchResult"
+  /gdpr/export/{vehicleId}:
+    get:
+      operationId: gdprExportVehicle
+      tags: [gdpr]
+      summary: Export all data tied to a vehicle (data subject access request)
+      parameters:
+        - name: vehicleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Full export document
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GdprExport"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /gdpr/anonymize/{vehicleId}:
+    post:
+      operationId: gdprAnonymizeVehicle
+      tags: [gdpr]
+      summary: Remove personal data but keep technical service history
+      parameters:
+        - name: vehicleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Anonymized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GdprActionResult"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /gdpr/vehicle/{vehicleId}:
+    delete:
+      operationId: gdprDeleteVehicle
+      tags: [gdpr]
+      summary: Permanently delete a vehicle and all linked records
+      parameters:
+        - name: vehicleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GdprActionResult"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /gdpr/consent/{vehicleId}:
+    put:
+      operationId: setVehicleConsent
+      tags: [gdpr]
+      summary: Record or withdraw the owner's data-processing consent
+      parameters:
+        - name: vehicleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetConsentInput"
+      responses:
+        "200":
+          description: Updated vehicle
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Vehicle"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /gdpr/audit-log:
+    get:
+      operationId: getAuditLog
+      tags: [gdpr]
+      summary: List recent audit-log entries
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Audit entries (most recent first)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditLogEntry"
+
 components:
   schemas:
     HealthStatus:
@@ -864,6 +1023,10 @@ components:
           type: ["string", "null"]
         ownerEmail:
           type: ["string", "null"]
+        consentGivenAt:
+          type: ["string", "null"]
+        consentNote:
+          type: ["string", "null"]
         currentKm:
           type: ["integer", "null"]
         notes:
@@ -943,6 +1106,10 @@ components:
         ownerPhone:
           type: ["string", "null"]
         ownerEmail:
+          type: ["string", "null"]
+        consentGivenAt:
+          type: ["string", "null"]
+        consentNote:
           type: ["string", "null"]
         currentKm:
           type: ["integer", "null"]
@@ -1445,6 +1612,8 @@ components:
           type: ["string", "null"]
         defaultPrice:
           type: ["integer", "null"]
+        supplier:
+          type: ["string", "null"]
         createdAt:
           type: string
           format: date-time
@@ -1460,6 +1629,40 @@ components:
           type: ["string", "null"]
         defaultPrice:
           type: ["integer", "null"]
+        supplier:
+          type: ["string", "null"]
+
+    ImportMaterialsInput:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          maxItems: 5000
+          items:
+            type: object
+            required: [name]
+            properties:
+              name:
+                type: string
+                description: Material name. Empty/blank rows are skipped server-side.
+              unit:
+                type: ["string", "null"]
+              defaultPrice:
+                type: ["integer", "null"]
+              supplier:
+                type: ["string", "null"]
+
+    MaterialsImportResult:
+      type: object
+      required: [imported, updated, skipped]
+      properties:
+        imported:
+          type: integer
+        updated:
+          type: integer
+        skipped:
+          type: integer
 
     WorkOrderMaterial:
       type: object
@@ -1716,3 +1919,87 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WorkOrder"
+    GdprVehicleMatch:
+      type: object
+      required: [id, licensePlate, ownerType, serviceRecordCount, workOrderCount, appointmentCount]
+      properties:
+        id:
+          type: integer
+        licensePlate:
+          type: string
+        ownerType:
+          type: string
+        ownerName:
+          type: ["string", "null"]
+        ownerPhone:
+          type: ["string", "null"]
+        ownerEmail:
+          type: ["string", "null"]
+        consentGivenAt:
+          type: ["string", "null"]
+        serviceRecordCount:
+          type: integer
+        workOrderCount:
+          type: integer
+        appointmentCount:
+          type: integer
+    GdprSearchResult:
+      type: object
+      required: [vehicles]
+      properties:
+        vehicles:
+          type: array
+          items:
+            $ref: "#/components/schemas/GdprVehicleMatch"
+    GdprExport:
+      type: object
+      required: [exportedAt, vehicle, serviceRecords, workOrders, appointments]
+      properties:
+        exportedAt:
+          type: string
+        vehicle:
+          $ref: "#/components/schemas/Vehicle"
+        serviceRecords:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceRecord"
+        workOrders:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkOrder"
+        appointments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Appointment"
+    SetConsentInput:
+      type: object
+      required: [given]
+      properties:
+        given:
+          type: boolean
+        note:
+          type: ["string", "null"]
+    GdprActionResult:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+    AuditLogEntry:
+      type: object
+      required: [id, action, createdAt]
+      properties:
+        id:
+          type: integer
+        action:
+          type: string
+        entity:
+          type: ["string", "null"]
+        entityId:
+          type: ["string", "null"]
+        detail:
+          type: ["string", "null"]
+        createdAt:
+          type: string

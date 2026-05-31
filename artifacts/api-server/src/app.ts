@@ -50,9 +50,10 @@ app.use(
   }),
 );
 
-// JSON limit kept generous because the TP-import endpoint accepts base64 photos.
-// DoS risk is mitigated by authentication gating all data endpoints.
-app.use(express.json({ limit: "15mb" }));
+// Small global body limit to avoid pre-auth resource amplification. The only
+// endpoint that needs large payloads (TP-import, base64 photos) installs its
+// own larger parser locally, after the auth gate.
+app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 
 app.use(sessionMiddleware);
@@ -80,7 +81,23 @@ app.use((err: unknown, req: Request, res: Response, next: NextFunction): void =>
     next(err);
     return;
   }
-  res.status(500).json({ error: "Interní chyba serveru" });
+
+  const status =
+    typeof err === "object" && err !== null && "status" in err && typeof (err as { status: unknown }).status === "number"
+      ? (err as { status: number }).status
+      : typeof err === "object" && err !== null && "statusCode" in err && typeof (err as { statusCode: unknown }).statusCode === "number"
+        ? (err as { statusCode: number }).statusCode
+        : 500;
+
+  if (status === 413) {
+    res.status(413).json({ error: "Soubor nebo požadavek je příliš velký." });
+    return;
+  }
+  if (status === 400) {
+    res.status(400).json({ error: "Neplatný požadavek." });
+    return;
+  }
+  res.status(status >= 400 && status < 600 ? status : 500).json({ error: "Interní chyba serveru" });
 });
 
 export default app;

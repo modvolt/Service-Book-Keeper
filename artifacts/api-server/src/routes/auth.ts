@@ -26,7 +26,24 @@ async function getOrSeedHash(): Promise<string | null> {
     .values({ id: ROW_ID, passwordHash })
     .onConflictDoNothing()
     .returning();
-  return created?.passwordHash ?? passwordHash;
+  if (created) return created.passwordHash;
+
+  // A concurrent request won the insert — re-read the persisted hash so we
+  // never authenticate against a locally computed, non-persisted value.
+  const [row] = await db.select().from(appAuthTable).where(eq(appAuthTable.id, ROW_ID));
+  return row?.passwordHash ?? null;
+}
+
+function regenerateSession(req: { session: { regenerate: (cb: (err: unknown) => void) => void } }): Promise<void> {
+  return new Promise((resolve, reject) => {
+    req.session.regenerate((err) => (err ? reject(err) : resolve()));
+  });
+}
+
+function saveSession(req: { session: { save: (cb: (err: unknown) => void) => void } }): Promise<void> {
+  return new Promise((resolve, reject) => {
+    req.session.save((err) => (err ? reject(err) : resolve()));
+  });
 }
 
 router.get("/auth/me", (req, res): void => {
@@ -53,18 +70,27 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
+  // Rotate the session ID on privilege elevation to prevent session fixation,
+  // then persist before reporting success.
+  await regenerateSession(req);
   req.session.authenticated = true;
+  await saveSession(req);
   await audit("login");
   res.json({ authenticated: true });
 });
 
-router.post("/auth/logout", async (req, res): Promise<void> => {
+router.post("/auth/logout", (req, res): void => {
   const wasAuthed = Boolean(req.session?.authenticated);
-  req.session.destroy(() => {
+  req.session.destroy((err) => {
+    if (err) {
+      req.log.error({ err }, "Session destroy failed");
+      res.status(500).json({ error: "Odhlášení se nezdařilo" });
+      return;
+    }
     res.clearCookie("autoservis.sid");
     res.status(204).end();
+    if (wasAuthed) void audit("logout");
   });
-  if (wasAuthed) await audit("logout");
 });
 
 router.post("/auth/change-password", async (req, res): Promise<void> => {

@@ -1,9 +1,14 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, json } from "express";
 import { getOpenAI } from "@workspace/integrations-openai-ai-server";
 import { ImportVehicleFromTpBody } from "@workspace/api-zod";
 import { normalizeSpzOrNull } from "../lib/spz";
 
 const router: IRouter = Router();
+
+// TP-import accepts base64 photos, so it needs a larger body limit than the
+// small global default. Mounted here (after the auth gate) to avoid pre-auth
+// resource amplification.
+const largeJson = json({ limit: "15mb" });
 
 const SYSTEM_PROMPT = `Jsi asistent pro autoservis. Z přiložených fotografií extrahuj údaje o vozidle. Fotografie mohou být různého typu a mohou se kombinovat:
 - malý technický průkaz (osvědčení o registraci vozidla část I, Česká republika),
@@ -33,7 +38,7 @@ Pravidla:
 - model: pouze označení modelu/typu (např. "Passat", "Octavia"). Výrobce do modelu nezahrnuj.
 - Jiné údaje (jméno, adresa, barva) nevracej.`;
 
-router.post("/vehicles/import-tp", async (req, res): Promise<void> => {
+router.post("/vehicles/import-tp", largeJson, async (req, res): Promise<void> => {
   const parsed = ImportVehicleFromTpBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.message });
