@@ -1118,6 +1118,10 @@ components:
           type: ["integer", "null"]
         licensePlate:
           type: string
+        make:
+          type: ["string", "null"]
+        model:
+          type: ["string", "null"]
         status:
           type: string
           enum: [open, in_progress, waiting_parts, needs_return, completed]
@@ -1323,6 +1327,10 @@ components:
           type: ["integer", "null"]
         engineDisplacement:
           type: ["integer", "null"]
+        make:
+          type: ["string", "null"]
+        model:
+          type: ["string", "null"]
 
     MaterialCatalogItem:
       type: object

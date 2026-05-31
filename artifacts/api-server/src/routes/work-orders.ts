@@ -44,25 +44,33 @@ router.get("/work-orders", async (req, res): Promise<void> => {
     return;
   }
 
-  let orders;
   const conditions = [];
   if (query.data.status) conditions.push(eq(workOrdersTable.status, query.data.status));
 
-  orders = await db.select().from(workOrdersTable)
+  let rows = await db
+    .select({
+      order: workOrdersTable,
+      make: vehiclesTable.make,
+      model: vehiclesTable.model,
+    })
+    .from(workOrdersTable)
+    .leftJoin(vehiclesTable, eq(workOrdersTable.vehicleId, vehiclesTable.id))
     .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(sql`coalesce(${workOrdersTable.serviceDate}, ${workOrdersTable.createdAt}::date) desc, ${workOrdersTable.createdAt} desc`);
 
   if (query.data.search) {
     const s = query.data.search.toLowerCase();
-    orders = orders.filter(o =>
-      o.licensePlate.toLowerCase().includes(s) ||
-      o.description?.toLowerCase().includes(s)
+    rows = rows.filter(r =>
+      r.order.licensePlate.toLowerCase().includes(s) ||
+      r.order.description?.toLowerCase().includes(s) ||
+      r.make?.toLowerCase().includes(s) ||
+      r.model?.toLowerCase().includes(s)
     );
   }
 
-  const withPhotos = await Promise.all(orders.map(async (o) => {
-    const photos = await db.select().from(photosTable).where(eq(photosTable.workOrderId, o.id));
-    return { ...o, photos };
+  const withPhotos = await Promise.all(rows.map(async (r) => {
+    const photos = await db.select().from(photosTable).where(eq(photosTable.workOrderId, r.order.id));
+    return { ...r.order, make: r.make ?? null, model: r.model ?? null, photos };
   }));
 
   res.json(withPhotos);

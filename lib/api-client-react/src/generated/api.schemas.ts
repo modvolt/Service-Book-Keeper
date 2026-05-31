@@ -161,6 +161,10 @@ export interface WorkOrder {
   /** @nullable */
   vehicleId?: number | null;
   licensePlate: string;
+  /** @nullable */
+  make?: string | null;
+  /** @nullable */
+  model?: string | null;
   status: WorkOrderStatus;
   /** @nullable */
   km?: number | null;
@@ -586,6 +590,10 @@ export interface ImportTpResult {
   registrationYear?: number | null;
   /** @nullable */
   engineDisplacement?: number | null;
+  /** @nullable */
+  make?: string | null;
+  /** @nullable */
+  model?: string | null;
 }
 
 export interface MaterialCatalogItem {

@@ -71,8 +71,10 @@ export default function NewVehicle() {
       vin: pre.vin ?? f.vin,
       year: pre.registrationYear != null ? String(pre.registrationYear) : f.year,
       engineDisplacement: pre.engineDisplacement != null ? String(pre.engineDisplacement) : f.engineDisplacement,
+      make: pre.make ?? f.make,
+      model: pre.model ?? f.model,
     }));
-    toast({ title: "Údaje z TP předvyplněny", description: "Doplňte výrobce, model a další chybějící údaje." });
+    toast({ title: "Údaje z TP předvyplněny", description: "Zkontrolujte je a doplňte chybějící údaje." });
   }, [toast]);
 
   const { data: makeOptions = [] } = useListVehicleMakes();
@@ -184,10 +186,12 @@ export default function NewVehicle() {
             vin: result.vin ?? f.vin,
             year: result.registrationYear != null ? String(result.registrationYear) : f.year,
             engineDisplacement: result.engineDisplacement != null ? String(result.engineDisplacement) : f.engineDisplacement,
+            make: result.make ?? f.make,
+            model: result.model ?? f.model,
           }));
           setImportOpen(false);
           setImportFiles([]);
-          toast({ title: "Údaje načteny", description: "Vyplnili jsme SPZ, VIN, rok a objem motoru. Ostatní pole prosím vyplňte ručně." });
+          toast({ title: "Údaje načteny", description: "Předvyplnili jsme rozpoznané údaje. Zkontrolujte je a doplňte chybějící pole." });
         },
         onError: () => {
           toast({ title: "Import selhal", description: "Zkuste znovu nebo vyplňte ručně.", variant: "destructive" });
@@ -471,7 +475,7 @@ export default function NewVehicle() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-amber-500" />Import z technického průkazu</DialogTitle>
             <DialogDescription>
-              Nahrajte fotografie malého technického průkazu (obě strany). Načteme pouze spolehlivé údaje: SPZ, VIN, rok první registrace a objem motoru. Značku, model a další údaje prosím doplňte ručně.
+              Nahrajte fotografie malého technického průkazu (obě strany). Pokud TP není po ruce, můžete nahrát i fotku SPZ vozidla a fotku VIN (štítek, ražba nebo VIN za sklem). Načteme SPZ, VIN, výrobce, model, rok první registrace a objem motoru. Ostatní údaje prosím doplňte ručně.
             </DialogDescription>
           </DialogHeader>
 

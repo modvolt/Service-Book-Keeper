@@ -45,10 +45,14 @@ export default function WorkOrdersList() {
     status !== "all" ? { status: status as WorkOrderStatus } : {}
   );
 
-  const filtered = workOrders?.filter(wo =>
-    !search || wo.licensePlate.toLowerCase().includes(search.toLowerCase()) ||
-    wo.description?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = workOrders?.filter(wo => {
+    if (!search) return true;
+    const s = search.toLowerCase();
+    return wo.licensePlate.toLowerCase().includes(s) ||
+      wo.description?.toLowerCase().includes(s) ||
+      wo.make?.toLowerCase().includes(s) ||
+      wo.model?.toLowerCase().includes(s);
+  });
 
   const dateStr = (d: string) => {
     try { return format(parseISO(d), 'd. M. yyyy', { locale: cs }); } catch { return d; }
@@ -108,6 +112,9 @@ export default function WorkOrdersList() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 flex-wrap mb-1">
                         <LicensePlate plate={wo.licensePlate} size="lg" />
+                        {(wo.make || wo.model) && (
+                          <span className="font-medium text-sm">{[wo.make, wo.model].filter(Boolean).join(" ")}</span>
+                        )}
                         <WorkOrderStatusBadge status={wo.status} size="sm" />
                         {wo.photos && wo.photos.length > 0 && (
                           <span className="flex items-center gap-1 text-xs text-muted-foreground">

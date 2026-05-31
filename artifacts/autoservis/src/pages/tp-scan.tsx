@@ -14,6 +14,8 @@ export type TpPrefill = {
   vin?: string | null;
   registrationYear?: number | null;
   engineDisplacement?: number | null;
+  make?: string | null;
+  model?: string | null;
 };
 
 export function setTpPrefill(data: TpPrefill) {
@@ -54,6 +56,8 @@ export default function TpScanPage() {
       vin: data.vin,
       registrationYear: data.registrationYear,
       engineDisplacement: data.engineDisplacement,
+      make: data.make,
+      model: data.model,
     });
     navigate("/vehicles/new");
   }
@@ -69,7 +73,7 @@ export default function TpScanPage() {
         <ScanLine className="h-8 w-8 text-primary" />
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Načtení technického průkazu</h1>
-          <p className="text-muted-foreground">Vyfoťte malý TP a údaje se automaticky předvyplní k vozidlu nebo zakázce.</p>
+          <p className="text-muted-foreground">Vyfoťte malý TP, nebo (pokud není po ruce) fotku SPZ a VIN vozidla. Údaje se automaticky předvyplní k vozidlu nebo zakázce.</p>
         </div>
       </div>
 
@@ -92,6 +96,8 @@ export default function TpScanPage() {
             <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
               <div><dt className="text-muted-foreground">SPZ</dt><dd className="font-mono font-semibold text-base">{data.licensePlate ?? "—"}</dd></div>
               <div><dt className="text-muted-foreground">VIN</dt><dd className="font-mono">{data.vin ?? "—"}</dd></div>
+              <div><dt className="text-muted-foreground">Výrobce</dt><dd>{data.make ?? "—"}</dd></div>
+              <div><dt className="text-muted-foreground">Model / typ</dt><dd>{data.model ?? "—"}</dd></div>
               <div><dt className="text-muted-foreground">Rok registrace</dt><dd>{data.registrationYear ?? "—"}</dd></div>
               <div><dt className="text-muted-foreground">Objem motoru</dt><dd>{data.engineDisplacement ? `${data.engineDisplacement} cm³` : "—"}</dd></div>
             </dl>

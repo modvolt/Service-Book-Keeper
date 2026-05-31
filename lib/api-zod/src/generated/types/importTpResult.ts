@@ -15,4 +15,8 @@ export interface ImportTpResult {
   registrationYear?: number | null;
   /** @nullable */
   engineDisplacement?: number | null;
+  /** @nullable */
+  make?: string | null;
+  /** @nullable */
+  model?: string | null;
 }

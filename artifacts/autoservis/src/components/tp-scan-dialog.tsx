@@ -11,6 +11,8 @@ export type TpExtractedData = {
   vin: string | null;
   registrationYear: number | null;
   engineDisplacement: number | null;
+  make: string | null;
+  model: string | null;
 };
 
 function fileToBase64(file: File): Promise<string> {
@@ -125,8 +127,8 @@ export function TpScanDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><ScanLine className="h-5 w-5 text-primary" />Načtení technického průkazu</DialogTitle>
           <DialogDescription>
-            Vyfoťte malý technický průkaz (osvědčení o registraci, část I), nahrajte snímek nebo vložte print screen ze schránky. Můžete přidat až 4 obrázky.
-            Automaticky se rozpozná SPZ, VIN, rok registrace a objem motoru.
+            Vyfoťte malý technický průkaz (osvědčení o registraci, část I). Pokud TP není po ruce, můžete nahrát i fotku SPZ vozidla a fotku VIN (štítek, ražba nebo VIN za sklem). Můžete přidat až 4 obrázky.
+            Automaticky se rozpozná SPZ, VIN, výrobce, model, rok registrace a objem motoru.
           </DialogDescription>
         </DialogHeader>
 

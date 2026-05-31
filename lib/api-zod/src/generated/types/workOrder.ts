@@ -13,6 +13,10 @@ export interface WorkOrder {
   /** @nullable */
   vehicleId?: number | null;
   licensePlate: string;
+  /** @nullable */
+  make?: string | null;
+  /** @nullable */
+  model?: string | null;
   status: WorkOrderStatus;
   /** @nullable */
   km?: number | null;

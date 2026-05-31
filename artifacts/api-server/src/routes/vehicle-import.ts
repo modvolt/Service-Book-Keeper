@@ -5,22 +5,33 @@ import { normalizeSpzOrNull } from "../lib/spz";
 
 const router: IRouter = Router();
 
-const SYSTEM_PROMPT = `Jsi asistent pro autoservis. Z fotografií malého technického průkazu (osvědčení o registraci vozidla část I, Česká republika) extrahuj POUZE následující jasně čitelné údaje. Vrať POUZE platné JSON bez markdown bloku, bez vysvětlení.
+const SYSTEM_PROMPT = `Jsi asistent pro autoservis. Z přiložených fotografií extrahuj údaje o vozidle. Fotografie mohou být různého typu a mohou se kombinovat:
+- malý technický průkaz (osvědčení o registraci vozidla část I, Česká republika),
+- fotografie registrační značky (SPZ) vozidla,
+- fotografie VIN (výrobní štítek, ražba VIN na karoserii nebo VIN za čelním sklem),
+- fotografie samotného vozidla.
+
+Údaje ze všech fotografií spoj dohromady. Vrať POUZE platné JSON bez markdown bloku, bez vysvětlení.
 
 Schéma odpovědi:
 {
   "licensePlate": string|null,        // SPZ vozidla ve formátu "XXX XXXX" (3 znaky, mezera, 4 znaky), např. "5L1 1642"
   "vin": string|null,                 // VIN / číslo karoserie (přesně 17 znaků, písmena a čísla)
   "registrationYear": number|null,    // ROK první registrace (jen číslo, např. 2018)
-  "engineDisplacement": number|null   // objem motoru v cm³ (kubických cm)
+  "engineDisplacement": number|null,  // objem motoru v cm³ (kubických cm)
+  "make": string|null,                // výrobce / značka vozidla, např. "Volkswagen", "Škoda", "Renault"
+  "model": string|null                // model / typ vozidla, např. "Passat", "Octavia", "Mégane"
 }
 
 Pravidla:
-- Vrať pouze údaje, které jsou na fotografii jednoznačně čitelné. Jinak null.
-- VIN musí mít přesně 17 znaků, jinak null.
+- Vrať pouze údaje, které jsou na fotografiích jednoznačně čitelné nebo jednoznačně určitelné. Jinak null.
+- VIN musí mít přesně 17 znaků, jinak null. VIN můžeš přečíst z TP, z výrobního štítku, z ražby na karoserii i z VIN za čelním sklem.
+- SPZ můžeš přečíst z TP i z fotografie registrační značky vozidla.
 - Engine displacement: pokud vidíš objem v litrech (např. 2.0), převeď na cm³ (2000).
 - registrationYear extrahuj POUZE rok (čtyřciferné číslo) z data první registrace.
-- Žádné další údaje (jméno, adresa, barva, značka, model) nevracej.`;
+- make: pouze název výrobce s velkým prvním písmenem (např. "Volkswagen", "Škoda"). Bez modelu.
+- model: pouze označení modelu/typu (např. "Passat", "Octavia"). Výrobce do modelu nezahrnuj.
+- Jiné údaje (jméno, adresa, barva) nevracej.`;
 
 router.post("/vehicles/import-tp", async (req, res): Promise<void> => {
   const parsed = ImportVehicleFromTpBody.safeParse(req.body);
@@ -44,7 +55,7 @@ router.post("/vehicles/import-tp", async (req, res): Promise<void> => {
         {
           role: "user",
           content: [
-            { type: "text", text: "Extrahuj údaje z těchto fotografií malého technického průkazu:" },
+            { type: "text", text: "Extrahuj údaje o vozidle z těchto fotografií:" },
             ...imageContents,
           ],
         },
@@ -61,11 +72,16 @@ router.post("/vehicles/import-tp", async (req, res): Promise<void> => {
       return;
     }
 
+    const cleanStr = (v: unknown): string | null =>
+      typeof v === "string" && v.trim() ? v.trim() : null;
+
     res.json({
       licensePlate: normalizeSpzOrNull(extracted.licensePlate),
       vin: typeof extracted.vin === "string" && extracted.vin.length === 17 ? extracted.vin : null,
       registrationYear: typeof extracted.registrationYear === "number" ? extracted.registrationYear : null,
       engineDisplacement: typeof extracted.engineDisplacement === "number" ? extracted.engineDisplacement : null,
+      make: cleanStr(extracted.make),
+      model: cleanStr(extracted.model),
     });
   } catch (err) {
     req.log.error({ err }, "TP import failed");
