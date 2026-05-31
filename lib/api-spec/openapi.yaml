@@ -35,6 +35,74 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
+  /auth/me:
+    get:
+      operationId: getAuthStatus
+      tags: [auth]
+      summary: Current authentication status
+      responses:
+        "200":
+          description: Auth status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Log in with the application password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthStatus"
+        "401":
+          description: Invalid password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Log out
+      responses:
+        "204":
+          description: Logged out
+
+  /auth/change-password:
+    post:
+      operationId: changePassword
+      tags: [auth]
+      summary: Change the application password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordInput"
+      responses:
+        "204":
+          description: Password changed
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /vehicles/catalog/makes:
     get:
       operationId: listVehicleMakes
@@ -722,6 +790,39 @@ components:
           type: string
       required:
         - status
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+
+    AuthStatus:
+      type: object
+      required: [authenticated]
+      properties:
+        authenticated:
+          type: boolean
+
+    LoginInput:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+          minLength: 1
+
+    ChangePasswordInput:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+          minLength: 1
+        newPassword:
+          type: string
+          minLength: 8
 
     Vehicle:
       type: object

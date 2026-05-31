@@ -1,9 +1,9 @@
 import { Router, type IRouter } from "express";
 import { eq, ilike, and, sql } from "drizzle-orm";
 import multer from "multer";
-import path from "path";
 import { db, workOrdersTable, vehiclesTable, photosTable } from "@workspace/db";
 import { ObjectStorageService } from "../lib/objectStorage";
+import { validateImageUpload } from "../lib/fileValidation";
 import {
   ListWorkOrdersQueryParams,
   CreateWorkOrderBody,
@@ -191,6 +191,9 @@ router.post("/work-orders/:id/photos", upload.single("photo"), async (req, res):
 
   if (!req.file) { res.status(400).json({ error: "No file uploaded" }); return; }
 
+  const validation = validateImageUpload(req.file);
+  if (!validation.ok) { res.status(400).json({ error: validation.error }); return; }
+
   const [order] = await db.select().from(workOrdersTable).where(eq(workOrdersTable.id, id));
   if (!order) { res.status(404).json({ error: "Zakázka nenalezena" }); return; }
 
@@ -207,8 +210,7 @@ router.post("/work-orders/:id/photos", upload.single("photo"), async (req, res):
     const url = new URL(uploadUrl);
     const objectPath = storage.normalizeObjectEntityPath(url.origin + url.pathname);
 
-    const ext = path.extname(req.file.originalname) || ".jpg";
-    const filename = `photo_${Date.now()}${ext}`;
+    const filename = `photo_${Date.now()}${validation.ext}`;
 
     const [photo] = await db.insert(photosTable).values({
       workOrderId: id,

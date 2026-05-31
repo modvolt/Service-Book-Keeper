@@ -1,9 +1,12 @@
 import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useGetAuthStatus, getGetAuthStatusQueryKey } from "@workspace/api-client-react";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Layout } from "@/components/layout";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { Spinner } from "@/components/ui/spinner";
+import LoginPage from "@/pages/login";
 import NotFound from "@/pages/not-found";
 
 import Dashboard from "@/pages/dashboard";
@@ -48,13 +51,33 @@ function Router() {
   );
 }
 
+function AuthGate() {
+  const { data, isLoading, isError } = useGetAuthStatus({
+    query: { queryKey: getGetAuthStatusQueryKey(), retry: false, staleTime: 60_000 },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+        <Spinner className="h-6 w-6" />
+      </div>
+    );
+  }
+
+  if (isError || !data?.authenticated) {
+    return <LoginPage />;
+  }
+
+  return <Router />;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <ErrorBoundary>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-            <Router />
+            <AuthGate />
           </WouterRouter>
         </ErrorBoundary>
         <Toaster />

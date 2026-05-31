@@ -9,6 +9,26 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface Error {
+  error: string;
+}
+
+export interface AuthStatus {
+  authenticated: boolean;
+}
+
+export interface LoginInput {
+  /** @minLength 1 */
+  password: string;
+}
+
+export interface ChangePasswordInput {
+  /** @minLength 1 */
+  currentPassword: string;
+  /** @minLength 8 */
+  newPassword: string;
+}
+
 /**
  * @nullable
  */

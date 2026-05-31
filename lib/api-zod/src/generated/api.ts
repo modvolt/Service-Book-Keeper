@@ -17,6 +17,43 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary Current authentication status
+ */
+export const GetAuthStatusResponse = zod.object({
+  "authenticated": zod.boolean()
+})
+
+
+/**
+ * @summary Log in with the application password
+ */
+
+
+
+export const LoginBody = zod.object({
+  "password": zod.string().min(1)
+})
+
+export const LoginResponse = zod.object({
+  "authenticated": zod.boolean()
+})
+
+
+/**
+ * @summary Change the application password
+ */
+
+export const changePasswordBodyNewPasswordMin = 8;
+
+
+
+export const ChangePasswordBody = zod.object({
+  "currentPassword": zod.string().min(1),
+  "newPassword": zod.string().min(changePasswordBodyNewPasswordMin)
+})
+
+
+/**
  * @summary List known vehicle makes (curated catalog + user history)
  */
 export const ListVehicleMakesResponseItem = zod.string()

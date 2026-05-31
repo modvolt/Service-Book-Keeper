@@ -1,10 +1,10 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import multer from "multer";
-import path from "path";
 import { db, settingsTable } from "@workspace/db";
 import { UpdateSettingsBody } from "@workspace/api-zod";
 import { ObjectStorageService } from "../lib/objectStorage";
+import { validateImageUpload } from "../lib/fileValidation";
 
 const router: IRouter = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -43,6 +43,8 @@ router.put("/settings", async (req, res): Promise<void> => {
 
 async function handleImageUpload(req: Express.Request & { file?: Express.Multer.File; log: any }, res: any, column: "logoUrl" | "signatureImageUrl", errLabel: string) {
   if (!req.file) { res.status(400).json({ error: "Žádný soubor" }); return; }
+  const validation = validateImageUpload(req.file);
+  if (!validation.ok) { res.status(400).json({ error: validation.error }); return; }
   try {
     const uploadUrl = await storage.getObjectEntityUploadURL();
     const uploadResponse = await fetch(uploadUrl, {

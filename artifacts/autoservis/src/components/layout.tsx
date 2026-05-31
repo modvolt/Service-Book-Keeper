@@ -1,7 +1,8 @@
 import { Link, useLocation } from "wouter";
-import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar, Settings as SettingsIcon, ScanLine, AlertTriangle, BarChart3 } from "lucide-react";
+import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar, Settings as SettingsIcon, ScanLine, AlertTriangle, BarChart3, LogOut } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
-import { useGetSettings } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useGetSettings, useLogout, getGetAuthStatusQueryKey } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -51,6 +52,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { data: settings } = useGetSettings();
+  const queryClient = useQueryClient();
+  const logout = useLogout({
+    mutation: {
+      onSuccess: () => {
+        queryClient.setQueryData(getGetAuthStatusQueryKey(), { authenticated: false });
+        queryClient.clear();
+      },
+    },
+  });
   const { theme } = useTheme();
   usePalette();
 
@@ -109,7 +119,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 
   const NavLinksBottom = () => (
-    <div className="flex flex-col space-y-1">{BOTTOM_NAV_ITEMS.map(renderItem)}</div>
+    <div className="flex flex-col space-y-1">
+      {BOTTOM_NAV_ITEMS.map(renderItem)}
+      <button
+        type="button"
+        disabled={logout.isPending}
+        onClick={() => { setMobileMenuOpen(false); logout.mutate(); }}
+        className={cn(
+          "flex items-center px-3 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer text-left",
+          "text-foreground/80 hover:bg-rose-50 dark:hover:bg-rose-950/40 disabled:opacity-50"
+        )}
+      >
+        <LogOut className="h-4 w-4 mr-3 text-rose-600 dark:text-rose-400" />
+        {logout.isPending ? "Odhlašování…" : "Odhlásit se"}
+      </button>
+    </div>
   );
 
   return (
