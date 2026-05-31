@@ -931,65 +931,6 @@ export const DeletePhotoParams = zod.object({
 
 
 /**
- * @summary List logbook entries (newest first)
- */
-export const ListLogbookEntriesResponseItem = zod.object({
-  "id": zod.number(),
-  "entryDate": zod.string(),
-  "title": zod.string(),
-  "content": zod.string().nullish(),
-  "createdAt": zod.coerce.date(),
-  "updatedAt": zod.coerce.date()
-})
-export const ListLogbookEntriesResponse = zod.array(ListLogbookEntriesResponseItem)
-
-
-/**
- * @summary Create logbook entry
- */
-
-
-
-
-export const CreateLogbookEntryBody = zod.object({
-  "entryDate": zod.string().min(1),
-  "title": zod.string().min(1),
-  "content": zod.string().nullish()
-})
-
-
-/**
- * @summary Update logbook entry
- */
-export const UpdateLogbookEntryParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-export const UpdateLogbookEntryBody = zod.object({
-  "entryDate": zod.string().nullish(),
-  "title": zod.string().nullish(),
-  "content": zod.string().nullish()
-})
-
-export const UpdateLogbookEntryResponse = zod.object({
-  "id": zod.number(),
-  "entryDate": zod.string(),
-  "title": zod.string(),
-  "content": zod.string().nullish(),
-  "createdAt": zod.coerce.date(),
-  "updatedAt": zod.coerce.date()
-})
-
-
-/**
- * @summary Delete logbook entry
- */
-export const DeleteLogbookEntryParams = zod.object({
-  "id": zod.coerce.number()
-})
-
-
-/**
  * @summary List appointments in a date range
  */
 export const ListAppointmentsQueryParams = zod.object({

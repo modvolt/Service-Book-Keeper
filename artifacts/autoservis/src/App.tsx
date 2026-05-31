@@ -19,7 +19,6 @@ import SettingsPage from "@/pages/settings";
 import TpScanPage from "@/pages/tp-scan";
 import AlertsPage from "@/pages/alerts";
 import StatisticsPage from "@/pages/statistics";
-import ChangelogPage from "@/pages/changelog";
 
 const queryClient = new QueryClient();
 
@@ -38,7 +37,6 @@ function Router() {
         <Route path="/work-orders/:id" component={WorkOrderDetail} />
         <Route path="/sklad" component={MaterialsPage} />
         <Route path="/kalendar" component={CalendarPage} />
-        <Route path="/zaznam-zmen" component={ChangelogPage} />
         <Route path="/nastaveni" component={SettingsPage} />
         <Route path="/nacteni-tp" component={TpScanPage} />
         <Route path="/po-terminu" component={AlertsPage} />

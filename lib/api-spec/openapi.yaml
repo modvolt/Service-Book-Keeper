@@ -570,76 +570,6 @@ paths:
         "204":
           description: Deleted
 
-  /logbook:
-    get:
-      operationId: listLogbookEntries
-      tags: [logbook]
-      summary: List logbook entries (newest first)
-      responses:
-        "200":
-          description: Logbook entries
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/LogbookEntry"
-    post:
-      operationId: createLogbookEntry
-      tags: [logbook]
-      summary: Create logbook entry
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/LogbookEntryInput"
-      responses:
-        "201":
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LogbookEntry"
-
-  /logbook/{id}:
-    patch:
-      operationId: updateLogbookEntry
-      tags: [logbook]
-      summary: Update logbook entry
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/LogbookEntryUpdate"
-      responses:
-        "200":
-          description: Updated
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/LogbookEntry"
-    delete:
-      operationId: deleteLogbookEntry
-      tags: [logbook]
-      summary: Delete logbook entry
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        "204":
-          description: Deleted
-
   /appointments:
     get:
       operationId: listAppointments
@@ -1519,48 +1449,6 @@ components:
         createdAt:
           type: string
           format: date-time
-
-    LogbookEntry:
-      type: object
-      required: [id, entryDate, title, createdAt, updatedAt]
-      properties:
-        id:
-          type: integer
-        entryDate:
-          type: string
-        title:
-          type: string
-        content:
-          type: ["string", "null"]
-        createdAt:
-          type: string
-          format: date-time
-        updatedAt:
-          type: string
-          format: date-time
-
-    LogbookEntryInput:
-      type: object
-      required: [entryDate, title]
-      properties:
-        entryDate:
-          type: string
-          minLength: 1
-        title:
-          type: string
-          minLength: 1
-        content:
-          type: ["string", "null"]
-
-    LogbookEntryUpdate:
-      type: object
-      properties:
-        entryDate:
-          type: ["string", "null"]
-        title:
-          type: ["string", "null"]
-        content:
-          type: ["string", "null"]
 
     Appointment:
       type: object
