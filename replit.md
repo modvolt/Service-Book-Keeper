@@ -47,7 +47,7 @@ Czech-language auto service management app for a self-employed mechanic — trac
 - Vehicle detail: basic info, service status (STK, oil change, brakes, timing), service history log
 - Work orders: create with SPZ entry (auto-resolves vehicle), service item checkboxes, status tracking
 - Work order detail: edit status/items, add photos from mobile camera or file upload (XHR upload progress bar + Czech error toasts)
-- Materials catalog (`/materials`): manage stock/parts catalog (name, unit, default price, supplier); items suggested when writing work orders. Supplier price-list import (CSV/XLSX) with client-side parse, column mapping, supplier override, and server-side upsert by name
+- Materials catalog (`/materials`): manage stock/parts catalog (name, product number, unit, default price, supplier); items suggested when writing work orders. Supplier price-list import (CSV/XLSX) with client-side parse, column mapping, supplier override, and server-side upsert matched by product number (case-insensitive) with name fallback
 - GDPR (`/gdpr`): search personal data (by name/phone/email/SPZ), per-vehicle export (JSON download), anonymize (strip owner + appointment PII, keep technical history), permanent delete (vehicle + work orders + appointments + service records + photo blobs), record/withdraw processing consent (`vehicles.consentGivenAt`/`consentNote`), and an audit-log viewer
 - PWA: installable (manifest + service worker via `vite-plugin-pwa`, `registerType: autoUpdate`). Manifest `start_url`/`scope` use Vite `base` (BASE_PATH); icons in `public/` (pwa-192, pwa-512, pwa-maskable-512, apple-touch-icon)
 

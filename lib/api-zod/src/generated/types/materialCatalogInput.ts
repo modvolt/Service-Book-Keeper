@@ -10,6 +10,8 @@ export interface MaterialCatalogInput {
   /** @minLength 1 */
   name: string;
   /** @nullable */
+  productNumber?: string | null;
+  /** @nullable */
   unit?: string | null;
   /** @nullable */
   defaultPrice?: number | null;

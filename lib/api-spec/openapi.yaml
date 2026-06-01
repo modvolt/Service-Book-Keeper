@@ -216,7 +216,7 @@ paths:
     post:
       operationId: importMaterials
       tags: [materials]
-      summary: Bulk import catalog materials from a price list (upsert by name)
+      summary: Bulk import catalog materials from a price list (upsert by product number, fallback name)
       requestBody:
         required: true
         content:
@@ -1608,6 +1608,8 @@ components:
           type: integer
         name:
           type: string
+        productNumber:
+          type: ["string", "null"]
         unit:
           type: ["string", "null"]
         defaultPrice:
@@ -1625,6 +1627,8 @@ components:
         name:
           type: string
           minLength: 1
+        productNumber:
+          type: ["string", "null"]
         unit:
           type: ["string", "null"]
         defaultPrice:
@@ -1646,6 +1650,9 @@ components:
               name:
                 type: string
                 description: Material name. Empty/blank rows are skipped server-side.
+              productNumber:
+                type: ["string", "null"]
+                description: Product/catalog number used to match price-list rows to catalog items.
               unit:
                 type: ["string", "null"]
               defaultPrice:

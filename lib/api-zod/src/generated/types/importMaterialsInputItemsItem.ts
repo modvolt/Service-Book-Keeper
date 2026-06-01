@@ -9,6 +9,11 @@
 export type ImportMaterialsInputItemsItem = {
   /** Material name. Empty/blank rows are skipped server-side. */
   name: string;
+  /**
+     * Product/catalog number used to match price-list rows to catalog items.
+     * @nullable
+     */
+  productNumber?: string | null;
   /** @nullable */
   unit?: string | null;
   /** @nullable */

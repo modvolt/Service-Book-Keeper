@@ -177,6 +177,7 @@ export const ListMaterialsQueryParams = zod.object({
 export const ListMaterialsResponseItem = zod.object({
   "id": zod.number(),
   "name": zod.string(),
+  "productNumber": zod.string().nullish(),
   "unit": zod.string().nullish(),
   "defaultPrice": zod.number().nullish(),
   "supplier": zod.string().nullish(),
@@ -193,6 +194,7 @@ export const ListMaterialsResponse = zod.array(ListMaterialsResponseItem)
 
 export const CreateMaterialBody = zod.object({
   "name": zod.string().min(1),
+  "productNumber": zod.string().nullish(),
   "unit": zod.string().nullish(),
   "defaultPrice": zod.number().nullish(),
   "supplier": zod.string().nullish()
@@ -209,6 +211,7 @@ export const importMaterialsBodyItemsMax = 5000;
 export const ImportMaterialsBody = zod.object({
   "items": zod.array(zod.object({
   "name": zod.string().describe('Material name. Empty\/blank rows are skipped server-side.'),
+  "productNumber": zod.string().nullish().describe('Product\/catalog number used to match price-list rows to catalog items.'),
   "unit": zod.string().nullish(),
   "defaultPrice": zod.number().nullish(),
   "supplier": zod.string().nullish()

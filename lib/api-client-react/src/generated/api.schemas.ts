@@ -628,6 +628,8 @@ export interface MaterialCatalogItem {
   id: number;
   name: string;
   /** @nullable */
+  productNumber?: string | null;
+  /** @nullable */
   unit?: string | null;
   /** @nullable */
   defaultPrice?: number | null;
@@ -640,6 +642,8 @@ export interface MaterialCatalogInput {
   /** @minLength 1 */
   name: string;
   /** @nullable */
+  productNumber?: string | null;
+  /** @nullable */
   unit?: string | null;
   /** @nullable */
   defaultPrice?: number | null;
@@ -650,6 +654,11 @@ export interface MaterialCatalogInput {
 export type ImportMaterialsInputItemsItem = {
   /** Material name. Empty/blank rows are skipped server-side. */
   name: string;
+  /**
+     * Product/catalog number used to match price-list rows to catalog items.
+     * @nullable
+     */
+  productNumber?: string | null;
   /** @nullable */
   unit?: string | null;
   /** @nullable */

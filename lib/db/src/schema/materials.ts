@@ -5,6 +5,7 @@ import { workOrdersTable } from "./work-orders";
 export const materialsCatalogTable = pgTable("materials_catalog", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
+  productNumber: text("product_number"),
   unit: text("unit"),
   defaultPrice: integer("default_price"),
   supplier: text("supplier"),

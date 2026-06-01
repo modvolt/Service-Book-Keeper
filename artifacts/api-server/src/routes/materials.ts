@@ -32,8 +32,10 @@ router.post("/materials", async (req, res): Promise<void> => {
   try {
     const [item] = await db.insert(materialsCatalogTable).values({
       name: parsed.data.name.trim(),
+      productNumber: parsed.data.productNumber?.trim() || null,
       unit: parsed.data.unit ?? null,
       defaultPrice: parsed.data.defaultPrice ?? null,
+      supplier: parsed.data.supplier?.trim() || null,
     }).returning();
     res.status(201).json(item);
   } catch (err) {
@@ -56,45 +58,73 @@ router.post("/materials/import", importJson, async (req, res): Promise<void> => 
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
   let skipped = 0;
-  // Normalize, drop empties, dedupe by lowercased name (last occurrence wins).
-  const byName = new Map<string, { name: string; unit: string | null; defaultPrice: number | null; supplier: string | null }>();
+  // Normalize and drop empty rows. Dedupe within the file: product number is the
+  // preferred key (price lists are keyed by it), name is the fallback.
+  type ImportRow = { name: string; productNumber: string | null; unit: string | null; defaultPrice: number | null; supplier: string | null };
+  const byKey = new Map<string, ImportRow>();
   for (const raw of parsed.data.items) {
     const name = raw.name?.trim() ?? "";
     if (!name) { skipped++; continue; }
-    byName.set(name.toLowerCase(), {
+    const productNumber = raw.productNumber?.trim() || null;
+    const key = productNumber ? `pn:${productNumber.toLowerCase()}` : `nm:${name.toLowerCase()}`;
+    byKey.set(key, {
       name,
+      productNumber,
       unit: raw.unit?.trim() || null,
       defaultPrice: typeof raw.defaultPrice === "number" && Number.isFinite(raw.defaultPrice) ? Math.round(raw.defaultPrice) : null,
       supplier: raw.supplier?.trim() || null,
     });
   }
 
-  const rows = Array.from(byName.values());
+  const rows = Array.from(byKey.values());
   if (rows.length === 0) { res.json({ imported: 0, updated: 0, skipped }); return; }
 
   try {
     const result = await db.transaction(async (tx) => {
-      // Determine which names already exist (case-insensitive) to report accurate counts.
-      const existing = await tx.select({ name: materialsCatalogTable.name }).from(materialsCatalogTable);
-      const existingLower = new Set(existing.map((e) => e.name.toLowerCase()));
+      // Pull existing items so we can match price-list rows by product number first
+      // (stable across suppliers/renames), then fall back to a case-insensitive name.
+      const existing = await tx.select({
+        id: materialsCatalogTable.id,
+        name: materialsCatalogTable.name,
+        productNumber: materialsCatalogTable.productNumber,
+      }).from(materialsCatalogTable);
+      const byProductNumber = new Map<string, number>();
+      const byNameLower = new Map<string, number>();
+      for (const e of existing) {
+        if (e.productNumber) byProductNumber.set(e.productNumber.toLowerCase(), e.id);
+        byNameLower.set(e.name.toLowerCase(), e.id);
+      }
 
       let imported = 0;
       let updated = 0;
       for (const row of rows) {
-        const isUpdate = existingLower.has(row.name.toLowerCase());
-        if (isUpdate) {
-          // Match the existing row case-insensitively; only overwrite fields the
-          // import actually provides (coalesce keeps existing values otherwise).
+        const matchId =
+          (row.productNumber ? byProductNumber.get(row.productNumber.toLowerCase()) : undefined)
+          ?? byNameLower.get(row.name.toLowerCase());
+
+        if (matchId !== undefined) {
+          // Only overwrite fields the import actually provides (coalesce keeps
+          // existing values otherwise). Name is left as-is to avoid colliding with
+          // the case-insensitive name unique index.
           await tx.update(materialsCatalogTable)
             .set({
+              productNumber: sql`coalesce(${row.productNumber}, ${materialsCatalogTable.productNumber})`,
               unit: sql`coalesce(${row.unit}, ${materialsCatalogTable.unit})`,
               defaultPrice: sql`coalesce(${row.defaultPrice}, ${materialsCatalogTable.defaultPrice})`,
               supplier: sql`coalesce(${row.supplier}, ${materialsCatalogTable.supplier})`,
             })
-            .where(sql`lower(${materialsCatalogTable.name}) = ${row.name.toLowerCase()}`);
+            .where(eq(materialsCatalogTable.id, matchId));
+          // Keep the product-number lookup in sync so later rows in the same import resolve correctly.
+          if (row.productNumber) byProductNumber.set(row.productNumber.toLowerCase(), matchId);
           updated++;
         } else {
-          await tx.insert(materialsCatalogTable).values(row);
+          const [inserted] = await tx.insert(materialsCatalogTable)
+            .values({ name: row.name, productNumber: row.productNumber, unit: row.unit, defaultPrice: row.defaultPrice, supplier: row.supplier })
+            .returning({ id: materialsCatalogTable.id });
+          if (inserted) {
+            if (row.productNumber) byProductNumber.set(row.productNumber.toLowerCase(), inserted.id);
+            byNameLower.set(row.name.toLowerCase(), inserted.id);
+          }
           imported++;
         }
       }

@@ -35,6 +35,7 @@ export function MaterialsImportDialog() {
   const [fileName, setFileName] = useState("");
   const [sheet, setSheet] = useState<ParsedSheet | null>(null);
   const [colName, setColName] = useState<string>(NONE);
+  const [colProductNumber, setColProductNumber] = useState<string>(NONE);
   const [colUnit, setColUnit] = useState<string>(NONE);
   const [colPrice, setColPrice] = useState<string>(NONE);
   const [colSupplier, setColSupplier] = useState<string>(NONE);
@@ -44,6 +45,7 @@ export function MaterialsImportDialog() {
     setFileName("");
     setSheet(null);
     setColName(NONE);
+    setColProductNumber(NONE);
     setColUnit(NONE);
     setColPrice(NONE);
     setColSupplier(NONE);
@@ -71,6 +73,7 @@ export function MaterialsImportDialog() {
       setFileName(file.name);
       setSheet({ headers, rows });
       setColName(guessColumn(headers, ["název", "nazev", "name", "položka", "polozka", "popis", "artikl"]));
+      setColProductNumber(guessColumn(headers, ["číslo produktu", "cislo produktu", "katalog", "katalogové", "katalogove", "kód", "kod", "product", "objedn", "ean", "art. č", "art.c", "artikl"]));
       setColUnit(guessColumn(headers, ["jednotka", "unit", "mj", "m.j."]));
       setColPrice(guessColumn(headers, ["cena", "price", "kč", "kc"]));
       setColSupplier(guessColumn(headers, ["dodavatel", "supplier", "výrobce", "vyrobce"]));
@@ -95,6 +98,7 @@ export function MaterialsImportDialog() {
     if (!sheet) return [];
     return sheet.rows.map((row) => ({
       name: cell(row, colName),
+      productNumber: cell(row, colProductNumber) || null,
       unit: cell(row, colUnit) || null,
       defaultPrice: parsePrice(cell(row, colPrice)),
       supplier: supplierOverride.trim() || cell(row, colSupplier) || null,
@@ -134,7 +138,7 @@ export function MaterialsImportDialog() {
         <DialogHeader>
           <DialogTitle>Import ceníku dodavatele</DialogTitle>
           <DialogDescription>
-            Nahrajte soubor CSV nebo XLSX. Přiřaďte sloupce a položky se uloží do skladu. Existující materiály (podle názvu) se aktualizují.
+            Nahrajte soubor CSV nebo XLSX. Přiřaďte sloupce a položky se uloží do skladu. Existující materiály se spárují podle čísla produktu (jinak podle názvu) a aktualizují se.
           </DialogDescription>
         </DialogHeader>
 
@@ -160,6 +164,7 @@ export function MaterialsImportDialog() {
 
             <div className="grid grid-cols-2 gap-3">
               <ColumnSelect label="Název *" headers={sheet.headers} value={colName} onChange={setColName} />
+              <ColumnSelect label="Číslo produktu" headers={sheet.headers} value={colProductNumber} onChange={setColProductNumber} />
               <ColumnSelect label="Jednotka" headers={sheet.headers} value={colUnit} onChange={setColUnit} />
               <ColumnSelect label="Cena" headers={sheet.headers} value={colPrice} onChange={setColPrice} />
               <ColumnSelect label="Dodavatel" headers={sheet.headers} value={colSupplier} onChange={setColSupplier} />
@@ -178,6 +183,7 @@ export function MaterialsImportDialog() {
                   <thead>
                     <tr className="border-b text-left text-xs text-muted-foreground">
                       <th className="px-3 py-1.5">Název</th>
+                      <th className="px-3 py-1.5">Č. produktu</th>
                       <th className="px-3 py-1.5">Jedn.</th>
                       <th className="px-3 py-1.5">Cena</th>
                       <th className="px-3 py-1.5">Dodavatel</th>
@@ -186,10 +192,11 @@ export function MaterialsImportDialog() {
                   <tbody>
                     {items.slice(0, 5).map((it, i) => (
                       <tr key={i} className="border-b last:border-0">
-                        <td className="px-3 py-1.5 truncate max-w-[220px]">{it.name || <span className="text-muted-foreground italic">(přeskočeno)</span>}</td>
+                        <td className="px-3 py-1.5 truncate max-w-[200px]">{it.name || <span className="text-muted-foreground italic">(přeskočeno)</span>}</td>
+                        <td className="px-3 py-1.5 truncate max-w-[120px]">{it.productNumber ?? "—"}</td>
                         <td className="px-3 py-1.5">{it.unit ?? "—"}</td>
                         <td className="px-3 py-1.5">{it.defaultPrice != null ? `${it.defaultPrice.toLocaleString("cs-CZ")} Kč` : "—"}</td>
-                        <td className="px-3 py-1.5 truncate max-w-[160px]">{it.supplier ?? "—"}</td>
+                        <td className="px-3 py-1.5 truncate max-w-[140px]">{it.supplier ?? "—"}</td>
                       </tr>
                     ))}
                   </tbody>

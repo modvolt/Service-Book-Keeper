@@ -10,6 +10,8 @@ export interface MaterialCatalogItem {
   id: number;
   name: string;
   /** @nullable */
+  productNumber?: string | null;
+  /** @nullable */
   unit?: string | null;
   /** @nullable */
   defaultPrice?: number | null;

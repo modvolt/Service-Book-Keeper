@@ -18,6 +18,7 @@ export default function MaterialsPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [name, setName] = useState("");
+  const [productNumber, setProductNumber] = useState("");
   const [unit, setUnit] = useState("");
   const [defaultPrice, setDefaultPrice] = useState("");
 
@@ -33,13 +34,14 @@ export default function MaterialsPage() {
     createMutation.mutate({
       data: {
         name: name.trim(),
+        productNumber: productNumber.trim() || null,
         unit: unit.trim() || null,
         defaultPrice: defaultPrice ? parseInt(defaultPrice, 10) : null,
       }
     }, {
       onSuccess: () => {
         toast({ title: "Materiál přidán" });
-        setName(""); setUnit(""); setDefaultPrice("");
+        setName(""); setProductNumber(""); setUnit(""); setDefaultPrice("");
         invalidate();
       },
       onError: () => {
@@ -76,6 +78,10 @@ export default function MaterialsPage() {
               <div className="space-y-1">
                 <Label>Název *</Label>
                 <Input placeholder="Olejový filtr Mann W712" value={name} onChange={e => setName(e.target.value)} required />
+              </div>
+              <div className="space-y-1">
+                <Label>Číslo produktu</Label>
+                <Input placeholder="Např. W712/52" value={productNumber} onChange={e => setProductNumber(e.target.value)} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
@@ -121,7 +127,8 @@ export default function MaterialsPage() {
                     <div className="min-w-0 flex-1">
                       <p className="font-medium truncate">{it.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {it.unit ? `Jednotka: ${it.unit}` : "Bez jednotky"}
+                        {it.productNumber ? `Č. produktu: ${it.productNumber}` : "Bez čísla produktu"}
+                        {it.unit && ` · ${it.unit}`}
                         {it.defaultPrice != null && ` · ${it.defaultPrice.toLocaleString("cs-CZ")} Kč`}
                         {it.supplier && ` · ${it.supplier}`}
                       </p>
