@@ -7,6 +7,7 @@ import { Layout } from "@/components/layout";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { Spinner } from "@/components/ui/spinner";
 import LoginPage from "@/pages/login";
+import ResetPasswordPage from "@/pages/reset-password";
 import NotFound from "@/pages/not-found";
 
 import Dashboard from "@/pages/dashboard";
@@ -54,9 +55,15 @@ function Router() {
 }
 
 function AuthGate() {
+  const [location] = useLocation();
   const { data, isLoading, isError } = useGetAuthStatus({
     query: { queryKey: getGetAuthStatusQueryKey(), retry: false, staleTime: 60_000 },
   });
+
+  // Password reset is reachable via an emailed link without an active session.
+  if (location === "/reset-hesla") {
+    return <ResetPasswordPage />;
+  }
 
   if (isLoading) {
     return (

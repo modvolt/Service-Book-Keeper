@@ -30,4 +30,6 @@ export interface Settings {
   emailRemindersEnabled: boolean;
   reminderStkDays: number;
   reminderServiceDays: number;
+  /** @nullable */
+  notificationEmail?: string | null;
 }

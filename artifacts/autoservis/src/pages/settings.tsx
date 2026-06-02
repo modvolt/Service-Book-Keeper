@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  useGetSettings, useUpdateSettings, getGetSettingsQueryKey,
+  useGetSettings, useUpdateSettings, useSendTestReminder, getGetSettingsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -30,6 +30,7 @@ type Form = {
   emailRemindersEnabled: boolean;
   reminderStkDays: string;
   reminderServiceDays: string;
+  notificationEmail: string;
 };
 
 const COLOR_PRESETS = [
@@ -46,6 +47,7 @@ export default function SettingsPage() {
   const queryClient = useQueryClient();
   const { data: settings, isLoading } = useGetSettings();
   const updateSettings = useUpdateSettings();
+  const sendTestReminder = useSendTestReminder();
   const logoInputRef = useRef<HTMLInputElement>(null);
   const signatureInputRef = useRef<HTMLInputElement>(null);
   const backupInputRef = useRef<HTMLInputElement>(null);
@@ -61,6 +63,7 @@ export default function SettingsPage() {
     companyName: "", companyAddress: "", companyPhone: "", companyEmail: "",
     companyIco: "", companyDic: "", signatureName: "", primaryColor: "",
     emailRemindersEnabled: false, reminderStkDays: "30", reminderServiceDays: "14",
+    notificationEmail: "",
   });
 
   useEffect(() => {
@@ -77,6 +80,7 @@ export default function SettingsPage() {
       emailRemindersEnabled: settings.emailRemindersEnabled,
       reminderStkDays: String(settings.reminderStkDays),
       reminderServiceDays: String(settings.reminderServiceDays),
+      notificationEmail: settings.notificationEmail ?? "",
     });
   }, [settings]);
 
@@ -94,11 +98,30 @@ export default function SettingsPage() {
         emailRemindersEnabled: form.emailRemindersEnabled,
         reminderStkDays: parseInt(form.reminderStkDays, 10) || 30,
         reminderServiceDays: parseInt(form.reminderServiceDays, 10) || 14,
+        notificationEmail: form.notificationEmail.trim() || null,
       }});
       await queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
       toast({ title: "Nastavení uloženo" });
     } catch (e: any) {
       toast({ title: "Chyba", description: String(e?.message ?? e), variant: "destructive" });
+    }
+  }
+
+  async function handleSendTest() {
+    try {
+      const result = await sendTestReminder.mutateAsync();
+      if (result.sent) {
+        toast({ title: "Souhrn odeslán", description: result.message });
+      } else {
+        toast({ title: "E-mail neodeslán", description: result.message, variant: "destructive" });
+      }
+      await queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+    } catch (e: any) {
+      const description =
+        e?.data && typeof e.data === "object" && "error" in e.data
+          ? String((e.data as { error: unknown }).error)
+          : "Odeslání souhrnu selhalo.";
+      toast({ title: "Chyba", description, variant: "destructive" });
     }
   }
 
@@ -430,24 +453,35 @@ export default function SettingsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Mail className="h-5 w-5" /> Upozornění e-mailem</CardTitle>
-          <CardDescription>Automatické e-maily zákazníkům před vypršením servisu a STK</CardDescription>
+          <CardDescription>Denní souhrn vozidel s blížící se STK a servisy odeslaný na váš e-mail</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <Alert>
-            <AlertTitle>Připravujeme</AlertTitle>
+            <AlertTitle>Jak to funguje</AlertTitle>
             <AlertDescription>
-              Odesílání e-mailů zatím není aktivní — jakmile připojíme e-mailovou službu, využijí se zde uložená nastavení a u zákazníků uložené adresy.
-              Upozornění se bude týkat: vypršení STK, intervalu výměny motorového oleje a u automatických převodovek také oleje v převodovce.
+              Jednou denně se sestaví souhrn vozidel po termínu nebo s blížící se STK, výměnou oleje, brzdami, rozvody a u automatů i olejem převodovky a odešle se na níže uvedenou adresu.
+              Odesílání vyžaduje nastavený SMTP server (proměnné SMTP_HOST, SMTP_USER, SMTP_PASS) — zajistí jej správce při nasazení.
             </AlertDescription>
           </Alert>
 
           <div className="flex items-center justify-between rounded-md border p-3">
             <div>
-              <Label htmlFor="reminders-enabled" className="text-base">Posílat upozornění zákazníkům</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">Globální vypínač pro všechna automatická upozornění</p>
+              <Label htmlFor="reminders-enabled" className="text-base">Posílat denní souhrn</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">Hlavní vypínač automatického odesílání souhrnu</p>
             </div>
             <Switch id="reminders-enabled" checked={form.emailRemindersEnabled}
               onCheckedChange={(v) => setForm({ ...form, emailRemindersEnabled: v })} />
+          </div>
+
+          <div>
+            <Label htmlFor="notification-email">E-mail pro upozornění</Label>
+            <Input id="notification-email" type="email"
+              placeholder={form.companyEmail ? `Výchozí: ${form.companyEmail}` : "vas@email.cz"}
+              value={form.notificationEmail}
+              onChange={(e) => setForm({ ...form, notificationEmail: e.target.value })} />
+            <p className="text-xs text-muted-foreground mt-1">
+              Nevyplníte-li, použije se e-mail firmy. Tato adresa se používá i pro obnovu hesla.
+            </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -463,6 +497,18 @@ export default function SettingsPage() {
                 value={form.reminderServiceDays}
                 onChange={(e) => setForm({ ...form, reminderServiceDays: e.target.value })} />
             </div>
+          </div>
+
+          <div className="rounded-md border p-3 flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <div className="font-medium text-sm">Odeslat souhrn nyní</div>
+              <p className="text-xs text-muted-foreground mt-0.5">Otestujte odesílání — pošle aktuální souhrn na nastavenou adresu. Nejprve uložte změny.</p>
+            </div>
+            <Button variant="outline" onClick={handleSendTest} disabled={sendTestReminder.isPending}>
+              {sendTestReminder.isPending
+                ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Odesílám…</>
+                : <><Mail className="h-4 w-4 mr-2" /> Odeslat zkušební souhrn</>}
+            </Button>
           </div>
         </CardContent>
       </Card>

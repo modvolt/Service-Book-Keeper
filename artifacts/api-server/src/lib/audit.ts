@@ -6,6 +6,8 @@ export type AuditAction =
   | "login_failed"
   | "logout"
   | "password_changed"
+  | "password_reset_requested"
+  | "password_reset"
   | "gdpr_export"
   | "gdpr_anonymize"
   | "gdpr_delete"

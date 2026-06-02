@@ -5,6 +5,7 @@ import { db, settingsTable } from "@workspace/db";
 import { UpdateSettingsBody } from "@workspace/api-zod";
 import { getObjectStorageService } from "../lib/storage";
 import { validateImageUpload } from "../lib/fileValidation";
+import { runReminderDigest } from "../lib/reminders";
 
 const router: IRouter = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
@@ -31,7 +32,7 @@ router.put("/settings", async (req, res): Promise<void> => {
   const data: Partial<typeof settingsTable.$inferInsert> = {};
   for (const [k, v] of Object.entries(parsed.data)) {
     if (v !== undefined && v !== null) (data as any)[k] = v;
-    else if (v === null && ["companyName","companyAddress","companyPhone","companyEmail","companyIco","companyDic","logoUrl","signatureName","signatureImageUrl","primaryColor"].includes(k)) {
+    else if (v === null && ["companyName","companyAddress","companyPhone","companyEmail","companyIco","companyDic","logoUrl","signatureName","signatureImageUrl","primaryColor","notificationEmail"].includes(k)) {
       (data as any)[k] = null;
     }
   }
@@ -65,6 +66,16 @@ router.post("/settings/logo", upload.single("logo"), async (req, res): Promise<v
 
 router.post("/settings/signature", upload.single("signature"), async (req, res): Promise<void> => {
   await handleImageUpload(req as any, res, "signatureImageUrl", "podpisu");
+});
+
+router.post("/settings/test-reminder", async (req, res): Promise<void> => {
+  try {
+    const result = await runReminderDigest({ manual: true });
+    res.json(result);
+  } catch (err) {
+    req.log.error({ err }, "Test reminder failed");
+    res.status(500).json({ error: "Odeslání souhrnu selhalo. Zkontrolujte SMTP nastavení." });
+  }
 });
 
 export default router;

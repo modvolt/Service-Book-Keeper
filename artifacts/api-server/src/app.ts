@@ -69,6 +69,16 @@ const loginLimiter = rateLimit({
   message: { error: "Příliš mnoho pokusů o přihlášení. Zkuste to prosím později." },
 });
 app.use("/api/auth/login", loginLimiter);
+
+const passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Příliš mnoho požadavků. Zkuste to prosím později." },
+});
+app.use("/api/auth/forgot-password", passwordResetLimiter);
+app.use("/api/auth/reset-password", passwordResetLimiter);
 app.use("/api", authRouter);
 
 // --- Protected routes (require authenticated session) ---

@@ -54,6 +54,35 @@ export const ChangePasswordBody = zod.object({
 
 
 /**
+ * @summary Request a password reset link by e-mail
+ */
+
+
+
+export const ForgotPasswordBody = zod.object({
+  "email": zod.string().min(1)
+})
+
+export const ForgotPasswordResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Set a new password using a reset token
+ */
+
+export const resetPasswordBodyNewPasswordMin = 8;
+
+
+
+export const ResetPasswordBody = zod.object({
+  "token": zod.string().min(1),
+  "newPassword": zod.string().min(resetPasswordBodyNewPasswordMin)
+})
+
+
+/**
  * @summary List known vehicle makes (curated catalog + user history)
  */
 export const ListVehicleMakesResponseItem = zod.string()
@@ -202,7 +231,7 @@ export const CreateMaterialBody = zod.object({
 
 
 /**
- * @summary Bulk import catalog materials from a price list (upsert by name)
+ * @summary Bulk import catalog materials from a price list (upsert by product number, fallback name)
  */
 export const importMaterialsBodyItemsMax = 5000;
 
@@ -1119,7 +1148,8 @@ export const GetSettingsResponse = zod.object({
   "primaryColor": zod.string().nullish(),
   "emailRemindersEnabled": zod.boolean(),
   "reminderStkDays": zod.number(),
-  "reminderServiceDays": zod.number()
+  "reminderServiceDays": zod.number(),
+  "notificationEmail": zod.string().nullish()
 })
 
 
@@ -1139,7 +1169,8 @@ export const UpdateSettingsBody = zod.object({
   "primaryColor": zod.string().nullish(),
   "emailRemindersEnabled": zod.boolean().nullish(),
   "reminderStkDays": zod.number().nullish(),
-  "reminderServiceDays": zod.number().nullish()
+  "reminderServiceDays": zod.number().nullish(),
+  "notificationEmail": zod.string().nullish()
 })
 
 export const UpdateSettingsResponse = zod.object({
@@ -1155,7 +1186,17 @@ export const UpdateSettingsResponse = zod.object({
   "primaryColor": zod.string().nullish(),
   "emailRemindersEnabled": zod.boolean(),
   "reminderStkDays": zod.number(),
-  "reminderServiceDays": zod.number()
+  "reminderServiceDays": zod.number(),
+  "notificationEmail": zod.string().nullish()
+})
+
+
+/**
+ * @summary Send the STK/service reminder digest now (manual trigger / test)
+ */
+export const SendTestReminderResponse = zod.object({
+  "sent": zod.boolean(),
+  "message": zod.string()
 })
 
 

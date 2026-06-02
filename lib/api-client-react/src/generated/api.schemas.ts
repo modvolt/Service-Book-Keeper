@@ -29,6 +29,27 @@ export interface ChangePasswordInput {
   newPassword: string;
 }
 
+export interface ForgotPasswordInput {
+  /** @minLength 1 */
+  email: string;
+}
+
+export interface ResetPasswordInput {
+  /** @minLength 1 */
+  token: string;
+  /** @minLength 8 */
+  newPassword: string;
+}
+
+export interface MessageResult {
+  message: string;
+}
+
+export interface TestReminderResult {
+  sent: boolean;
+  message: string;
+}
+
 /**
  * @nullable
  */
@@ -852,6 +873,8 @@ export interface Settings {
   emailRemindersEnabled: boolean;
   reminderStkDays: number;
   reminderServiceDays: number;
+  /** @nullable */
+  notificationEmail?: string | null;
 }
 
 export interface SettingsInput {
@@ -881,6 +904,8 @@ export interface SettingsInput {
   reminderStkDays?: number | null;
   /** @nullable */
   reminderServiceDays?: number | null;
+  /** @nullable */
+  notificationEmail?: string | null;
 }
 
 export interface DashboardSummary {

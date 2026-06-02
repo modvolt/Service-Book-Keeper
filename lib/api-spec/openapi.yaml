@@ -103,6 +103,46 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /auth/forgot-password:
+    post:
+      operationId: forgotPassword
+      tags: [auth]
+      summary: Request a password reset link by e-mail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordInput"
+      responses:
+        "200":
+          description: Request accepted (always, to avoid account enumeration)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResult"
+
+  /auth/reset-password:
+    post:
+      operationId: resetPassword
+      tags: [auth]
+      summary: Set a new password using a reset token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordInput"
+      responses:
+        "204":
+          description: Password reset
+        "400":
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /vehicles/catalog/makes:
     get:
       operationId: listVehicleMakes
@@ -787,6 +827,19 @@ paths:
               schema:
                 $ref: "#/components/schemas/Settings"
 
+  /settings/test-reminder:
+    post:
+      operationId: sendTestReminder
+      tags: [settings]
+      summary: Send the STK/service reminder digest now (manual trigger / test)
+      responses:
+        "200":
+          description: Result of the send attempt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TestReminderResult"
+
   /dashboard/summary:
     get:
       operationId: getDashboardSummary
@@ -982,6 +1035,41 @@ components:
         newPassword:
           type: string
           minLength: 8
+
+    ForgotPasswordInput:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          minLength: 1
+
+    ResetPasswordInput:
+      type: object
+      required: [token, newPassword]
+      properties:
+        token:
+          type: string
+          minLength: 1
+        newPassword:
+          type: string
+          minLength: 8
+
+    MessageResult:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    TestReminderResult:
+      type: object
+      required: [sent, message]
+      properties:
+        sent:
+          type: boolean
+        message:
+          type: string
 
     Vehicle:
       type: object
@@ -1877,6 +1965,8 @@ components:
           type: integer
         reminderServiceDays:
           type: integer
+        notificationEmail:
+          type: ["string", "null"]
 
     SettingsInput:
       type: object
@@ -1907,6 +1997,8 @@ components:
           type: ["integer", "null"]
         reminderServiceDays:
           type: ["integer", "null"]
+        notificationEmail:
+          type: ["string", "null"]
 
     DashboardSummary:
       type: object

@@ -33,4 +33,6 @@ export interface SettingsInput {
   reminderStkDays?: number | null;
   /** @nullable */
   reminderServiceDays?: number | null;
+  /** @nullable */
+  notificationEmail?: string | null;
 }
