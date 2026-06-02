@@ -1679,6 +1679,9 @@ components:
           type: ["string", "null"]
         model:
           type: ["string", "null"]
+        odometerKm:
+          type: ["integer", "null"]
+          description: Odometer reading (km) detected from a dashboard photo, if any
 
     MaterialCatalogItem:
       type: object

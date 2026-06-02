@@ -19,4 +19,9 @@ export interface ImportTpResult {
   make?: string | null;
   /** @nullable */
   model?: string | null;
+  /**
+     * Odometer reading (km) detected from a dashboard photo, if any
+     * @nullable
+     */
+  odometerKm?: number | null;
 }

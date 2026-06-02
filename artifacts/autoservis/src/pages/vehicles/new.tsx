@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { takeTpPrefill } from "@/pages/tp-scan";
+import { takeVehiclePrefill } from "@/lib/scan-prefill";
 import { useCreateVehicle, useImportVehicleFromTp, useListVehicleMakes, useListVehicleModels, getListVehiclesQueryKey } from "@workspace/api-client-react";
 import { AutocompleteInput } from "@/components/autocomplete-input";
 import { AresButton } from "@/components/ares-button";
@@ -63,7 +63,7 @@ export default function NewVehicle() {
   const [dragActive, setDragActive] = useState(false);
 
   useEffect(() => {
-    const pre = takeTpPrefill();
+    const pre = takeVehiclePrefill();
     if (!pre) return;
     setForm((f) => ({
       ...f,
@@ -73,8 +73,9 @@ export default function NewVehicle() {
       engineDisplacement: pre.engineDisplacement != null ? String(pre.engineDisplacement) : f.engineDisplacement,
       make: pre.make ?? f.make,
       model: pre.model ?? f.model,
+      currentKm: pre.currentKm != null ? String(pre.currentKm) : f.currentKm,
     }));
-    toast({ title: "Údaje z TP předvyplněny", description: "Zkontrolujte je a doplňte chybějící údaje." });
+    toast({ title: "Údaje předvyplněny", description: "Zkontrolujte je a doplňte chybějící údaje." });
   }, [toast]);
 
   const { data: makeOptions = [] } = useListVehicleMakes();
@@ -187,6 +188,7 @@ export default function NewVehicle() {
             engineDisplacement: result.engineDisplacement != null ? String(result.engineDisplacement) : f.engineDisplacement,
             make: result.make ?? f.make,
             model: result.model ?? f.model,
+            currentKm: result.odometerKm != null ? String(result.odometerKm) : f.currentKm,
           }));
           setImportOpen(false);
           setImportFiles([]);
@@ -215,7 +217,7 @@ export default function NewVehicle() {
           <p className="text-muted-foreground">Přidejte nové vozidlo do evidence.</p>
         </div>
         <Button variant="outline" onClick={() => setImportOpen(true)}>
-          <Sparkles className="h-4 w-4 mr-2" />Importovat z TP
+          <Sparkles className="h-4 w-4 mr-2" />Načíst z fotek
         </Button>
       </div>
 
@@ -468,9 +470,9 @@ export default function NewVehicle() {
       <Dialog open={importOpen} onOpenChange={(open) => { setImportOpen(open); if (!open) setImportFiles([]); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-amber-500" />Import z technického průkazu</DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-amber-500" />Načtení vozu z fotek</DialogTitle>
             <DialogDescription>
-              Nahrajte fotografie malého technického průkazu (obě strany). Pokud TP není po ruce, můžete nahrát i fotku SPZ vozidla a fotku VIN (štítek, ražba nebo VIN za sklem). Načteme SPZ, VIN, výrobce, model, rok první registrace a objem motoru. Ostatní údaje prosím doplňte ručně.
+              Nahrajte fotografie malého technického průkazu (obě strany). Pokud není po ruce, můžete nahrát i fotku SPZ vozidla a fotku VIN (štítek, ražba nebo VIN za sklem). Přidejte i fotku přístrojové desky (tachometru) pro načtení stavu km. Načteme SPZ, VIN, výrobce, model, rok první registrace, objem motoru a stav tachometru. Ostatní údaje prosím doplňte ručně.
             </DialogDescription>
           </DialogHeader>
 
@@ -544,7 +546,7 @@ export default function NewVehicle() {
             )}
 
             <p className="text-xs text-muted-foreground">
-              Můžete nahrát až 4 fotografie. Doporučujeme přední i zadní stranu TP pro lepší výsledek.
+              Můžete nahrát až 4 fotografie. Doporučujeme přední i zadní stranu technického průkazu pro lepší výsledek.
             </p>
           </div>
 

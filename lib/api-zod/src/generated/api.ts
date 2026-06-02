@@ -353,7 +353,8 @@ export const ImportVehicleFromTpResponse = zod.object({
   "registrationYear": zod.number().nullish(),
   "engineDisplacement": zod.number().nullish(),
   "make": zod.string().nullish(),
-  "model": zod.string().nullish()
+  "model": zod.string().nullish(),
+  "odometerKm": zod.number().nullish().describe('Odometer reading (km) detected from a dashboard photo, if any')
 })
 
 

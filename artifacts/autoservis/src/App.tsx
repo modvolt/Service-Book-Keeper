@@ -24,11 +24,14 @@ import TpScanPage from "@/pages/tp-scan";
 import AlertsPage from "@/pages/alerts";
 import StatisticsPage from "@/pages/statistics";
 import GdprPage from "@/pages/gdpr";
+import { useScanHandoff } from "@/hooks/use-scan-handoff";
 
 const queryClient = new QueryClient();
 
 function Router() {
   const [location] = useLocation();
+  // Live phone -> PC scan handoff: this session listens for scan results.
+  useScanHandoff();
   return (
     <Layout>
       <ErrorBoundary key={location}>
@@ -43,6 +46,8 @@ function Router() {
         <Route path="/sklad" component={MaterialsPage} />
         <Route path="/kalendar" component={CalendarPage} />
         <Route path="/nastaveni" component={SettingsPage} />
+        <Route path="/nacteni-vozu" component={TpScanPage} />
+        {/* Alias for old bookmarks/links */}
         <Route path="/nacteni-tp" component={TpScanPage} />
         <Route path="/po-terminu" component={AlertsPage} />
         <Route path="/statistiky" component={StatisticsPage} />

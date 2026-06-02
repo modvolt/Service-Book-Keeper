@@ -5,3 +5,4 @@
 - [Customer reminder de-dup](customer-reminder-dedup.md) — owner reminder emails de-duped per deadline via a ledger; token anchors on resolved-deadline point, never live odometer.
 - [connect-pg-simple under esbuild](connect-pg-simple-esbuild.md) — createTableIfMissing silently fails in the bundle (missing table.sql); create session table via Drizzle push instead.
 - [Gray page in prod](gray-page-prod.md) — works in dev but blank/gray in production = uncaught React render error; dev's Vite overlay masks it, prod has no error boundary.
+- [Scan km-prefill gating](scan-km-prefill-gating.md) — a scanned odometer prefills a known vehicle's work order only when strictly > stored currentKm; enforced in server + client, keep in lockstep.

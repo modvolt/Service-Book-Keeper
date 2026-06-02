@@ -13,6 +13,7 @@ import aresRouter from "./ares";
 import storageRouter from "./storage";
 import backupRouter from "./backup";
 import gdprRouter from "./gdpr";
+import scanHandoffRouter from "./scan-handoff";
 
 const router: IRouter = Router();
 
@@ -29,6 +30,7 @@ router.use(settingsRouter);
 router.use(aresRouter);
 router.use(backupRouter);
 router.use(gdprRouter);
+router.use(scanHandoffRouter);
 router.use("/storage", storageRouter);
 
 export default router;

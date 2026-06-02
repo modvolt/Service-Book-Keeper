@@ -13,6 +13,7 @@ export type TpExtractedData = {
   engineDisplacement: number | null;
   make: string | null;
   model: string | null;
+  odometerKm: number | null;
 };
 
 function fileToBase64(file: File): Promise<string> {
@@ -125,10 +126,10 @@ export function TpScanDialog({
     <Dialog open={open} onOpenChange={close}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2"><ScanLine className="h-5 w-5 text-primary" />Načtení technického průkazu</DialogTitle>
+          <DialogTitle className="flex items-center gap-2"><ScanLine className="h-5 w-5 text-primary" />Načtení vozu</DialogTitle>
           <DialogDescription>
-            Vyfoťte malý technický průkaz (osvědčení o registraci, část I). Pokud TP není po ruce, můžete nahrát i fotku SPZ vozidla a fotku VIN (štítek, ražba nebo VIN za sklem). Můžete přidat až 4 obrázky.
-            Automaticky se rozpozná SPZ, VIN, výrobce, model, rok registrace a objem motoru.
+            Vyfoťte malý technický průkaz (osvědčení o registraci, část I). Pokud není po ruce, stačí fotka SPZ a VIN (štítek, ražba nebo VIN za sklem). Přidejte i fotku přístrojové desky (tachometru) pro načtení stavu km. Můžete přidat až 4 obrázky.
+            Automaticky se rozpozná SPZ, VIN, výrobce, model, rok registrace, objem motoru a stav tachometru.
           </DialogDescription>
         </DialogHeader>
 
@@ -157,16 +158,16 @@ export function TpScanDialog({
             </p>
           </div>
 
-          <div className="flex gap-2">
-            <Button type="button" variant="outline" className="flex-1"
+          <div className="flex flex-col gap-2">
+            <Button type="button" size="lg" className="w-full h-14 text-base"
+              onClick={() => { if (inputRef.current) { inputRef.current.setAttribute("capture", "environment"); inputRef.current.click(); } }}
+              disabled={!canAddMore}>
+              <Camera className="h-5 w-5 mr-2" />Vyfotit
+            </Button>
+            <Button type="button" variant="outline" className="w-full"
               onClick={() => { if (inputRef.current) { inputRef.current.removeAttribute("capture"); inputRef.current.click(); } }}
               disabled={!canAddMore}>
               <Upload className="h-4 w-4 mr-2" />Nahrát soubor
-            </Button>
-            <Button type="button" variant="outline" className="flex-1"
-              onClick={() => { if (inputRef.current) { inputRef.current.setAttribute("capture", "environment"); inputRef.current.click(); } }}
-              disabled={!canAddMore}>
-              <Camera className="h-4 w-4 mr-2" />Vyfotit z telefonu
             </Button>
           </div>
 

@@ -3,38 +3,25 @@ import { Link, useLocation } from "wouter";
 import { useGetVehicleByPlate } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ScanLine, Car, Plus, ClipboardList, RotateCcw } from "lucide-react";
+import { ScanLine, Car, Plus, ClipboardList, RotateCcw, MonitorSmartphone, CheckCircle2, Loader2, Gauge } from "lucide-react";
 import { TpScanDialog, type TpExtractedData } from "@/components/tp-scan-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { setVehiclePrefill, setWorkOrderPrefill } from "@/lib/scan-prefill";
+import { sendScanHandoff } from "@/lib/scan-channel";
 
-const PREFILL_KEY = "tpImportPrefill";
-
-export type TpPrefill = {
-  licensePlate?: string | null;
-  vin?: string | null;
-  registrationYear?: number | null;
-  engineDisplacement?: number | null;
-  make?: string | null;
-  model?: string | null;
-};
-
-export function setTpPrefill(data: TpPrefill) {
-  try { sessionStorage.setItem(PREFILL_KEY, JSON.stringify(data)); } catch {}
-}
-export function takeTpPrefill(): TpPrefill | null {
-  try {
-    const raw = sessionStorage.getItem(PREFILL_KEY);
-    if (!raw) return null;
-    sessionStorage.removeItem(PREFILL_KEY);
-    return JSON.parse(raw);
-  } catch { return null; }
-}
+type HandoffState =
+  | { status: "idle" }
+  | { status: "sending" }
+  | { status: "sent"; kind: "new-vehicle" | "work-order" }
+  | { status: "no-pc" }
+  | { status: "error" };
 
 export default function TpScanPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [dialogOpen, setDialogOpen] = useState(true);
   const [data, setData] = useState<TpExtractedData | null>(null);
+  const [handoff, setHandoff] = useState<HandoffState>({ status: "idle" });
 
   // Open camera dialog automatically on mount
   useEffect(() => { setDialogOpen(true); }, []);
@@ -44,26 +31,58 @@ export default function TpScanPage() {
     query: { enabled: plateClean.length >= 4 } as any,
   });
 
-  function handleExtracted(d: TpExtractedData) {
+  async function handleExtracted(d: TpExtractedData) {
     setData(d);
-    toast({ title: "Údaje načteny", description: d.licensePlate ? `SPZ: ${d.licensePlate}` : "Údaje byly zpracovány." });
+    setHandoff({ status: "sending" });
+    try {
+      const result = await sendScanHandoff({
+        licensePlate: d.licensePlate,
+        vin: d.vin,
+        registrationYear: d.registrationYear,
+        engineDisplacement: d.engineDisplacement,
+        make: d.make,
+        model: d.model,
+        odometerKm: d.odometerKm,
+      });
+      if (result.delivered > 0) {
+        setHandoff({ status: "sent", kind: result.kind });
+        toast({ title: "Odesláno do PC", description: "Pokračujte na počítači." });
+      } else {
+        setHandoff({ status: "no-pc" });
+      }
+    } catch {
+      setHandoff({ status: "error" });
+    }
+  }
+
+  function resetScan() {
+    setData(null);
+    setHandoff({ status: "idle" });
+    setDialogOpen(true);
   }
 
   function goToNewVehicle() {
     if (!data) return;
-    setTpPrefill({
+    setVehiclePrefill({
       licensePlate: data.licensePlate,
       vin: data.vin,
       registrationYear: data.registrationYear,
       engineDisplacement: data.engineDisplacement,
       make: data.make,
       model: data.model,
+      currentKm: data.odometerKm,
     });
     navigate("/vehicles/new");
   }
 
   function goToNewWorkOrder() {
     if (!data?.licensePlate) return;
+    const higher =
+      data.odometerKm != null &&
+      (foundVehicle?.currentKm == null || data.odometerKm > foundVehicle.currentKm)
+        ? data.odometerKm
+        : null;
+    setWorkOrderPrefill({ km: higher });
     navigate(`/work-orders/new?spz=${encodeURIComponent(data.licensePlate)}`);
   }
 
@@ -72,8 +91,8 @@ export default function TpScanPage() {
       <div className="flex items-center gap-3">
         <ScanLine className="h-8 w-8 text-primary" />
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Načtení technického průkazu</h1>
-          <p className="text-muted-foreground">Vyfoťte malý TP, nebo (pokud není po ruce) fotku SPZ a VIN vozidla. Údaje se automaticky předvyplní k vozidlu nebo zakázce.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Načtení vozu</h1>
+          <p className="text-muted-foreground">Vyfoťte na telefonu doklady vozu (malý technický průkaz, nebo SPZ a VIN) a případně tachometr. Údaje se rovnou objeví na počítači připravené ke kontrole.</p>
         </div>
       </div>
 
@@ -81,9 +100,9 @@ export default function TpScanPage() {
         <Card>
           <CardContent className="py-12 text-center space-y-4">
             <ScanLine className="h-12 w-12 text-muted-foreground mx-auto" />
-            <p className="text-muted-foreground">Otevřete fotoaparát a vyfoťte technický průkaz.</p>
-            <Button onClick={() => setDialogOpen(true)} size="lg">
-              <ScanLine className="h-4 w-4 mr-2" />Spustit načtení
+            <p className="text-muted-foreground">Otevřete fotoaparát a vyfoťte vůz.</p>
+            <Button onClick={() => setDialogOpen(true)} size="lg" className="h-14 text-base px-8">
+              <ScanLine className="h-5 w-5 mr-2" />Spustit načtení
             </Button>
           </CardContent>
         </Card>
@@ -93,6 +112,44 @@ export default function TpScanPage() {
             <CardTitle>Načtené údaje</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Handoff status banner */}
+            {handoff.status === "sending" && (
+              <div className="flex items-center gap-2 bg-muted/50 border rounded-md p-3 text-sm">
+                <Loader2 className="h-4 w-4 animate-spin" /> Odesílám do PC…
+              </div>
+            )}
+            {handoff.status === "sent" && (
+              <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-md p-4">
+                <CheckCircle2 className="h-6 w-6 text-emerald-600 shrink-0" />
+                <div>
+                  <p className="font-semibold text-emerald-800">Odesláno do PC</p>
+                  <p className="text-sm text-emerald-700">
+                    {handoff.kind === "work-order"
+                      ? "Na počítači se otevřela nová zakázka pro toto vozidlo. Zkontrolujte a uložte."
+                      : "Na počítači se otevřel formulář nového vozidla. Zkontrolujte a uložte."}
+                  </p>
+                </div>
+              </div>
+            )}
+            {handoff.status === "no-pc" && (
+              <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-md p-4">
+                <MonitorSmartphone className="h-6 w-6 text-amber-600 shrink-0" />
+                <div>
+                  <p className="font-semibold text-amber-800">Žádný počítač není připojen</p>
+                  <p className="text-sm text-amber-700">Otevřete aplikaci AutoServis na PC a načtěte vůz znovu, nebo pokračujte zde níže.</p>
+                </div>
+              </div>
+            )}
+            {handoff.status === "error" && (
+              <div className="flex items-start gap-3 bg-rose-50 border border-rose-200 rounded-md p-4">
+                <MonitorSmartphone className="h-6 w-6 text-rose-600 shrink-0" />
+                <div>
+                  <p className="font-semibold text-rose-800">Odeslání do PC selhalo</p>
+                  <p className="text-sm text-rose-700">Zkuste to znovu, nebo pokračujte zde níže.</p>
+                </div>
+              </div>
+            )}
+
             <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
               <div><dt className="text-muted-foreground">SPZ</dt><dd className="font-mono font-semibold text-base">{data.licensePlate ?? "—"}</dd></div>
               <div><dt className="text-muted-foreground">VIN</dt><dd className="font-mono">{data.vin ?? "—"}</dd></div>
@@ -100,9 +157,11 @@ export default function TpScanPage() {
               <div><dt className="text-muted-foreground">Model / typ</dt><dd>{data.model ?? "—"}</dd></div>
               <div><dt className="text-muted-foreground">Rok registrace</dt><dd>{data.registrationYear ?? "—"}</dd></div>
               <div><dt className="text-muted-foreground">Objem motoru</dt><dd>{data.engineDisplacement ? `${data.engineDisplacement} cm³` : "—"}</dd></div>
+              <div className="col-span-2"><dt className="text-muted-foreground flex items-center gap-1"><Gauge className="h-3.5 w-3.5" />Stav tachometru</dt><dd>{data.odometerKm != null ? `${data.odometerKm.toLocaleString("cs-CZ")} km` : "—"}</dd></div>
             </dl>
 
             <div className="border-t pt-4 space-y-2">
+              <p className="text-xs text-muted-foreground">Pokračovat zde na tomto zařízení:</p>
               {plateClean.length >= 4 && (
                 <>
                   {isFetching && <p className="text-sm text-muted-foreground">Hledám vozidlo v evidenci…</p>}
@@ -132,11 +191,13 @@ export default function TpScanPage() {
               )}
 
               <div className="flex gap-2 flex-wrap pt-2">
-                <Button onClick={goToNewVehicle}>
-                  <Plus className="h-4 w-4 mr-2" />Vytvořit vozidlo s těmito údaji
-                </Button>
-                <Button variant="outline" onClick={() => { setData(null); setDialogOpen(true); }}>
-                  <RotateCcw className="h-4 w-4 mr-2" />Načíst znovu
+                {!foundVehicle && (
+                  <Button onClick={goToNewVehicle}>
+                    <Plus className="h-4 w-4 mr-2" />Vytvořit vozidlo s těmito údaji
+                  </Button>
+                )}
+                <Button variant="outline" onClick={resetScan}>
+                  <RotateCcw className="h-4 w-4 mr-2" />Načíst další vůz
                 </Button>
               </div>
             </div>

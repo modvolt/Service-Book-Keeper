@@ -14,7 +14,8 @@ const SYSTEM_PROMPT = `Jsi asistent pro autoservis. Z přiložených fotografií
 - malý technický průkaz (osvědčení o registraci vozidla část I, Česká republika),
 - fotografie registrační značky (SPZ) vozidla,
 - fotografie VIN (výrobní štítek, ražba VIN na karoserii nebo VIN za čelním sklem),
-- fotografie samotného vozidla.
+- fotografie samotného vozidla,
+- fotografie přístrojové desky (palubky) s ukazatelem počtu najetých kilometrů (tachometr).
 
 Údaje ze všech fotografií spoj dohromady. Vrať POUZE platné JSON bez markdown bloku, bez vysvětlení.
 
@@ -25,7 +26,8 @@ Schéma odpovědi:
   "registrationYear": number|null,    // ROK první registrace (jen číslo, např. 2018)
   "engineDisplacement": number|null,  // objem motoru v cm³ (kubických cm)
   "make": string|null,                // výrobce / značka vozidla, např. "Volkswagen", "Škoda", "Renault"
-  "model": string|null                // model / typ vozidla, např. "Passat", "Octavia", "Mégane"
+  "model": string|null,               // model / typ vozidla, např. "Passat", "Octavia", "Mégane"
+  "odometerKm": number|null           // stav tachometru (počet najetých kilometrů) z fotografie přístrojové desky
 }
 
 Pravidla:
@@ -36,6 +38,7 @@ Pravidla:
 - registrationYear extrahuj POUZE rok (čtyřciferné číslo) z data první registrace.
 - make: pouze název výrobce s velkým prvním písmenem (např. "Volkswagen", "Škoda"). Bez modelu.
 - model: pouze označení modelu/typu (např. "Passat", "Octavia"). Výrobce do modelu nezahrnuj.
+- odometerKm: stav tachometru čti POUZE z fotografie přístrojové desky (palubky). Vrať celé číslo v kilometrech bez mezer a jednotek (např. 185000). Pokud na fotografiích žádný tachometr není, vrať null. Ignoruj denní počítadlo (trip), které bývá menší a má desetinné místo.
 - Jiné údaje (jméno, adresa, barva) nevracej.`;
 
 router.post("/vehicles/import-tp", largeJson, async (req, res): Promise<void> => {
@@ -80,6 +83,9 @@ router.post("/vehicles/import-tp", largeJson, async (req, res): Promise<void> =>
     const cleanStr = (v: unknown): string | null =>
       typeof v === "string" && v.trim() ? v.trim() : null;
 
+    const cleanInt = (v: unknown): number | null =>
+      typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.round(v) : null;
+
     res.json({
       licensePlate: normalizeSpzOrNull(extracted.licensePlate),
       vin: typeof extracted.vin === "string" && extracted.vin.length === 17 ? extracted.vin : null,
@@ -87,6 +93,7 @@ router.post("/vehicles/import-tp", largeJson, async (req, res): Promise<void> =>
       engineDisplacement: typeof extracted.engineDisplacement === "number" ? extracted.engineDisplacement : null,
       make: cleanStr(extracted.make),
       model: cleanStr(extracted.model),
+      odometerKm: cleanInt(extracted.odometerKm),
     });
   } catch (err) {
     req.log.error({ err }, "TP import failed");

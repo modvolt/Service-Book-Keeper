@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link, useLocation, useSearch } from "wouter";
 import { LicensePlate } from "@/components/license-plate";
+import { takeWorkOrderPrefill } from "@/lib/scan-prefill";
 import { useCreateWorkOrder, useGetVehicleByPlate, useListVehicles, getListWorkOrdersQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,6 +55,14 @@ export default function NewWorkOrder() {
     otherServices: "", notes: "",
     serviceDate: today,
   });
+
+  // Pre-fill the odometer reading when arriving from a vehicle scan handoff.
+  useEffect(() => {
+    const pre = takeWorkOrderPrefill();
+    if (pre?.km != null) {
+      setForm((f) => ({ ...f, km: String(pre.km) }));
+    }
+  }, []);
 
   function handleSpzChange(value: string) {
     setSpz(value);
