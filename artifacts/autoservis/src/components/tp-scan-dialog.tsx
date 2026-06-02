@@ -38,7 +38,8 @@ export function TpScanDialog({
 }) {
   const { toast } = useToast();
   const importFromTp = useImportVehicleFromTp();
-  const inputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const uploadInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
   const [dragActive, setDragActive] = useState(false);
@@ -135,7 +136,11 @@ export function TpScanDialog({
 
         <div className="space-y-3">
           <input
-            ref={inputRef} type="file" accept="image/*" multiple className="hidden"
+            ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden"
+            onChange={(e) => { handleAdd(e.target.files); e.target.value = ""; }}
+          />
+          <input
+            ref={uploadInputRef} type="file" accept="image/*" multiple className="hidden"
             onChange={(e) => { handleAdd(e.target.files); e.target.value = ""; }}
           />
 
@@ -160,12 +165,12 @@ export function TpScanDialog({
 
           <div className="flex flex-col gap-2">
             <Button type="button" size="lg" className="w-full h-14 text-base"
-              onClick={() => { if (inputRef.current) { inputRef.current.setAttribute("capture", "environment"); inputRef.current.click(); } }}
+              onClick={() => cameraInputRef.current?.click()}
               disabled={!canAddMore}>
               <Camera className="h-5 w-5 mr-2" />Vyfotit
             </Button>
             <Button type="button" variant="outline" className="w-full"
-              onClick={() => { if (inputRef.current) { inputRef.current.removeAttribute("capture"); inputRef.current.click(); } }}
+              onClick={() => uploadInputRef.current?.click()}
               disabled={!canAddMore}>
               <Upload className="h-4 w-4 mr-2" />Nahrát soubor
             </Button>
