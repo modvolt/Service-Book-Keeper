@@ -83,8 +83,6 @@ export interface Vehicle {
   /** @nullable */
   engineDisplacement?: number | null;
   /** @nullable */
-  registrationDate?: string | null;
-  /** @nullable */
   transmission?: VehicleTransmission;
   ownerType: VehicleOwnerType;
   /** @nullable */
@@ -273,8 +271,6 @@ export interface VehicleDetail {
   /** @nullable */
   engineDisplacement?: number | null;
   /** @nullable */
-  registrationDate?: string | null;
-  /** @nullable */
   transmission?: VehicleDetailTransmission;
   ownerType: VehicleDetailOwnerType;
   /** @nullable */
@@ -373,8 +369,6 @@ export interface VehicleInput {
   /** @nullable */
   engineDisplacement?: number | null;
   /** @nullable */
-  registrationDate?: string | null;
-  /** @nullable */
   transmission?: VehicleInputTransmission;
   /** @nullable */
   ownerType?: VehicleInputOwnerType;
@@ -462,8 +456,6 @@ export interface VehicleUpdate {
   vin?: string | null;
   /** @nullable */
   engineDisplacement?: number | null;
-  /** @nullable */
-  registrationDate?: string | null;
   /** @nullable */
   transmission?: VehicleUpdateTransmission;
   /** @nullable */

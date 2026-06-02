@@ -140,7 +140,7 @@ export default function VehicleDetail() {
 
   const [editForm, setEditForm] = useState({
     make: "", model: "", year: "", color: "", vin: "", currentKm: "", notes: "", stkValidUntil: "",
-    engineDisplacement: "", registrationDate: "",
+    engineDisplacement: "",
     transmission: "manual" as "manual" | "automatic",
     ownerType: "private" as "private" | "company",
     ownerName: "", ownerAddress: "", ownerIco: "", ownerDic: "", ownerPhone: "", ownerEmail: "",
@@ -176,7 +176,6 @@ export default function VehicleDetail() {
       color: vehicle.color ?? "", vin: vehicle.vin ?? "", currentKm: vehicle.currentKm?.toString() ?? "",
       notes: vehicle.notes ?? "", stkValidUntil: vehicle.stkValidUntil ?? "",
       engineDisplacement: vehicle.engineDisplacement?.toString() ?? "",
-      registrationDate: vehicle.registrationDate ?? "",
       transmission: (vehicle.transmission === "automatic" ? "automatic" : "manual"),
       ownerType: (vehicle.ownerType === "company" ? "company" : "private"),
       ownerName: vehicle.ownerName ?? "",
@@ -216,7 +215,6 @@ export default function VehicleDetail() {
         year: toInt(editForm.year),
         currentKm: toInt(editForm.currentKm),
         engineDisplacement: toInt(editForm.engineDisplacement),
-        registrationDate: editForm.registrationDate || null,
         transmission: editForm.transmission,
         ownerType: editForm.ownerType,
         ownerName: editForm.ownerName || null,
@@ -393,8 +391,6 @@ export default function VehicleDetail() {
               <span className="font-medium">{vehicle.engineDisplacement ? `${vehicle.engineDisplacement.toLocaleString('cs-CZ')} cm³` : "-"}</span>
               <span className="text-muted-foreground">Převodovka</span>
               <span className="font-medium">{transmissionLabel ?? "-"}</span>
-              <span className="text-muted-foreground">První registrace</span>
-              <span className="font-medium">{dateStr(vehicle.registrationDate)}</span>
               <span className="text-muted-foreground">Najeté km</span>
               <span className="font-semibold text-lg">{vehicle.currentKm ? `${vehicle.currentKm.toLocaleString('cs-CZ')} km` : "-"}</span>
             </div>
@@ -683,7 +679,6 @@ export default function VehicleDetail() {
                 <div className="space-y-1"><Label>Barva</Label><Input value={editForm.color} onChange={e => setEditForm(f => ({ ...f, color: e.target.value }))} /></div>
                 <div className="space-y-1 col-span-2"><Label>VIN</Label><Input value={editForm.vin} onChange={e => setEditForm(f => ({ ...f, vin: e.target.value }))} /></div>
                 <div className="space-y-1"><Label>Objem motoru (cm³)</Label><Input type="number" value={editForm.engineDisplacement} onChange={e => setEditForm(f => ({ ...f, engineDisplacement: e.target.value }))} /></div>
-                <div className="space-y-1"><Label>První registrace</Label><Input type="date" value={editForm.registrationDate} onChange={e => setEditForm(f => ({ ...f, registrationDate: e.target.value }))} /></div>
                 <div className="space-y-1 col-span-2">
                   <Label>Převodovka</Label>
                   <RadioGroup

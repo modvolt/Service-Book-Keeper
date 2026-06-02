@@ -11,7 +11,6 @@ export const vehiclesTable = pgTable("vehicles", {
   color: text("color"),
   vin: text("vin"),
   engineDisplacement: integer("engine_displacement"),
-  registrationDate: date("registration_date", { mode: "string" }),
   transmission: text("transmission"), // "manual" | "automatic"
   ownerType: text("owner_type").notNull().default("private"), // "private" | "company"
   ownerName: text("owner_name"),

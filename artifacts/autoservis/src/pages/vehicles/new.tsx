@@ -44,7 +44,7 @@ export default function NewVehicle() {
 
   const [form, setForm] = useState({
     licensePlate: "", make: "", model: "", year: "", color: "", vin: "",
-    engineDisplacement: "", registrationDate: "",
+    engineDisplacement: "",
     transmission: "manual" as "manual" | "automatic",
     ownerType: "private" as "private" | "company",
     ownerName: "", ownerAddress: "", ownerIco: "", ownerDic: "", ownerPhone: "", ownerEmail: "",
@@ -97,7 +97,6 @@ export default function NewVehicle() {
         color: form.color || null,
         vin: form.vin || null,
         engineDisplacement: toInt(form.engineDisplacement),
-        registrationDate: form.registrationDate || null,
         transmission: form.transmission,
         ownerType: form.ownerType,
         ownerName: form.ownerName || null,
@@ -348,10 +347,6 @@ export default function NewVehicle() {
                 <div className="space-y-1">
                   <Label>Objem motoru (cm³)</Label>
                   <Input type="number" placeholder="1997" value={form.engineDisplacement} onChange={e => setForm(f => ({ ...f, engineDisplacement: e.target.value }))} />
-                </div>
-                <div className="space-y-1">
-                  <Label>Datum první registrace</Label>
-                  <Input type="date" value={form.registrationDate} onChange={e => setForm(f => ({ ...f, registrationDate: e.target.value }))} />
                 </div>
                 <div className="space-y-1 col-span-2">
                   <Label>Převodovka *</Label>

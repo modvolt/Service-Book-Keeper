@@ -21,8 +21,6 @@ export interface VehicleUpdate {
   /** @nullable */
   engineDisplacement?: number | null;
   /** @nullable */
-  registrationDate?: string | null;
-  /** @nullable */
   transmission?: VehicleUpdateTransmission;
   /** @nullable */
   ownerType?: VehicleUpdateOwnerType;

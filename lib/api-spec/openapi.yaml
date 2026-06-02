@@ -1091,8 +1091,6 @@ components:
           type: ["string", "null"]
         engineDisplacement:
           type: ["integer", "null"]
-        registrationDate:
-          type: ["string", "null"]
         transmission:
           type: ["string", "null"]
           enum: [manual, automatic, null]
@@ -1175,8 +1173,6 @@ components:
           type: ["string", "null"]
         engineDisplacement:
           type: ["integer", "null"]
-        registrationDate:
-          type: ["string", "null"]
         transmission:
           type: ["string", "null"]
           enum: [manual, automatic, null]
@@ -1272,8 +1268,6 @@ components:
           type: ["string", "null"]
         engineDisplacement:
           type: ["integer", "null"]
-        registrationDate:
-          type: ["string", "null"]
         transmission:
           type: ["string", "null"]
           enum: [manual, automatic, null]
@@ -1346,8 +1340,6 @@ components:
           type: ["string", "null"]
         engineDisplacement:
           type: ["integer", "null"]
-        registrationDate:
-          type: ["string", "null"]
         transmission:
           type: ["string", "null"]
           enum: [manual, automatic, null]
