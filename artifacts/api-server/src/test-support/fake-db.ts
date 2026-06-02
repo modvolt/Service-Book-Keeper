@@ -38,6 +38,7 @@ export const appAuthTable: { id: object } = { id: {} };
 export const settingsTable: { id: object } = { id: {} };
 export const vehiclesTable: { id: object } = { id: {} };
 export const auditLogTable: { id: object } = { id: {} };
+export const customerReminderLogTable: { id: object } = { id: {} };
 
 export const __store = new Store();
 
@@ -65,23 +66,34 @@ function makeDb(store: Store) {
 
     insert(table: unknown) {
       return {
-        values(vals: InsertValues) {
+        values(vals: InsertValues | InsertValues[]) {
+          const list = Array.isArray(vals) ? vals : [vals];
+          const first = list[0] ?? {};
           const insertRow = (): Row => {
-            const row: Row = { ...vals };
+            const row: Row = { ...first };
             store.get(table).push(row);
             return row;
           };
+          const insertAll = (): void => {
+            for (const v of list) store.get(table).push({ ...v });
+          };
           return {
             then<T>(onF: (v: undefined) => T, onR?: (e: unknown) => T) {
-              insertRow();
+              insertAll();
               return Promise.resolve(undefined).then(onF, onR);
             },
             onConflictDoNothing() {
+              // Awaitable (no .returning()) — used by batch inserts that ignore
+              // the result; also exposes .returning() for single-row callers.
               return {
+                then<T>(onF: (v: undefined) => T, onR?: (e: unknown) => T) {
+                  insertAll();
+                  return Promise.resolve(undefined).then(onF, onR);
+                },
                 returning: async (): Promise<Row[]> => {
                   const arr = store.get(table);
                   const existing =
-                    vals.id != null ? arr.find((r) => r.id === vals.id) : undefined;
+                    first.id != null ? arr.find((r) => r.id === first.id) : undefined;
                   if (existing) return [];
                   return [insertRow()];
                 },
@@ -92,7 +104,7 @@ function makeDb(store: Store) {
                 then<T>(onF: (v: undefined) => T, onR?: (e: unknown) => T) {
                   const arr = store.get(table);
                   const existing =
-                    vals.id != null ? arr.find((r) => r.id === vals.id) : undefined;
+                    first.id != null ? arr.find((r) => r.id === first.id) : undefined;
                   if (existing) Object.assign(existing, args.set);
                   else insertRow();
                   return Promise.resolve(undefined).then(onF, onR);
@@ -113,6 +125,16 @@ function makeDb(store: Store) {
               return Promise.resolve(undefined);
             },
           };
+        },
+      };
+    },
+
+    delete(table: unknown) {
+      return {
+        where(_pred?: unknown): Promise<undefined> {
+          // Predicates are ignored (see file header); clear the whole table.
+          store.get(table).length = 0;
+          return Promise.resolve(undefined);
         },
       };
     },

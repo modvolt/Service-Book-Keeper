@@ -1,6 +1,9 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { maybeRunScheduledDigest } from "./lib/reminders";
+import {
+  maybeRunScheduledDigest,
+  maybeRunScheduledCustomerReminders,
+} from "./lib/reminders";
 
 // In-process daily reminder scheduler. Single-instance deployment (Coolify);
 // the once-per-day guard lives in settings.lastStkReminderSentAt, so frequent
@@ -30,7 +33,11 @@ app.listen(port, (err) => {
   logger.info({ port }, "Server listening");
 
   // Kick a tick shortly after boot, then hourly. Errors are handled inside.
-  setTimeout(() => void maybeRunScheduledDigest(), 30_000);
-  const timer = setInterval(() => void maybeRunScheduledDigest(), REMINDER_TICK_MS);
+  const tick = (): void => {
+    void maybeRunScheduledDigest();
+    void maybeRunScheduledCustomerReminders();
+  };
+  setTimeout(tick, 30_000);
+  const timer = setInterval(tick, REMINDER_TICK_MS);
   timer.unref();
 });

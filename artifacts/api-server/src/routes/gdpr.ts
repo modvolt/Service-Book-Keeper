@@ -8,6 +8,7 @@ import {
   appointmentsTable,
   photosTable,
   auditLogTable,
+  customerReminderLogTable,
 } from "@workspace/db";
 import { SetVehicleConsentBody } from "@workspace/api-zod";
 import { getObjectStorageService } from "../lib/storage";
@@ -161,6 +162,11 @@ router.post("/gdpr/anonymize/:vehicleId", async (req, res): Promise<void> => {
       .update(appointmentsTable)
       .set({ customerName: null, customerPhone: null })
       .where(eq(appointmentsTable.vehicleId, id));
+
+    // Drop the customer-reminder ledger so a future re-consent starts clean.
+    await tx
+      .delete(customerReminderLogTable)
+      .where(eq(customerReminderLogTable.vehicleId, id));
   });
 
   await audit("gdpr_anonymize", {

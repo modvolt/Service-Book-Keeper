@@ -5,6 +5,7 @@ export * from "./photos";
 export * from "./materials";
 export * from "./appointments";
 export * from "./settings";
+export * from "./customer-reminders";
 export * from "./auth";
 export * from "./audit";
 export * from "./session";

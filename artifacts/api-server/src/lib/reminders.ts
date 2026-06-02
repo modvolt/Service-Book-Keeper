@@ -1,4 +1,9 @@
-import { db, vehiclesTable, settingsTable } from "@workspace/db";
+import {
+  db,
+  vehiclesTable,
+  settingsTable,
+  customerReminderLogTable,
+} from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { sendMail, isMailConfigured } from "./mailer";
 import { logger } from "./logger";
@@ -8,10 +13,27 @@ type Settings = typeof settingsTable.$inferSelect;
 
 type Severity = "overdue" | "due-soon";
 
+/** Stable machine identifier for each reminder kind (used for de-duplication). */
+type AlertKey =
+  | "stk"
+  | "oil"
+  | "brakes"
+  | "timing"
+  | "brakeFluid"
+  | "transmissionOil";
+
 interface VehicleAlert {
+  key: AlertKey;
   label: string;
   severity: Severity;
   detail: string;
+  /**
+   * Anchor of the current deadline period. Stays constant while the same
+   * deadline is pending and changes once it is resolved (STK renewed, service
+   * performed), which is exactly when a fresh customer reminder may be sent.
+   * Contains only technical anchors (dates / km), never owner PII.
+   */
+  dedupeToken: string;
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -43,11 +65,12 @@ function stkAlert(v: Vehicle, reminderStkDays: number): VehicleAlert | null {
   if (!v.stkValidUntil) return null;
   const days = daysBetween(v.stkValidUntil);
   if (days == null) return null;
+  const dedupeToken = `stk:${v.stkValidUntil}`;
   if (days < 0) {
-    return { label: "STK", severity: "overdue", detail: `propadlá ${fmtCzDate(v.stkValidUntil)}` };
+    return { key: "stk", label: "STK", severity: "overdue", detail: `propadlá ${fmtCzDate(v.stkValidUntil)}`, dedupeToken };
   }
   if (days <= reminderStkDays) {
-    return { label: "STK", severity: "due-soon", detail: `propadne ${fmtCzDate(v.stkValidUntil)} (za ${days} dní)` };
+    return { key: "stk", label: "STK", severity: "due-soon", detail: `propadne ${fmtCzDate(v.stkValidUntil)} (za ${days} dní)`, dedupeToken };
   }
   return null;
 }
@@ -58,6 +81,7 @@ function stkAlert(v: Vehicle, reminderStkDays: number): VehicleAlert | null {
  * `reminderServiceDays` days or 2000 km of the interval.
  */
 function serviceAlert(
+  key: AlertKey,
   label: string,
   args: {
     lastDate?: string | null;
@@ -70,6 +94,10 @@ function serviceAlert(
 ): VehicleAlert | null {
   const { lastDate, lastKm, currentKm, intervalKm, intervalMonths } = args;
   if (!lastDate && lastKm == null) return null;
+
+  // Anchored on the "last service" point only (never currentKm), so the token
+  // stays stable until a new service resets it.
+  const dedupeToken = `${key}:${lastDate ?? ""}:${lastKm ?? ""}`;
 
   let monthsOver: number | null = null;
   let kmOver: number | null = null;
@@ -97,7 +125,7 @@ function serviceAlert(
     const parts: string[] = [];
     if (monthsOver != null) parts.push(`o ${monthsOver} měs.`);
     if (kmOver != null) parts.push(`o ${kmOver.toLocaleString("cs-CZ")} km`);
-    return { label, severity: "overdue", detail: `po termínu ${parts.join(" / ")}` };
+    return { key, label, severity: "overdue", detail: `po termínu ${parts.join(" / ")}`, dedupeToken };
   }
 
   const monthsThreshold = Math.max(1, Math.round(reminderServiceDays / 30));
@@ -108,7 +136,7 @@ function serviceAlert(
     const parts: string[] = [];
     if (monthsRemaining != null) parts.push(`${monthsRemaining} měs.`);
     if (kmRemaining != null) parts.push(`${kmRemaining.toLocaleString("cs-CZ")} km`);
-    return { label, severity: "due-soon", detail: `zbývá ${parts.join(" / ")}` };
+    return { key, label, severity: "due-soon", detail: `zbývá ${parts.join(" / ")}`, dedupeToken };
   }
   return null;
 }
@@ -118,30 +146,30 @@ function computeVehicleAlerts(v: Vehicle, settings: Settings): VehicleAlert[] {
   const stk = stkAlert(v, settings.reminderStkDays);
   if (stk) out.push(stk);
 
-  const oil = serviceAlert("Výměna oleje", {
+  const oil = serviceAlert("oil", "Výměna oleje", {
     lastDate: v.lastOilChangeDate, lastKm: v.lastOilChangeKm, currentKm: v.currentKm,
     intervalKm: v.oilChangeIntervalKm ?? 15000, intervalMonths: v.oilChangeIntervalMonths ?? 12,
   }, settings.reminderServiceDays);
   if (oil) out.push(oil);
 
-  const brakes = serviceAlert("Brzdy", {
+  const brakes = serviceAlert("brakes", "Brzdy", {
     lastDate: v.lastBrakesDate, intervalMonths: v.brakesIntervalMonths ?? 24,
   }, settings.reminderServiceDays);
   if (brakes) out.push(brakes);
 
-  const timing = serviceAlert("Rozvody", {
+  const timing = serviceAlert("timing", "Rozvody", {
     lastDate: v.lastTimingDate, currentKm: v.currentKm,
     intervalKm: v.timingIntervalKm ?? 120000, intervalMonths: v.timingIntervalMonths ?? 120,
   }, settings.reminderServiceDays);
   if (timing) out.push(timing);
 
-  const brakeFluid = serviceAlert("Brzdová kapalina", {
+  const brakeFluid = serviceAlert("brakeFluid", "Brzdová kapalina", {
     lastDate: v.lastBrakeFluidDate, intervalMonths: v.brakeFluidIntervalMonths ?? 24,
   }, settings.reminderServiceDays);
   if (brakeFluid) out.push(brakeFluid);
 
   if (v.transmission === "automatic") {
-    const trans = serviceAlert("Olej převodovky", {
+    const trans = serviceAlert("transmissionOil", "Olej převodovky", {
       lastDate: v.lastTransmissionOilDate, lastKm: v.lastTransmissionOilKm, currentKm: v.currentKm,
       intervalKm: v.transmissionOilIntervalKm ?? 60000, intervalMonths: v.transmissionOilIntervalMonths ?? 48,
     }, settings.reminderServiceDays);
@@ -293,5 +321,202 @@ export async function maybeRunScheduledDigest(): Promise<void> {
     }
   } catch (err) {
     logger.error({ err }, "Scheduled reminder digest failed");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Customer-facing reminders
+//
+// Unlike the mechanic digest (one summary email to the workshop), these notify
+// the vehicle owner directly ahead of their own STK / service deadlines. Each
+// (vehicle, reminder kind, deadline period) is emailed at most once thanks to
+// the customer_reminder_log ledger, and owners who never gave — or withdrew —
+// GDPR processing consent are excluded.
+// ---------------------------------------------------------------------------
+
+function buildCustomerEmail(
+  v: Vehicle,
+  alerts: VehicleAlert[],
+  settings: Settings,
+): { subject: string; text: string; html: string } {
+  const workshop = (settings.companyName || "Autoservis").trim();
+  const vehicleLabel = `${v.make} ${v.model} (${v.licensePlate})`;
+  const greeting = v.ownerName ? `Dobrý den, ${v.ownerName},` : "Dobrý den,";
+
+  const subject = `${workshop}: blíží se termín pro vozidlo ${v.licensePlate}`;
+
+  const contactParts: string[] = [];
+  if (settings.companyPhone) contactParts.push(`telefon ${settings.companyPhone}`);
+  if (settings.companyEmail) contactParts.push(`e-mail ${settings.companyEmail}`);
+  const contactLine =
+    contactParts.length > 0
+      ? `Pro objednání nás kontaktujte: ${contactParts.join(", ")}.`
+      : "Pro objednání nás prosím kontaktujte.";
+
+  const lines: string[] = [];
+  lines.push(greeting);
+  lines.push("");
+  lines.push(`u Vašeho vozidla ${vehicleLabel} se blíží následující termíny:`);
+  lines.push("");
+  for (const a of alerts) {
+    lines.push(`  - ${a.label}: ${a.detail}`);
+  }
+  lines.push("");
+  lines.push(contactLine);
+  lines.push("");
+  lines.push(`S pozdravem,`);
+  lines.push(workshop);
+  const text = lines.join("\n").trim();
+
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+  const items = alerts
+    .map(
+      (a) =>
+        `<li style="margin:2px 0;"><strong>${esc(a.label)}:</strong> ${esc(a.detail)}</li>`,
+    )
+    .join("");
+
+  const html = `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111;">
+<p style="margin:0 0 12px 0;">${esc(greeting)}</p>
+<p style="margin:0 0 12px 0;">u Vašeho vozidla <strong>${esc(vehicleLabel)}</strong> se blíží následující termíny:</p>
+<ul style="margin:0 0 12px 18px;padding:0;">${items}</ul>
+<p style="margin:0 0 12px 0;">${esc(contactLine)}</p>
+<p style="margin:0;">S pozdravem,<br>${esc(workshop)}</p>
+</div>`;
+
+  return { subject, text, html };
+}
+
+export interface CustomerReminderRunResult {
+  /** Number of owner emails actually sent. */
+  sent: number;
+  /** Number of vehicles skipped because every alert was already emailed. */
+  skipped: number;
+  message: string;
+}
+
+/**
+ * Send per-owner reminder emails for upcoming STK / service deadlines.
+ *
+ * Eligibility: the vehicle must have a recorded GDPR consent (`consentGivenAt`)
+ * and an owner email. Each deadline period is emailed once — already-sent
+ * (vehicle, reminderKey, dedupeToken) tuples are read from
+ * `customer_reminder_log` and skipped. The log row is written only after a
+ * successful send, so a failed send is retried on the next run. Per-vehicle
+ * failures are isolated so one bad address never blocks the rest.
+ *
+ * `manual` bypasses the global enabled flag (used by an in-app test trigger).
+ */
+export async function runCustomerReminders(
+  opts: { manual?: boolean } = {},
+): Promise<CustomerReminderRunResult> {
+  const manual = opts.manual ?? false;
+
+  const [settings] = await db.select().from(settingsTable).where(eq(settingsTable.id, 1));
+  if (!settings) {
+    return { sent: 0, skipped: 0, message: "Nastavení nebylo nalezeno." };
+  }
+
+  if (!manual && !settings.emailRemindersEnabled) {
+    return { sent: 0, skipped: 0, message: "Upozornění e-mailem jsou vypnutá." };
+  }
+
+  if (!isMailConfigured()) {
+    return {
+      sent: 0,
+      skipped: 0,
+      message: "E-mail není nakonfigurován (chybí SMTP nastavení na serveru).",
+    };
+  }
+
+  const vehicles = await db.select().from(vehiclesTable);
+
+  // Prefetch the whole ledger once and index it; the table holds one row per
+  // already-emailed deadline, so it stays small relative to vehicles.
+  const ledger = await db.select().from(customerReminderLogTable);
+  const ledgerKey = (vehicleId: number, key: string, token: string): string =>
+    `${vehicleId}\u0000${key}\u0000${token}`;
+  const alreadySent = new Set(
+    ledger.map((r) => ledgerKey(r.vehicleId, r.reminderKey, r.dedupeToken)),
+  );
+
+  let sent = 0;
+  let skipped = 0;
+
+  for (const v of vehicles) {
+    // Consent gate: no consent on record (never given or withdrawn) → never email.
+    if (!v.consentGivenAt) continue;
+    const email = (v.ownerEmail || "").trim();
+    if (!email) continue;
+
+    const alerts = computeVehicleAlerts(v, settings);
+    if (alerts.length === 0) continue;
+
+    // Drop alerts whose deadline period was already emailed to this owner.
+    const fresh = alerts.filter(
+      (a) => !alreadySent.has(ledgerKey(v.id, a.key, a.dedupeToken)),
+    );
+    if (fresh.length === 0) {
+      skipped += 1;
+      continue;
+    }
+
+    const { subject, text, html } = buildCustomerEmail(v, fresh, settings);
+    try {
+      await sendMail({ to: email, subject, text, html });
+    } catch (err) {
+      logger.error({ err, vehicleId: v.id }, "Customer reminder send failed");
+      continue;
+    }
+
+    // Record one ledger row per freshly-emailed deadline. onConflictDoNothing
+    // guards against a racing concurrent run inserting the same tuple.
+    await db
+      .insert(customerReminderLogTable)
+      .values(
+        fresh.map((a) => ({
+          vehicleId: v.id,
+          reminderKey: a.key,
+          dedupeToken: a.dedupeToken,
+        })),
+      )
+      .onConflictDoNothing();
+
+    sent += 1;
+    logger.info(
+      { vehicleId: v.id, deadlines: fresh.length },
+      "Customer reminder sent",
+    );
+  }
+
+  return {
+    sent,
+    skipped,
+    message:
+      sent > 0
+        ? `Odesláno ${sent} upozornění zákazníkům.`
+        : "Žádná nová upozornění zákazníkům k odeslání.",
+  };
+}
+
+/**
+ * Scheduler tick for customer reminders. Idempotent thanks to the per-deadline
+ * ledger, so — unlike the digest — it needs no once-per-day guard and is safe
+ * to call on every tick. Errors are swallowed to keep the scheduler alive.
+ */
+export async function maybeRunScheduledCustomerReminders(): Promise<void> {
+  try {
+    const [settings] = await db.select().from(settingsTable).where(eq(settingsTable.id, 1));
+    if (!settings || !settings.emailRemindersEnabled || !isMailConfigured()) return;
+
+    const result = await runCustomerReminders();
+    logger.info(
+      { sent: result.sent, skipped: result.skipped },
+      "Scheduled customer reminders run",
+    );
+  } catch (err) {
+    logger.error({ err }, "Scheduled customer reminders failed");
   }
 }
