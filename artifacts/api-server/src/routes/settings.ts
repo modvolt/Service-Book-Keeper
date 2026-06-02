@@ -3,12 +3,12 @@ import { eq } from "drizzle-orm";
 import multer from "multer";
 import { db, settingsTable } from "@workspace/db";
 import { UpdateSettingsBody } from "@workspace/api-zod";
-import { ObjectStorageService } from "../lib/storage";
+import { getObjectStorageService } from "../lib/storage";
 import { validateImageUpload } from "../lib/fileValidation";
 
 const router: IRouter = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
-const storage = new ObjectStorageService();
+const storage = getObjectStorageService();
 
 async function getOrCreate() {
   const [existing] = await db.select().from(settingsTable).where(eq(settingsTable.id, 1));

@@ -10,11 +10,11 @@ import {
   auditLogTable,
 } from "@workspace/db";
 import { SetVehicleConsentBody } from "@workspace/api-zod";
-import { ObjectStorageService } from "../lib/storage";
+import { getObjectStorageService } from "../lib/storage";
 import { audit } from "../lib/audit";
 
 const router: IRouter = Router();
-const storage = new ObjectStorageService();
+const storage = getObjectStorageService();
 
 function parseId(raw: string): number | null {
   const id = Number(raw);

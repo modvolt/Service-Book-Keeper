@@ -1,9 +1,9 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { pipeline } from "stream";
-import { ObjectStorageService, ObjectNotFoundError, type StoredObject } from "../lib/storage";
+import { getObjectStorageService, ObjectNotFoundError, type StoredObject } from "../lib/storage";
 
 const router: IRouter = Router();
-const objectStorageService = new ObjectStorageService();
+const objectStorageService = getObjectStorageService();
 
 function streamObject(res: Response, obj: StoredObject): void {
   res.setHeader("Content-Type", obj.contentType);

@@ -16,6 +16,51 @@ function requireEnv(name: string): string {
   return value;
 }
 
+/**
+ * Fully env-driven S3 configuration — NOTHING here is hardcoded.
+ *
+ * Every value is read from an environment variable, so the whole storage
+ * backend can be repointed (e.g. to a different Hetzner bucket/region) purely
+ * by changing the environment (Coolify → Environment Variables), with no code
+ * change and no redeploy of new code:
+ *
+ *   Required:
+ *     S3_ENDPOINT           — S3-compatible endpoint URL
+ *     S3_BUCKET             — bucket name
+ *     S3_ACCESS_KEY_ID      — access key
+ *     S3_SECRET_ACCESS_KEY  — secret key
+ *   Optional (defaults shown):
+ *     S3_REGION             — region (default "auto")
+ *     S3_FORCE_PATH_STYLE   — "true"/"false" (default "true")
+ *     S3_PRIVATE_PREFIX     — key prefix for private objects (default "private")
+ *     S3_PUBLIC_PREFIX      — key prefix for public objects (default "public")
+ *
+ * Missing required values throw a clear error at startup (fail-fast).
+ */
+export interface S3Config {
+  endpoint: string;
+  bucket: string;
+  region: string;
+  forcePathStyle: boolean;
+  accessKeyId: string;
+  secretAccessKey: string;
+  privatePrefix: string;
+  publicPrefix: string;
+}
+
+function readS3Config(): S3Config {
+  return {
+    endpoint: requireEnv("S3_ENDPOINT"),
+    bucket: requireEnv("S3_BUCKET"),
+    accessKeyId: requireEnv("S3_ACCESS_KEY_ID"),
+    secretAccessKey: requireEnv("S3_SECRET_ACCESS_KEY"),
+    region: process.env.S3_REGION || "auto",
+    forcePathStyle: (process.env.S3_FORCE_PATH_STYLE || "true").toLowerCase() === "true",
+    privatePrefix: (process.env.S3_PRIVATE_PREFIX || "private").replace(/^\/+|\/+$/g, ""),
+    publicPrefix: (process.env.S3_PUBLIC_PREFIX || "public").replace(/^\/+|\/+$/g, ""),
+  };
+}
+
 function isNotFound(err: unknown): boolean {
   if (typeof err !== "object" || err === null) return false;
   const name = (err as { name?: string }).name;
@@ -37,16 +82,17 @@ export class S3StorageDriver implements StorageDriver {
   private readonly publicPrefix: string;
 
   constructor() {
-    this.bucket = requireEnv("S3_BUCKET");
-    this.privatePrefix = (process.env.S3_PRIVATE_PREFIX || "private").replace(/^\/+|\/+$/g, "");
-    this.publicPrefix = (process.env.S3_PUBLIC_PREFIX || "public").replace(/^\/+|\/+$/g, "");
+    const config = readS3Config();
+    this.bucket = config.bucket;
+    this.privatePrefix = config.privatePrefix;
+    this.publicPrefix = config.publicPrefix;
     this.client = new S3Client({
-      endpoint: requireEnv("S3_ENDPOINT"),
-      region: process.env.S3_REGION || "auto",
-      forcePathStyle: (process.env.S3_FORCE_PATH_STYLE || "true").toLowerCase() === "true",
+      endpoint: config.endpoint,
+      region: config.region,
+      forcePathStyle: config.forcePathStyle,
       credentials: {
-        accessKeyId: requireEnv("S3_ACCESS_KEY_ID"),
-        secretAccessKey: requireEnv("S3_SECRET_ACCESS_KEY"),
+        accessKeyId: config.accessKeyId,
+        secretAccessKey: config.secretAccessKey,
       },
     });
   }

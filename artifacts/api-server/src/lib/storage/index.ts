@@ -29,8 +29,13 @@ function createStorageDriver(): StorageDriver {
 export class ObjectStorageService {
   private readonly driver: StorageDriver;
 
-  constructor() {
+  private constructor() {
     this.driver = createStorageDriver();
+  }
+
+  /** Internal — used only by the process-wide singleton accessor. */
+  static createInstance(): ObjectStorageService {
+    return new ObjectStorageService();
   }
 
   /**
@@ -77,4 +82,21 @@ export class ObjectStorageService {
     }
     await this.driver.deletePrivateObject(entityId);
   }
+}
+
+let singleton: ObjectStorageService | null = null;
+
+/**
+ * Process-wide {@link ObjectStorageService} singleton.
+ *
+ * The backing driver (and its env-derived S3/GCS config + client) is created
+ * exactly once and shared by every route, instead of each route building its
+ * own instance. Called at module load by the routes, so missing/invalid S3 env
+ * still fails fast at startup.
+ */
+export function getObjectStorageService(): ObjectStorageService {
+  if (!singleton) {
+    singleton = ObjectStorageService.createInstance();
+  }
+  return singleton;
 }

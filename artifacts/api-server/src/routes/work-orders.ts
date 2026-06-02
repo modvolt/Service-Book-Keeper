@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq, ilike, and, sql } from "drizzle-orm";
 import multer from "multer";
 import { db, workOrdersTable, vehiclesTable, photosTable } from "@workspace/db";
-import { ObjectStorageService } from "../lib/storage";
+import { getObjectStorageService } from "../lib/storage";
 import { validateImageUpload } from "../lib/fileValidation";
 import {
   ListWorkOrdersQueryParams,
@@ -19,7 +19,7 @@ import { recomputeVehicleServiceStatus } from "../lib/vehicleStatus";
 
 const router: IRouter = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
-const storage = new ObjectStorageService();
+const storage = getObjectStorageService();
 
 async function getWorkOrderWithPhotos(id: number) {
   const [order] = await db.select().from(workOrdersTable).where(eq(workOrdersTable.id, id));
