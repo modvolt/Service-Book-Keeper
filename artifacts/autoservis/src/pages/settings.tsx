@@ -200,7 +200,7 @@ export default function SettingsPage() {
 
   async function handleImportBackup(file: File) {
     const ok = confirm(
-      "Obnovením ze zálohy se NAHRADÍ všechna současná data (vozidla, zakázky, servisní historie, materiály, nastavení). Tuto akci nelze vrátit zpět. Pokračovat?",
+      "Obnova ze zálohy SLOUČÍ data ze souboru se současnými: chybějící doplní a existující záznamy (podle ID) přepíše hodnotami ze zálohy. Nic se nemaže. Přepsané hodnoty u existujících záznamů nelze vrátit zpět. Pokračovat?",
     );
     if (!ok) return;
     setImporting(true);
@@ -532,7 +532,7 @@ export default function SettingsPage() {
           <div className="rounded-md border p-4 space-y-2">
             <div className="font-medium">Obnova ze zálohy</div>
             <p className="text-sm text-muted-foreground">
-              Načte data ze záložního souboru. Pozor: nahradí všechna současná data v aplikaci.
+              Načte data ze záložního souboru a sloučí je se současnými: chybějící záznamy doplní a existující (podle ID) aktualizuje hodnotami ze zálohy. Záznamy, které v záloze nejsou, zůstanou zachovány — nic se nemaže.
             </p>
             <input ref={backupInputRef} type="file" accept="application/json,.json" className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImportBackup(f); e.target.value = ""; }} />

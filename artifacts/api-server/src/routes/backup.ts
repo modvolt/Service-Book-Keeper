@@ -1,5 +1,6 @@
-import { Router, type IRouter } from "express";
-import { sql } from "drizzle-orm";
+import { Router, type IRouter, json } from "express";
+import { getTableColumns, sql } from "drizzle-orm";
+import type { PgTable } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import {
   db,
@@ -84,24 +85,53 @@ const ImportBody = z.object({
 
 type Row = Record<string, unknown>;
 
-function withDates(rows: Row[], dateKeys: string[]): Row[] {
+// Keep only columns the table actually has (so a backup taken before a column was
+// removed still imports), and turn ISO strings back into Date objects for
+// timestamp columns. `date` columns use mode:"string" (dataType "string") so they
+// pass through untouched; only timestamps (dataType "date") need coercion.
+function coerceRows(table: PgTable, rows: Row[]): Row[] {
+  const cols = getTableColumns(table);
   return rows.map((row) => {
-    const out: Row = { ...row };
-    for (const k of dateKeys) {
-      if (out[k] != null && typeof out[k] === "string") out[k] = new Date(out[k] as string);
+    const out: Row = {};
+    for (const [key, col] of Object.entries(cols)) {
+      if (!(key in row)) continue;
+      let v = row[key];
+      if (v != null && typeof v === "string" && (col as { dataType?: string }).dataType === "date") {
+        v = new Date(v);
+      }
+      out[key] = v;
     }
     return out;
   });
 }
 
+// On id conflict, overwrite every non-id column with the value from the backup
+// row (`excluded`). This is what makes the merge "update existing".
+function excludedSet(table: PgTable): Record<string, unknown> {
+  const cols = getTableColumns(table);
+  // Keyed by the Drizzle property name; the value references the proposed row.
+  const out: Record<string, unknown> = {};
+  for (const [key, col] of Object.entries(cols)) {
+    const name = (col as { name: string }).name;
+    if (name === "id") continue;
+    out[key] = sql`excluded.${sql.identifier(name)}`;
+  }
+  return out;
+}
+
+const importJson = json({ limit: "10mb" });
+
 /**
  * POST /backup/import
  *
- * Replace all data with the contents of an exported backup.
- * Existing rows are wiped first; IDs from the backup are preserved so that
- * relationships stay intact, and serial sequences are realigned afterwards.
+ * Merge the contents of an exported backup into the current data:
+ * rows missing in the database are inserted, rows that already exist (matched by
+ * id) are updated with the backup's values. Nothing is deleted — records present
+ * in the database but absent from the backup are left untouched. IDs from the
+ * backup are preserved and serial sequences are realigned afterwards so future
+ * inserts don't collide.
  */
-router.post("/backup/import", async (req, res): Promise<void> => {
+router.post("/backup/import", importJson, async (req, res): Promise<void> => {
   const parsed = ImportBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Soubor zálohy je neplatný nebo poškozený" });
@@ -111,36 +141,28 @@ router.post("/backup/import", async (req, res): Promise<void> => {
   const d = parsed.data.data;
 
   try {
-    await db.transaction(async (tx) => {
-      // Wipe in FK-safe order (children first).
-      await tx.delete(photosTable);
-      await tx.delete(workOrderMaterialsTable);
-      await tx.delete(appointmentsTable);
-      await tx.delete(workOrdersTable);
-      await tx.delete(serviceRecordsTable);
-      await tx.delete(materialsCatalogTable);
-      await tx.delete(vehiclesTable);
-      await tx.delete(settingsTable);
+    const merged = await db.transaction(async (tx) => {
+      const merge = async (table: PgTable, rows: Row[]): Promise<number> => {
+        if (!rows.length) return 0;
+        const values = coerceRows(table, rows);
+        await tx
+          .insert(table)
+          .values(values as any)
+          .onConflictDoUpdate({ target: (table as any).id, set: excludedSet(table) as any });
+        return values.length;
+      };
 
-      // Insert in FK-safe order (parents first), preserving IDs.
-      if (d.vehicles.length)
-        await tx.insert(vehiclesTable).values(withDates(d.vehicles, ["createdAt"]) as any);
-      if (d.serviceRecords.length)
-        await tx.insert(serviceRecordsTable).values(withDates(d.serviceRecords, ["createdAt"]) as any);
-      if (d.workOrders.length)
-        await tx.insert(workOrdersTable).values(withDates(d.workOrders, ["createdAt", "completedAt"]) as any);
-      if (d.materialsCatalog.length)
-        await tx.insert(materialsCatalogTable).values(withDates(d.materialsCatalog, ["createdAt"]) as any);
-      if (d.workOrderMaterials.length)
-        await tx.insert(workOrderMaterialsTable).values(withDates(d.workOrderMaterials, ["createdAt"]) as any);
-      if (d.photos.length)
-        await tx.insert(photosTable).values(withDates(d.photos, ["createdAt"]) as any);
-      if (d.appointments.length)
-        await tx.insert(appointmentsTable).values(withDates(d.appointments, ["createdAt"]) as any);
-      if (d.settings.length)
-        await tx.insert(settingsTable).values(withDates(d.settings, ["updatedAt"]) as any);
-      else
-        await tx.insert(settingsTable).values({ id: 1 });
+      // Parents before children so foreign keys resolve for newly-inserted rows.
+      const summary = {
+        vehicles: await merge(vehiclesTable, d.vehicles),
+        materialsCatalog: await merge(materialsCatalogTable, d.materialsCatalog),
+        workOrders: await merge(workOrdersTable, d.workOrders),
+        serviceRecords: await merge(serviceRecordsTable, d.serviceRecords),
+        appointments: await merge(appointmentsTable, d.appointments),
+        workOrderMaterials: await merge(workOrderMaterialsTable, d.workOrderMaterials),
+        photos: await merge(photosTable, d.photos),
+        settings: await merge(settingsTable, d.settings),
+      };
 
       // Realign serial sequences so future inserts don't collide with restored IDs.
       const serialTables = [
@@ -157,9 +179,11 @@ router.post("/backup/import", async (req, res): Promise<void> => {
           sql`SELECT setval(pg_get_serial_sequence(${t}, 'id'), COALESCE((SELECT MAX(id) FROM ${sql.raw(`"${t}"`)}), 1), (SELECT COUNT(*) > 0 FROM ${sql.raw(`"${t}"`)}))`,
         );
       }
+
+      return summary;
     });
 
-    res.json({ ok: true });
+    res.json({ ok: true, merged });
   } catch (err) {
     req.log.error({ err }, "Backup import failed");
     res.status(500).json({ error: "Obnova ze zálohy selhala" });

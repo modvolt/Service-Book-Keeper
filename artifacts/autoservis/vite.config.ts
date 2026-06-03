@@ -60,6 +60,10 @@ export default defineConfig({
       workbox: {
         navigateFallback: `${basePath}index.html`,
         globPatterns: ["**/*.{js,css,html,svg,png,ico,woff,woff2}"],
+        // Drop precache entries from previous builds when the new SW activates, so
+        // a published update can't keep serving stale chunks (the cause of
+        // post-deploy "removeChild" crashes).
+        cleanupOutdatedCaches: true,
       },
       devOptions: {
         enabled: false,
