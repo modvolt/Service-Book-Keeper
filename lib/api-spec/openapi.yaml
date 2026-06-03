@@ -1711,7 +1711,7 @@ components:
         images:
           type: array
           minItems: 1
-          maxItems: 4
+          maxItems: 8
           items:
             type: string
             description: Base64-encoded image data (without the data URI prefix)

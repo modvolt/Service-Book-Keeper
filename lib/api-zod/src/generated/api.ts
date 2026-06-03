@@ -342,7 +342,7 @@ export const ImportInvoiceForWorkOrderResponse = zod.object({
 /**
  * @summary Extract vehicle data from a photo of a Czech technical license (TP)
  */
-export const importVehicleFromTpBodyImagesMax = 4;
+export const importVehicleFromTpBodyImagesMax = 8;
 
 
 

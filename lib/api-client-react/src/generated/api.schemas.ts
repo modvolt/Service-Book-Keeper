@@ -642,7 +642,7 @@ export interface WorkOrderUpdate {
 export interface ImportTpInput {
   /**
      * @minItems 1
-     * @maxItems 4
+     * @maxItems 8
      */
   images: string[];
 }

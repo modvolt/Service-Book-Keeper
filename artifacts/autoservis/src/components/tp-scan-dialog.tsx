@@ -17,6 +17,8 @@ export type TpExtractedData = {
   odometerKm: number | null;
 };
 
+const MAX_IMAGES = 8;
+
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -54,7 +56,7 @@ export function TpScanDialog({
   function addImages(list: File[]) {
     const imgs = list.filter((f) => f.type.startsWith("image/"));
     if (imgs.length === 0) return;
-    setFiles((p) => [...p, ...imgs].slice(0, 4));
+    setFiles((p) => [...p, ...imgs].slice(0, MAX_IMAGES));
   }
 
   function handleAdd(list: FileList | null) {
@@ -122,7 +124,7 @@ export function TpScanDialog({
     onOpenChange(v);
   }
 
-  const canAddMore = files.length < 4 && !importFromTp.isPending;
+  const canAddMore = files.length < MAX_IMAGES && !importFromTp.isPending;
 
   return (
     <Dialog open={open} onOpenChange={close}>
@@ -130,7 +132,7 @@ export function TpScanDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2"><ScanLine className="h-5 w-5 text-primary" />Načtení vozu</DialogTitle>
           <DialogDescription>
-            Vyfoťte malý technický průkaz (osvědčení o registraci, část I). Pokud není po ruce, stačí fotka SPZ a VIN (štítek, ražba nebo VIN za sklem). Přidejte i fotku přístrojové desky (tachometru) pro načtení stavu km. Můžete přidat až 4 obrázky.
+            Vyfoťte malý technický průkaz (osvědčení o registraci, část I). Pokud není po ruce, stačí fotka SPZ a VIN (štítek, ražba nebo VIN za sklem). Přidejte i fotku přístrojové desky (tachometru) pro načtení stavu km. Můžete přidat až 8 obrázků.
             Automaticky se rozpozná SPZ, VIN, výrobce, model, rok registrace, objem motoru a stav tachometru.
           </DialogDescription>
         </DialogHeader>
@@ -180,16 +182,19 @@ export function TpScanDialog({
           {files.length > 0 && (
             <div className="grid grid-cols-4 gap-2">
               {files.map((f, i) => (
-                <div key={i} className="relative group aspect-square rounded border overflow-hidden bg-muted">
-                  {previews[i] && (
-                    <img src={previews[i]} alt={f.name} className="w-full h-full object-cover" />
-                  )}
-                  <Button type="button" variant="secondary" size="icon"
-                    className="absolute top-1 right-1 h-6 w-6 opacity-90"
+                <div key={i} className="relative aspect-square">
+                  <div className="h-full w-full rounded border overflow-hidden bg-muted">
+                    {previews[i] && (
+                      <img src={previews[i]} alt={f.name} className="w-full h-full object-cover" />
+                    )}
+                  </div>
+                  <button type="button"
+                    aria-label="Odebrat fotografii"
+                    className="absolute -top-1.5 -right-1.5 h-6 w-6 rounded-full bg-red-600 text-white flex items-center justify-center shadow-md ring-2 ring-white hover:bg-red-700 disabled:opacity-50"
                     onClick={() => setFiles((p) => p.filter((_, idx) => idx !== i))}
                     disabled={importFromTp.isPending}>
-                    <X className="h-3 w-3" />
-                  </Button>
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 </div>
               ))}
             </div>
