@@ -39,6 +39,8 @@ export const settingsTable: { id: object } = { id: {} };
 export const vehiclesTable: { id: object } = { id: {} };
 export const auditLogTable: { id: object } = { id: {} };
 export const customerReminderLogTable: { id: object } = { id: {} };
+export const workOrdersTable: { id: object } = { id: {} };
+export const serviceRecordsTable: { id: object } = { id: {} };
 
 export const __store = new Store();
 

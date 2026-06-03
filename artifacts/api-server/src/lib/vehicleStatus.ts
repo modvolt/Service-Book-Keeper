@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db, serviceRecordsTable, workOrdersTable, vehiclesTable } from "@workspace/db";
 
 function addMonthsUtc(dateStr: string, months: number): string {
@@ -20,9 +20,15 @@ type Event = {
 
 /**
  * Recompute vehicle.currentKm, last* service dates/km and stkValidUntil
- * from the full history of service records and completed work orders.
- * Authoritative: if a service item is no longer recorded anywhere, the
- * corresponding "last *" field is cleared.
+ * from the full history of service records and work orders.
+ *
+ * currentKm is monotonic and status-agnostic: it takes the highest Km known
+ * across all service records and all work orders (any status) AND the vehicle's
+ * existing currentKm. It never decreases and is never cleared once known.
+ *
+ * The "last *" service date/state fields stay authoritative over service
+ * records + completed work orders only: if a service item is no longer recorded
+ * anywhere, the corresponding "last *" field is cleared.
  */
 export async function recomputeVehicleServiceStatus(vehicleId: number): Promise<void> {
   const [vehicle] = await db.select().from(vehiclesTable).where(eq(vehiclesTable.id, vehicleId));
@@ -30,8 +36,11 @@ export async function recomputeVehicleServiceStatus(vehicleId: number): Promise<
 
   const records = await db.select().from(serviceRecordsTable)
     .where(eq(serviceRecordsTable.vehicleId, vehicleId));
-  const orders = await db.select().from(workOrdersTable)
-    .where(and(eq(workOrdersTable.vehicleId, vehicleId), eq(workOrdersTable.status, "completed")));
+  // All work orders (any status) — needed for the Km candidate.
+  const allOrders = await db.select().from(workOrdersTable)
+    .where(eq(workOrdersTable.vehicleId, vehicleId));
+  // Only completed work orders drive the "last *" service date/state fields.
+  const orders = allOrders.filter((o) => o.status === "completed");
 
   const events: Event[] = [];
   for (const r of records) {
@@ -69,8 +78,15 @@ export async function recomputeVehicleServiceStatus(vehicleId: number): Promise<
     return best;
   }
 
-  const kmEvents = events.filter((e) => e.km != null);
-  const maxKm = kmEvents.length > 0 ? Math.max(...kmEvents.map((e) => e.km as number)) : null;
+  // Km candidate spans ALL service records and ALL work orders regardless of
+  // status. Current Km is monotonic: never decreases, never gets cleared once a
+  // value is known. Only stays null when no Km exists anywhere and none was
+  // previously stored.
+  const kmCandidates: number[] = [];
+  for (const r of records) if (r.km != null) kmCandidates.push(r.km);
+  for (const o of allOrders) if (o.km != null) kmCandidates.push(o.km);
+  if (vehicle.currentKm != null) kmCandidates.push(vehicle.currentKm);
+  const maxKm = kmCandidates.length > 0 ? Math.max(...kmCandidates) : null;
 
   const oil = latest((e) => e.oil);
   const brakes = latest((e) => e.brakes);
