@@ -746,6 +746,21 @@ export const CreateServiceRecordBody = zod.object({
 
 
 /**
+ * @summary List customer reminder emails already sent for a vehicle
+ */
+export const ListVehicleReminderLogParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ListVehicleReminderLogResponseItem = zod.object({
+  "id": zod.number(),
+  "reminderKey": zod.string(),
+  "sentAt": zod.coerce.date()
+})
+export const ListVehicleReminderLogResponse = zod.array(ListVehicleReminderLogResponseItem)
+
+
+/**
  * @summary Get service record by ID
  */
 export const GetServiceRecordParams = zod.object({

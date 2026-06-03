@@ -529,6 +529,12 @@ export interface VehicleUpdate {
   brakeFluidIntervalMonths?: number | null;
 }
 
+export interface CustomerReminderLogEntry {
+  id: number;
+  reminderKey: string;
+  sentAt: string;
+}
+
 export interface ServiceRecordInput {
   date: string;
   /** @nullable */

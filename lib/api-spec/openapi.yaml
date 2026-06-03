@@ -538,6 +538,29 @@ paths:
               schema:
                 $ref: "#/components/schemas/ServiceRecord"
 
+  /vehicles/{id}/reminder-log:
+    get:
+      operationId: listVehicleReminderLog
+      tags: [vehicles]
+      summary: List customer reminder emails already sent for a vehicle
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reminder send history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CustomerReminderLogEntry"
+        "404":
+          description: Not found
+
   /service-records/{id}:
     get:
       operationId: getServiceRecord
@@ -1443,6 +1466,18 @@ components:
         technician:
           type: ["string", "null"]
         createdAt:
+          type: string
+          format: date-time
+
+    CustomerReminderLogEntry:
+      type: object
+      required: [id, reminderKey, sentAt]
+      properties:
+        id:
+          type: integer
+        reminderKey:
+          type: string
+        sentAt:
           type: string
           format: date-time
 

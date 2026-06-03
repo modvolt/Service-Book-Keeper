@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useRoute, Link, useLocation } from "wouter";
 import { LicensePlate } from "@/components/license-plate";
-import { useGetVehicle, useUpdateVehicle, useDeleteVehicle, useCreateServiceRecord, useDeleteServiceRecord, useListVehicleMakes, useListVehicleModels, useGetSettings, useRecomputeVehicleStatus, getGetVehicleQueryKey, getListServiceRecordsQueryKey, getListVehiclesQueryKey } from "@workspace/api-client-react";
+import { useGetVehicle, useUpdateVehicle, useDeleteVehicle, useCreateServiceRecord, useDeleteServiceRecord, useListVehicleMakes, useListVehicleModels, useGetSettings, useRecomputeVehicleStatus, useListVehicleReminderLog, getGetVehicleQueryKey, getListServiceRecordsQueryKey, getListVehiclesQueryKey } from "@workspace/api-client-react";
 import { VehicleHistoryExportDialog } from "@/components/vehicle-history-export-dialog";
 import { AutocompleteInput } from "@/components/autocomplete-input";
 import { AresButton } from "@/components/ares-button";
@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { ArrowLeft, Car, Wrench, Plus, Trash2, ClipboardList, Edit, User, FileDown, RefreshCw } from "lucide-react";
+import { ArrowLeft, Car, Wrench, Plus, Trash2, ClipboardList, Edit, User, FileDown, RefreshCw, BellRing } from "lucide-react";
 import { WorkOrderStatusBadge } from "@/lib/work-order-status";
 import { format, differenceInDays, parseISO, isValid } from "date-fns";
 import { cs } from "date-fns/locale";
@@ -46,6 +46,19 @@ const SERVICE_BADGE_STYLES: Record<ServiceCategory, string> = {
 
 function ServiceBadge({ category, children }: { category: ServiceCategory; children: React.ReactNode }) {
   return <Badge variant="outline" className={cn("text-xs", SERVICE_BADGE_STYLES[category])}>{children}</Badge>;
+}
+
+const REMINDER_KEY_LABELS: Record<string, string> = {
+  stk: "STK",
+  oil: "Výměna oleje",
+  brakes: "Brzdy",
+  timing: "Rozvody",
+  brakeFluid: "Brzdová kapalina",
+  transmissionOil: "Olej převodovky",
+};
+
+function reminderKeyLabel(key: string): string {
+  return REMINDER_KEY_LABELS[key] ?? key;
 }
 
 function StkBadge({ date }: { date?: string | null }) {
@@ -127,6 +140,7 @@ export default function VehicleDetail() {
 
   const { data: vehicle, isLoading, isError } = useGetVehicle(id, { query: { enabled: !isNaN(id) } as any });
   const { data: settings } = useGetSettings();
+  const { data: reminderLog = [] } = useListVehicleReminderLog(id, { query: { enabled: !isNaN(id) } as any });
 
   const [editOpen, setEditOpen] = useState(false);
   const [addServiceOpen, setAddServiceOpen] = useState(false);
@@ -456,6 +470,25 @@ export default function VehicleDetail() {
               lastDate={vehicle.lastBrakeFluidDate}
               intervalMonths={vehicle.brakeFluidIntervalMonths ?? 24}
             />
+          </CardContent>
+        </Card>
+
+        {/* Sent customer reminders */}
+        <Card className="md:col-span-2">
+          <CardHeader><CardTitle className="flex items-center gap-2"><BellRing className="h-4 w-4" />Odeslaná upozornění zákazníkovi</CardTitle></CardHeader>
+          <CardContent>
+            {reminderLog.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">Zatím nebylo odesláno žádné upozornění.</p>
+            ) : (
+              <ul className="divide-y">
+                {reminderLog.map((entry) => (
+                  <li key={entry.id} className="flex items-center justify-between py-2 gap-3">
+                    <span className="text-sm font-medium">{reminderKeyLabel(entry.reminderKey)}</span>
+                    <span className="text-sm text-muted-foreground">Odesláno {dateStr(entry.sentAt)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
       </div>

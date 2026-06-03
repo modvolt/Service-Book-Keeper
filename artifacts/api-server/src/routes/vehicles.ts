@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, ilike, or, desc } from "drizzle-orm";
-import { db, vehiclesTable, serviceRecordsTable, workOrdersTable } from "@workspace/db";
+import { db, vehiclesTable, serviceRecordsTable, workOrdersTable, customerReminderLogTable } from "@workspace/db";
 import {
   ListVehiclesQueryParams,
   CreateVehicleBody,
@@ -173,6 +173,36 @@ router.post("/vehicles/:id/recompute-status", async (req, res): Promise<void> =>
   await recomputeVehicleServiceStatus(id);
   const [vehicle] = await db.select().from(vehiclesTable).where(eq(vehiclesTable.id, id));
   res.json(vehicle);
+});
+
+router.get("/vehicles/:id/reminder-log", async (req, res): Promise<void> => {
+  const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
+  const id = parseInt(raw, 10);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid ID" });
+    return;
+  }
+
+  const [vehicle] = await db
+    .select({ id: vehiclesTable.id })
+    .from(vehiclesTable)
+    .where(eq(vehiclesTable.id, id));
+  if (!vehicle) {
+    res.status(404).json({ error: "Vozidlo nenalezeno" });
+    return;
+  }
+
+  const rows = await db
+    .select({
+      id: customerReminderLogTable.id,
+      reminderKey: customerReminderLogTable.reminderKey,
+      sentAt: customerReminderLogTable.sentAt,
+    })
+    .from(customerReminderLogTable)
+    .where(eq(customerReminderLogTable.vehicleId, id))
+    .orderBy(desc(customerReminderLogTable.sentAt), desc(customerReminderLogTable.id));
+
+  res.json(rows);
 });
 
 router.delete("/vehicles/:id", async (req, res): Promise<void> => {

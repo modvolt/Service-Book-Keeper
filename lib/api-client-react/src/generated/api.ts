@@ -27,6 +27,7 @@ import type {
   AuditLogEntry,
   AuthStatus,
   ChangePasswordInput,
+  CustomerReminderLogEntry,
   DashboardSummary,
   Error,
   ForgotPasswordInput,
@@ -2078,6 +2079,83 @@ export const useCreateServiceRecord = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getCreateServiceRecordMutationOptions(options));
     }
+
+export const getListVehicleReminderLogUrl = (id: number,) => {
+
+
+
+
+  return `/api/vehicles/${id}/reminder-log`
+}
+
+/**
+ * @summary List customer reminder emails already sent for a vehicle
+ */
+export const listVehicleReminderLog = async (id: number, options?: RequestInit): Promise<CustomerReminderLogEntry[]> => {
+
+  return customFetch<CustomerReminderLogEntry[]>(getListVehicleReminderLogUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListVehicleReminderLogQueryKey = (id: number,) => {
+    return [
+    `/api/vehicles/${id}/reminder-log`
+    ] as const;
+    }
+
+
+export const getListVehicleReminderLogQueryOptions = <TData = Awaited<ReturnType<typeof listVehicleReminderLog>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVehicleReminderLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListVehicleReminderLogQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listVehicleReminderLog>>> = ({ signal }) => listVehicleReminderLog(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listVehicleReminderLog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListVehicleReminderLogQueryResult = NonNullable<Awaited<ReturnType<typeof listVehicleReminderLog>>>
+export type ListVehicleReminderLogQueryError = ErrorType<void>
+
+
+/**
+ * @summary List customer reminder emails already sent for a vehicle
+ */
+
+export function useListVehicleReminderLog<TData = Awaited<ReturnType<typeof listVehicleReminderLog>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listVehicleReminderLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListVehicleReminderLogQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetServiceRecordUrl = (id: number,) => {
 

@@ -16,6 +16,7 @@ export * from './aresResult';
 export * from './auditLogEntry';
 export * from './authStatus';
 export * from './changePasswordInput';
+export * from './customerReminderLogEntry';
 export * from './dashboardSummary';
 export * from './error';
 export * from './forgotPasswordInput';
