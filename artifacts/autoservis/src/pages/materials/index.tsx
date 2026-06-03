@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Package, Plus, Search, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { MaterialsImportDialog } from "@/components/materials-import-dialog";
 
@@ -44,8 +45,8 @@ export default function MaterialsPage() {
         setName(""); setProductNumber(""); setUnit(""); setDefaultPrice("");
         invalidate();
       },
-      onError: () => {
-        toast({ title: "Chyba", description: "Materiál se nepodařilo přidat (možná již existuje).", variant: "destructive" });
+      onError: (err) => {
+        toast({ title: "Chyba", description: getApiErrorMessage(err, "Materiál se nepodařilo přidat (možná již existuje)."), variant: "destructive" });
       }
     });
   }
@@ -53,7 +54,7 @@ export default function MaterialsPage() {
   function handleDelete(id: number) {
     deleteMutation.mutate({ id }, {
       onSuccess: () => { toast({ title: "Smazáno" }); invalidate(); },
-      onError: () => toast({ title: "Chyba", variant: "destructive" }),
+      onError: (err) => toast({ title: "Chyba", description: getApiErrorMessage(err, "Materiál se nepodařilo smazat."), variant: "destructive" }),
     });
   }
 

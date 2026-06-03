@@ -7,3 +7,4 @@
 - [Gray page in prod](gray-page-prod.md) — works in dev but blank/gray in production = uncaught React render error; dev's Vite overlay masks it, prod has no error boundary.
 - [iOS file input camera capture](ios-file-capture.md) — on iOS a file input with both `multiple` and `capture` ignores `capture`; use two separate inputs for camera vs multi-upload.
 - [Scan km-prefill gating](scan-km-prefill-gating.md) — a scanned odometer prefills a known vehicle's work order only when strictly > stored currentKm; enforced in server + client, keep in lockstep.
+- [helmet CSP blocks inline scripts](helmet-csp-inline-script.md) — server-rendered HTML pages can't use inline <script> (script-src 'self'); serve JS as a same-origin file instead.

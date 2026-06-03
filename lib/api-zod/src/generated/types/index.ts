@@ -26,6 +26,8 @@ export * from './gdprSearchResult';
 export * from './gdprVehicleMatch';
 export * from './getAuditLogParams';
 export * from './healthStatus';
+export * from './healthStatusDatabase';
+export * from './healthStatusStorage';
 export * from './importMaterialsInput';
 export * from './importMaterialsInputItemsItem';
 export * from './importTpInput';

@@ -151,4 +151,16 @@ export class GcsStorageDriver implements StorageDriver {
     const file = objectStorageClient.bucket(bucketName).file(objectName);
     await file.delete({ ignoreNotFound: true });
   }
+
+  async healthCheck(): Promise<void> {
+    // Cheap, non-mutating probe: an object-existence check exercises GCS
+    // connectivity and the service account's object-level permissions without
+    // requiring bucket-level access (storage.buckets.get), which Replit's
+    // deployment service account does not grant. The sentinel object need not
+    // exist — exists() resolves [false] when absent and only rejects on a real
+    // connectivity/permission failure, which is exactly what we want to detect.
+    const fullPath = `${this.getPrivateObjectDir()}/.health-check`;
+    const { bucketName, objectName } = parseObjectPath(fullPath);
+    await objectStorageClient.bucket(bucketName).file(objectName).exists();
+  }
 }

@@ -25,6 +25,7 @@ import { cs } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { uploadFileWithProgress, UploadError } from "@/lib/upload";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { Progress } from "@/components/ui/progress";
 import { WorkOrderStatusBadge, WORK_ORDER_STATUSES, type WorkOrderStatus } from "@/lib/work-order-status";
 import { DEFAULT_HOURLY_RATE, computeLaborPrice } from "@/lib/labor";
@@ -211,14 +212,14 @@ export default function WorkOrderDetail() {
       }
     }, {
       onSuccess: () => { invalidateOrder(); setLaborEditing(false); toast({ title: "Práce uložena" }); },
-      onError: () => toast({ title: "Chyba", description: "Práci se nepodařilo uložit.", variant: "destructive" }),
+      onError: (err) => toast({ title: "Chyba", description: getApiErrorMessage(err, "Práci se nepodařilo uložit."), variant: "destructive" }),
     });
   }
 
   function handleQuickStatus(value: string) {
     updateOrder.mutate({ id, data: { status: value as WorkOrderStatus } }, {
       onSuccess: () => { invalidateOrder(); toast({ title: "Stav změněn" }); },
-      onError: () => toast({ title: "Chyba", description: "Stav se nepodařilo změnit.", variant: "destructive" }),
+      onError: (err) => toast({ title: "Chyba", description: getApiErrorMessage(err, "Stav se nepodařilo změnit."), variant: "destructive" }),
     });
   }
 
@@ -254,7 +255,7 @@ export default function WorkOrderDetail() {
       }
     }, {
       onSuccess: () => { invalidateOrder(); setEditMode(false); toast({ title: "Zakázka aktualizována" }); },
-      onError: () => toast({ title: "Chyba", description: "Změny se nepodařilo uložit.", variant: "destructive" }),
+      onError: (err) => toast({ title: "Chyba", description: getApiErrorMessage(err, "Změny se nepodařilo uložit."), variant: "destructive" }),
     });
   }
 
@@ -307,7 +308,7 @@ export default function WorkOrderDetail() {
         setShowSuggest(false);
         invalidateMaterials();
       },
-      onError: () => toast({ title: "Chyba", description: "Materiál se nepodařilo přidat.", variant: "destructive" }),
+      onError: (err) => toast({ title: "Chyba", description: getApiErrorMessage(err, "Materiál se nepodařilo přidat."), variant: "destructive" }),
     });
   }
 
@@ -321,7 +322,7 @@ export default function WorkOrderDetail() {
   function handleDeleteMaterial(matId: number) {
     deleteMaterial.mutate({ id: matId }, {
       onSuccess: invalidateMaterials,
-      onError: () => toast({ title: "Chyba", variant: "destructive" }),
+      onError: (err) => toast({ title: "Chyba", description: getApiErrorMessage(err, "Materiál se nepodařilo smazat."), variant: "destructive" }),
     });
   }
 
@@ -355,7 +356,7 @@ export default function WorkOrderDetail() {
             toast({ title: "Žádné položky", description: "Z fotografie se nepodařilo rozeznat materiál." });
           }
         },
-        onError: () => toast({ title: "Import selhal", variant: "destructive" }),
+        onError: (err) => toast({ title: "Import selhal", description: getApiErrorMessage(err, "Fakturu se nepodařilo zpracovat."), variant: "destructive" }),
       });
     } catch {
       toast({ title: "Chyba", description: "Soubor se nepodařilo načíst.", variant: "destructive" });

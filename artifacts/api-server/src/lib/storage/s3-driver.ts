@@ -3,6 +3,7 @@ import {
   GetObjectCommand,
   PutObjectCommand,
   DeleteObjectCommand,
+  HeadBucketCommand,
   type GetObjectCommandOutput,
 } from "@aws-sdk/client-s3";
 import type { Readable } from "stream";
@@ -156,5 +157,11 @@ export class S3StorageDriver implements StorageDriver {
       }
       throw err;
     }
+  }
+
+  async healthCheck(): Promise<void> {
+    // Cheap, non-mutating probe: a HEAD on the bucket confirms credentials and
+    // endpoint reachability without touching any object.
+    await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
   }
 }

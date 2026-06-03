@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Camera, Upload, X, Loader2, Sparkles, ScanLine, ClipboardPaste } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export type TpExtractedData = {
   licensePlate: string | null;
@@ -109,7 +110,7 @@ export function TpScanDialog({
           setFiles([]);
           onOpenChange(false);
         },
-        onError: () => toast({ title: "Načtení selhalo", description: "Zkuste pořídit ostřejší fotografii.", variant: "destructive" }),
+        onError: (err) => toast({ title: "Načtení selhalo", description: getApiErrorMessage(err, "Zkuste pořídit ostřejší fotografii."), variant: "destructive" }),
       });
     } catch {
       toast({ title: "Chyba", description: "Soubor se nepodařilo načíst.", variant: "destructive" });

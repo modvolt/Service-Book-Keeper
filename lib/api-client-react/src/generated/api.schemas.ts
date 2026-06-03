@@ -5,8 +5,27 @@
  * AutoServis API
  * OpenAPI spec version: 0.1.0
  */
+export type HealthStatusDatabase = typeof HealthStatusDatabase[keyof typeof HealthStatusDatabase];
+
+
+export const HealthStatusDatabase = {
+  ok: 'ok',
+  failing: 'failing',
+} as const;
+
+export type HealthStatusStorage = typeof HealthStatusStorage[keyof typeof HealthStatusStorage];
+
+
+export const HealthStatusStorage = {
+  ok: 'ok',
+  failing: 'failing',
+} as const;
+
 export interface HealthStatus {
   status: string;
+  ready: boolean;
+  database: HealthStatusDatabase;
+  storage: HealthStatusStorage;
 }
 
 export interface Error {

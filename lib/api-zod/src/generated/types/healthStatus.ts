@@ -5,7 +5,12 @@
  * AutoServis API
  * OpenAPI spec version: 0.1.0
  */
+import type { HealthStatusDatabase } from './healthStatusDatabase';
+import type { HealthStatusStorage } from './healthStatusStorage';
 
 export interface HealthStatus {
   status: string;
+  ready: boolean;
+  database: HealthStatusDatabase;
+  storage: HealthStatusStorage;
 }

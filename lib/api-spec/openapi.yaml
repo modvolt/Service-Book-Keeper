@@ -29,7 +29,13 @@ paths:
       summary: Health check
       responses:
         "200":
-          description: Healthy
+          description: Healthy — all dependencies reachable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+        "503":
+          description: Not ready — one or more dependencies are unreachable
           content:
             application/json:
               schema:
@@ -1000,8 +1006,19 @@ components:
       properties:
         status:
           type: string
+        ready:
+          type: boolean
+        database:
+          type: string
+          enum: [ok, failing]
+        storage:
+          type: string
+          enum: [ok, failing]
       required:
         - status
+        - ready
+        - database
+        - storage
 
     Error:
       type: object

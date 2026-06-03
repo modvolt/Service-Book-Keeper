@@ -82,6 +82,11 @@ export class ObjectStorageService {
     }
     await this.driver.deletePrivateObject(entityId);
   }
+
+  /** Probe the backing store for reachability. Rejects when unreachable. */
+  async healthCheck(): Promise<void> {
+    await this.driver.healthCheck();
+  }
 }
 
 let singleton: ObjectStorageService | null = null;

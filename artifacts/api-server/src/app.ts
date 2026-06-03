@@ -5,10 +5,12 @@ import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import healthRouter from "./routes/health";
+import diagnosticsRouter from "./routes/diagnostics";
 import authRouter from "./routes/auth";
 import { sessionMiddleware } from "./lib/session";
 import { requireAuth } from "./middlewares/requireAuth";
 import { logger } from "./lib/logger";
+import { recordError } from "./lib/error-buffer";
 
 const app: Express = express();
 
@@ -60,6 +62,9 @@ app.use(sessionMiddleware);
 
 // --- Public routes (no auth) ---
 app.use("/api", healthRouter);
+// Diagnostics page + error feed. Public by deliberate user choice so it stays
+// reachable at the deployed URL without a login.
+app.use("/api", diagnosticsRouter);
 
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -87,6 +92,7 @@ app.use("/api", requireAuth, router);
 // --- Global error handler ---
 app.use((err: unknown, req: Request, res: Response, next: NextFunction): void => {
   req.log?.error({ err }, "Unhandled error");
+  recordError(err, `API ${req.method} ${req.originalUrl?.split("?")[0] ?? req.url}`);
   if (res.headersSent) {
     next(err);
     return;
@@ -99,15 +105,28 @@ app.use((err: unknown, req: Request, res: Response, next: NextFunction): void =>
         ? (err as { statusCode: number }).statusCode
         : 500;
 
-  if (status === 413) {
+  // The specific error message, when we have a non-empty string one. Errors we
+  // throw ourselves carry Czech messages; this preserves them verbatim.
+  const specificMessage =
+    typeof err === "object" && err !== null && typeof (err as { message?: unknown }).message === "string"
+      ? (err as { message: string }).message.trim()
+      : "";
+
+  const normalizedStatus = status >= 400 && status < 600 ? status : 500;
+
+  // Keep clear Czech wording for the two situations the user always sees.
+  if (normalizedStatus === 413) {
     res.status(413).json({ error: "Soubor nebo požadavek je příliš velký." });
     return;
   }
-  if (status === 400) {
-    res.status(400).json({ error: "Neplatný požadavek." });
+  if (normalizedStatus === 400) {
+    res.status(400).json({ error: specificMessage || "Neplatný požadavek." });
     return;
   }
-  res.status(status >= 400 && status < 600 ? status : 500).json({ error: "Interní chyba serveru" });
+
+  // For everything else (incl. 500s), surface the real cause instead of hiding
+  // it behind a blanket message — per the user's explicit diagnostics request.
+  res.status(normalizedStatus).json({ error: specificMessage || "Interní chyba serveru" });
 });
 
 export default app;

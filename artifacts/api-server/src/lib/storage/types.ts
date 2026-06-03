@@ -40,4 +40,9 @@ export interface StorageDriver {
   getPublicObject(filePath: string): Promise<StoredObject | null>;
   /** Delete a private object. Must not throw if the object is already absent. */
   deletePrivateObject(entityId: string): Promise<void>;
+  /**
+   * Cheap, non-mutating reachability probe for the backing store. Resolves when
+   * the backend is reachable; rejects otherwise. Used by the readiness check.
+   */
+  healthCheck(): Promise<void>;
 }

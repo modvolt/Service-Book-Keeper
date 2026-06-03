@@ -23,6 +23,7 @@ import { cs } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { computeServiceStatus, type ServiceStatus } from "@/lib/service-status";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 type ServiceCategory =
   | "oil" | "transmissionOil" | "brakes" | "brakeFluid" | "timing"
@@ -344,7 +345,7 @@ export default function VehicleDetail() {
                         toast({ title: "Vozidlo smazáno" });
                         navigate("/vehicles");
                       },
-                      onError: () => toast({ title: "Chyba", description: "Vozidlo se nepodařilo smazat.", variant: "destructive" }),
+                      onError: (err) => toast({ title: "Chyba", description: getApiErrorMessage(err, "Vozidlo se nepodařilo smazat."), variant: "destructive" }),
                     });
                   }}
                 >Smazat</AlertDialogAction>
@@ -370,7 +371,7 @@ export default function VehicleDetail() {
                       queryClient.invalidateQueries({ queryKey: getListVehiclesQueryKey() });
                       toast({ title: "Údaje obnoveny", description: "Najeté km a stav servisu byly přepočítány z historie." });
                     },
-                    onError: () => toast({ title: "Obnovení selhalo", variant: "destructive" }),
+                    onError: (err) => toast({ title: "Obnovení selhalo", description: getApiErrorMessage(err), variant: "destructive" }),
                   });
                 }}
                 disabled={recompute.isPending}

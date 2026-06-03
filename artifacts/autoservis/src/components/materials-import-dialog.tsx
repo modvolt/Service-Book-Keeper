@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileSpreadsheet, Upload, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 const NONE = "__none__";
 
@@ -123,7 +124,7 @@ export function MaterialsImportDialog() {
         setOpen(false);
         reset();
       },
-      onError: () => toast({ title: "Chyba", description: "Import ceníku se nepodařil.", variant: "destructive" }),
+      onError: (err) => toast({ title: "Chyba", description: getApiErrorMessage(err, "Import ceníku se nepodařil."), variant: "destructive" }),
     });
   }
 
