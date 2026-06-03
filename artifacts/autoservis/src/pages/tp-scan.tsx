@@ -1,13 +1,30 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation } from "wouter";
+import { QRCodeSVG } from "qrcode.react";
 import { useGetVehicleByPlate } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ScanLine, Car, Plus, ClipboardList, RotateCcw, MonitorSmartphone, CheckCircle2, Loader2, Gauge } from "lucide-react";
+import { ScanLine, Car, Plus, ClipboardList, RotateCcw, MonitorSmartphone, CheckCircle2, Loader2, Gauge, Smartphone, Copy, Check } from "lucide-react";
 import { TpScanDialog, type TpExtractedData } from "@/components/tp-scan-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { setVehiclePrefill, setWorkOrderPrefill } from "@/lib/scan-prefill";
 import { sendScanHandoff } from "@/lib/scan-channel";
+
+// True on touch-first devices (phone/tablet). Used to decide whether to open the
+// camera automatically (phone) or show a QR code to hand off to a phone (PC).
+function detectTouchDevice(): boolean {
+  if (typeof window === "undefined") return false;
+  return (
+    (typeof navigator !== "undefined" && navigator.maxTouchPoints > 0) ||
+    window.matchMedia("(pointer: coarse)").matches
+  );
+}
+
+// Absolute URL of the scan screen on this same deployment, for the QR/link.
+function scanUrl(): string {
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
+  return `${window.location.origin}${base}/nacteni-vozu`;
+}
 
 type HandoffState =
   | { status: "idle" }
@@ -19,12 +36,25 @@ type HandoffState =
 export default function TpScanPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
-  const [dialogOpen, setDialogOpen] = useState(true);
+  const [isTouch] = useState(detectTouchDevice);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [data, setData] = useState<TpExtractedData | null>(null);
   const [handoff, setHandoff] = useState<HandoffState>({ status: "idle" });
+  const [copied, setCopied] = useState(false);
 
-  // Open camera dialog automatically on mount
-  useEffect(() => { setDialogOpen(true); }, []);
+  // On a phone (touch device) open the camera automatically. On a PC keep it
+  // closed and show a QR code so the user can hand off to their phone instead.
+  useEffect(() => { if (isTouch) setDialogOpen(true); }, [isTouch]);
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(scanUrl());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({ title: "Kopírování se nezdařilo", description: scanUrl(), variant: "destructive" });
+    }
+  }
 
   const plateClean = data?.licensePlate?.replace(/\s+/g, "").toUpperCase() ?? "";
   const { data: foundVehicle, isFetching } = useGetVehicleByPlate(plateClean, {
@@ -96,7 +126,39 @@ export default function TpScanPage() {
         </div>
       </div>
 
-      {!data ? (
+      {!data && !isTouch && (
+        <Card>
+          <CardContent className="py-8">
+            <div className="flex flex-col md:flex-row items-center gap-8">
+              <div className="bg-white p-4 rounded-lg border shrink-0">
+                <QRCodeSVG value={scanUrl()} size={208} level="M" />
+              </div>
+              <div className="space-y-4 text-center md:text-left">
+                <div className="flex items-center gap-2 justify-center md:justify-start">
+                  <Smartphone className="h-6 w-6 text-primary" />
+                  <h2 className="text-xl font-semibold">Naskenujte telefonem</h2>
+                </div>
+                <p className="text-muted-foreground max-w-md">
+                  Naskenujte tento QR kód mobilem. Na telefonu se rovnou otevře fotoaparát pro načtení vozu a vyfocené údaje se objeví zde na počítači připravené ke kontrole.
+                </p>
+                <div className="flex items-center gap-2 justify-center md:justify-start">
+                  <code className="text-sm bg-muted px-2 py-1 rounded font-mono break-all">{scanUrl()}</code>
+                  <Button variant="outline" size="sm" onClick={copyLink}>
+                    {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <div className="border-t pt-4">
+                  <Button variant="ghost" onClick={() => setDialogOpen(true)}>
+                    <ScanLine className="h-4 w-4 mr-2" />Načíst na tomto počítači
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!data && isTouch && (
         <Card>
           <CardContent className="py-12 text-center space-y-4">
             <ScanLine className="h-12 w-12 text-muted-foreground mx-auto" />
@@ -106,7 +168,9 @@ export default function TpScanPage() {
             </Button>
           </CardContent>
         </Card>
-      ) : (
+      )}
+
+      {data && (
         <Card>
           <CardHeader>
             <CardTitle>Načtené údaje</CardTitle>
