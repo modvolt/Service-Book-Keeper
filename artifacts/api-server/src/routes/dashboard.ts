@@ -44,19 +44,24 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
     );
 
   const recentWorkOrders = await db
-    .select()
+    .select({
+      order: workOrdersTable,
+      make: vehiclesTable.make,
+      model: vehiclesTable.model,
+    })
     .from(workOrdersTable)
+    .leftJoin(vehiclesTable, eq(workOrdersTable.vehicleId, vehiclesTable.id))
     .orderBy(sql`${workOrdersTable.createdAt} desc`)
     .limit(8);
 
-  // Attach photos to recent work orders
+  // Attach vehicle make/model and photos to recent work orders
   const withPhotos = await Promise.all(
-    recentWorkOrders.map(async (wo) => {
+    recentWorkOrders.map(async (r) => {
       const photos = await db
         .select()
         .from(photosTable)
-        .where(eq(photosTable.workOrderId, wo.id));
-      return { ...wo, photos };
+        .where(eq(photosTable.workOrderId, r.order.id));
+      return { ...r.order, make: r.make ?? null, model: r.model ?? null, photos };
     }),
   );
 

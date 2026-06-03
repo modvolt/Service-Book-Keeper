@@ -1,8 +1,13 @@
 <!DOCTYPE html>
-<html lang="cs">
+<html lang="cs" translate="no">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <!-- Disable browser auto-translation. Google Translate / Edge rewrite text
+         nodes into <font> wrappers, which then breaks React's DOM reconciliation
+         with "insertBefore/removeChild ... is not a child of this node" crashes
+         (most visible on the calendar's changing day names and dates). -->
+    <meta name="google" content="notranslate" />
     <title>AutoServis</title>
     <meta name="description" content="Správa autoservisu — vozidla, zakázky a servisní historie." />
     <meta name="theme-color" content="#1e3a8a" />
@@ -20,7 +25,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root" class="notranslate"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -22,14 +22,21 @@ export default function VehiclesList() {
 
   const filteredVehicles = useMemo(() => {
     if (!vehicles) return vehicles;
-    if (!stkFilter) return vehicles;
-    return vehicles
-      .filter((v) => {
-        if (!v.stkValidUntil) return false;
-        const diff = differenceInDays(parseISO(v.stkValidUntil), new Date());
-        return diff <= 30;
-      })
-      .sort((a, b) => (a.stkValidUntil ?? "").localeCompare(b.stkValidUntil ?? ""));
+    if (stkFilter) {
+      return vehicles
+        .filter((v) => {
+          if (!v.stkValidUntil) return false;
+          const diff = differenceInDays(parseISO(v.stkValidUntil), new Date());
+          return diff <= 30;
+        })
+        .sort((a, b) => (a.stkValidUntil ?? "").localeCompare(b.stkValidUntil ?? ""));
+    }
+    // Default view: alphabetical by make, then model (Czech collation, X3 < X5).
+    return [...vehicles].sort((a, b) => {
+      const make = (a.make ?? "").localeCompare(b.make ?? "", "cs", { sensitivity: "base", numeric: true });
+      if (make !== 0) return make;
+      return (a.model ?? "").localeCompare(b.model ?? "", "cs", { sensitivity: "base", numeric: true });
+    });
   }, [vehicles, stkFilter]);
 
   const getStkStatus = (dateString?: string | null) => {

@@ -203,8 +203,11 @@ export default function Dashboard() {
                   <Link key={order.id} href={`/work-orders/${order.id}`}>
                     <div className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer group">
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <LicensePlate plate={order.licensePlate} size="lg" />
+                          {(order.make || order.model) && (
+                            <span className="font-medium text-sm">{[order.make, order.model].filter(Boolean).join(" ")}</span>
+                          )}
                           {getStatusBadge(order.status)}
                         </div>
                         <p className="text-sm text-muted-foreground line-clamp-1">

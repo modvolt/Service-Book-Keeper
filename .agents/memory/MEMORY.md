@@ -6,6 +6,7 @@
 - [connect-pg-simple under esbuild](connect-pg-simple-esbuild.md) — createTableIfMissing silently fails in the bundle (missing table.sql); create session table via Drizzle push instead.
 - [Gray page in prod](gray-page-prod.md) — works in dev but blank/gray in production = uncaught React render error; dev's Vite overlay masks it, prod has no error boundary.
 - [PWA stale-chunk recovery](pwa-stale-chunk-recovery.md) — post-deploy "removeChild" crash = old SW serving stale chunks; one-shot reload guard must survive sessionStorage being unavailable or it loops.
+- [Browser translation breaks React](browser-translation-react-crash.md) — insertBefore/removeChild crashes that survive a redeploy = Google/Edge auto-translation, not stale chunks; disable translate in index.html.
 - [iOS file input camera capture](ios-file-capture.md) — on iOS a file input with both `multiple` and `capture` ignores `capture`; use two separate inputs for camera vs multi-upload.
 - [Scan km-prefill gating](scan-km-prefill-gating.md) — a scanned odometer prefills a known vehicle's work order only when strictly > stored currentKm; enforced in server + client, keep in lockstep.
 - [helmet CSP blocks inline scripts](helmet-csp-inline-script.md) — server-rendered HTML pages can't use inline <script> (script-src 'self'); serve JS as a same-origin file instead.
