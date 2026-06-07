@@ -34,11 +34,11 @@ ENV NODE_ENV=production
 # build output (served as static files), and node_modules. node_modules is kept
 # whole because the esbuild bundle externalizes native packages (@aws-sdk/*,
 # @google-cloud/*, nodemailer, ...) that must exist at runtime, and the
-# first-boot schema push uses drizzle-kit.
+# boot-time migration step uses drizzle-kit + the committed lib/db/drizzle files.
 COPY --from=builder /app /app
 
 EXPOSE 8080
 
-# Entrypoint applies the DB schema (idempotent drizzle push) then starts the
-# server. The script is invoked via sh so no executable bit is required.
+# Entrypoint applies committed DB migrations (drizzle-kit migrate) then starts
+# the server. The script is invoked via sh so no executable bit is required.
 ENTRYPOINT ["sh", "/app/docker-entrypoint.sh"]
