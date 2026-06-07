@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { FLEET_OWNER_NAME } from "@/lib/fleet";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -222,7 +223,7 @@ export default function VehicleDetail() {
   function handleEditSubmit(e: React.FormEvent) {
     e.preventDefault();
     const toInt = (s: string) => s.trim() ? parseInt(s, 10) : null;
-    const editIsCompany = editForm.ownerType === "company";
+    const editIsCompany = !editForm.isFleet && editForm.ownerType === "company";
     const editIsAuto = editForm.transmission === "automatic";
     updateVehicle.mutate({
       id,
@@ -233,13 +234,13 @@ export default function VehicleDetail() {
         currentKm: toInt(editForm.currentKm),
         engineDisplacement: toInt(editForm.engineDisplacement),
         transmission: editForm.transmission,
-        ownerType: editForm.ownerType,
-        ownerName: editForm.ownerName || null,
-        ownerAddress: editForm.ownerAddress || null,
+        ownerType: editForm.isFleet ? "private" : editForm.ownerType,
+        ownerName: editForm.isFleet ? FLEET_OWNER_NAME : (editForm.ownerName || null),
+        ownerAddress: editForm.isFleet ? null : (editForm.ownerAddress || null),
         ownerIco: editIsCompany ? (editForm.ownerIco || null) : null,
         ownerDic: editIsCompany ? (editForm.ownerDic || null) : null,
-        ownerPhone: editForm.ownerPhone || null,
-        ownerEmail: editForm.ownerEmail || null,
+        ownerPhone: editForm.isFleet ? null : (editForm.ownerPhone || null),
+        ownerEmail: editForm.isFleet ? null : (editForm.ownerEmail || null),
         lastOilChangeKm: toInt(editForm.lastOilChangeKm),
         stkValidUntil: editForm.stkValidUntil || null,
         lastOilChangeDate: editForm.lastOilChangeDate || null,
@@ -670,6 +671,12 @@ export default function VehicleDetail() {
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader><DialogTitle>Upravit vozidlo</DialogTitle></DialogHeader>
           <form onSubmit={handleEditSubmit} className="space-y-5">
+            {editForm.isFleet && (
+              <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3 text-sm">
+                Vozidlo vozového parku je vedeno na jméno <span className="font-medium">{FLEET_OWNER_NAME}</span>.
+              </div>
+            )}
+            {!editForm.isFleet && (
             <div className="space-y-3">
               <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Vlastník</h3>
               <RadioGroup
@@ -706,6 +713,7 @@ export default function VehicleDetail() {
                 )}
               </div>
             </div>
+            )}
 
             <div className="space-y-3">
               <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Vozidlo</h3>
@@ -788,10 +796,6 @@ export default function VehicleDetail() {
             </div>
 
             <div className="space-y-1"><Label>Poznámky</Label><Textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} /></div>
-            <label className="flex items-center gap-3 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3 cursor-pointer select-none">
-              <Checkbox checked={editForm.isFleet} onCheckedChange={(v) => setEditForm(f => ({ ...f, isFleet: v === true }))} />
-              <span className="text-sm font-medium">Vozidlo vozového parku (náhradní vůz)</span>
-            </label>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Zrušit</Button>
               <Button type="submit" disabled={updateVehicle.isPending}>Uložit změny</Button>

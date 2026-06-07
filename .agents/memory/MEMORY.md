@@ -11,3 +11,4 @@
 - [Scan km-prefill gating](scan-km-prefill-gating.md) — a scanned odometer prefills a known vehicle's work order only when strictly > stored currentKm; enforced in server + client, keep in lockstep.
 - [helmet CSP blocks inline scripts](helmet-csp-inline-script.md) — server-rendered HTML pages can't use inline <script> (script-src 'self'); serve JS as a same-origin file instead.
 - [Docker deploy smoke testing](docker-deploy-smoke-testing.md) — nested Docker in the workspace breaks bridge nets + exec healthchecks; use host net, literal env, X-Forwarded-Proto for secure cookies. Build needs pnpm pin.
+- [Post-merge codegen stale](post-merge-codegen-stale.md) — task-agent merges run drizzle push but NOT Orval codegen; rerun codegen if the merge touched openapi.yaml or frontend types go missing.

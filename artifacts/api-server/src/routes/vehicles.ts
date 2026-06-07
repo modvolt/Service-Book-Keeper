@@ -15,6 +15,8 @@ import { recomputeVehicleServiceStatus } from "../lib/vehicleStatus";
 
 const router: IRouter = Router();
 
+const FLEET_OWNER_NAME = "Martin Junek";
+
 router.get("/vehicles", async (req, res): Promise<void> => {
   const query = ListVehiclesQueryParams.safeParse(req.query);
   if (!query.success) {
@@ -55,11 +57,23 @@ router.post("/vehicles", async (req, res): Promise<void> => {
   }
 
   const { ownerType, isFleet, ...rest } = parsed.data;
+  const fleet = !!isFleet;
+  const ownerOverrides = fleet
+    ? {
+        ownerType: "private" as const,
+        ownerName: FLEET_OWNER_NAME,
+        ownerAddress: null,
+        ownerIco: null,
+        ownerDic: null,
+        ownerPhone: null,
+        ownerEmail: null,
+      }
+    : (ownerType ? { ownerType } : {});
   const values = {
     ...rest,
     licensePlate: normalizeSpz(parsed.data.licensePlate),
-    ...(ownerType ? { ownerType } : {}),
-    ...(isFleet != null ? { isFleet } : {}),
+    ...ownerOverrides,
+    isFleet: fleet,
   };
   const [vehicle] = await db.insert(vehiclesTable).values(values).returning();
   res.status(201).json(vehicle);
@@ -147,11 +161,33 @@ router.patch("/vehicles/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const { ownerType, isFleet, ...restUpdates } = parsed.data;
+  const { ownerType, ...restUpdates } = parsed.data;
+  // Fleet status is set only at creation (from Vozový park) and is immutable afterwards.
+  delete (restUpdates as Record<string, unknown>).isFleet;
+
+  const [existing] = await db
+    .select()
+    .from(vehiclesTable)
+    .where(eq(vehiclesTable.id, params.data.id));
+  if (!existing) {
+    res.status(404).json({ error: "Vozidlo nenalezeno" });
+    return;
+  }
+
   const updates: Record<string, unknown> = { ...restUpdates };
   if (parsed.data.licensePlate) updates.licensePlate = normalizeSpz(parsed.data.licensePlate);
   if (ownerType) updates.ownerType = ownerType;
-  if (isFleet != null) updates.isFleet = isFleet;
+
+  // Fleet vehicles are always registered under the fixed owner name.
+  if (existing.isFleet) {
+    updates.ownerType = "private";
+    updates.ownerName = FLEET_OWNER_NAME;
+    updates.ownerAddress = null;
+    updates.ownerIco = null;
+    updates.ownerDic = null;
+    updates.ownerPhone = null;
+    updates.ownerEmail = null;
+  }
 
   const [vehicle] = await db
     .update(vehiclesTable)

@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
+import { FLEET_OWNER_NAME } from "@/lib/fleet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ArrowLeft, Sparkles, Upload, X, Loader2, Camera, ClipboardPaste } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -60,7 +60,7 @@ export default function NewVehicle() {
   });
 
   const fleetMode = new URLSearchParams(window.location.search).get("fleet") === "1";
-  const [isFleet, setIsFleet] = useState(() => fleetMode);
+  const isFleet = fleetMode;
 
   const [importOpen, setImportOpen] = useState(false);
   const [importFiles, setImportFiles] = useState<File[]>([]);
@@ -92,7 +92,7 @@ export default function NewVehicle() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const isCompany = form.ownerType === "company";
+    const isCompany = !isFleet && form.ownerType === "company";
     createVehicle.mutate({
       data: {
         licensePlate: form.licensePlate.toUpperCase().trim(),
@@ -103,13 +103,13 @@ export default function NewVehicle() {
         vin: form.vin || null,
         engineDisplacement: toInt(form.engineDisplacement),
         transmission: form.transmission,
-        ownerType: form.ownerType,
-        ownerName: form.ownerName || null,
-        ownerAddress: form.ownerAddress || null,
+        ownerType: isFleet ? "private" : form.ownerType,
+        ownerName: isFleet ? FLEET_OWNER_NAME : (form.ownerName || null),
+        ownerAddress: isFleet ? null : (form.ownerAddress || null),
         ownerIco: isCompany ? (form.ownerIco || null) : null,
         ownerDic: isCompany ? (form.ownerDic || null) : null,
-        ownerPhone: form.ownerPhone || null,
-        ownerEmail: form.ownerEmail || null,
+        ownerPhone: isFleet ? null : (form.ownerPhone || null),
+        ownerEmail: isFleet ? null : (form.ownerEmail || null),
         currentKm: toInt(form.currentKm),
         notes: form.notes || null,
         stkValidUntil: form.stkValidUntil || null,
@@ -230,6 +230,12 @@ export default function NewVehicle() {
         <CardHeader><CardTitle>Údaje o vozidle</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {isFleet && (
+              <div className="rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3 text-sm">
+                Vozidlo vozového parku je vedeno na jméno <span className="font-medium">{FLEET_OWNER_NAME}</span>.
+              </div>
+            )}
+            {!isFleet && (
             <div className="space-y-4">
               <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Vlastník</h3>
               <RadioGroup
@@ -305,17 +311,17 @@ export default function NewVehicle() {
                 )}
               </div>
             </div>
+            )}
 
             <div className="space-y-4">
               <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Vozidlo</h3>
               {fleetMode && (
-                <label className="flex items-center gap-3 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3 cursor-pointer select-none">
-                  <Checkbox checked={isFleet} onCheckedChange={(v) => setIsFleet(v === true)} />
+                <div className="flex items-center gap-3 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3">
                   <div>
                     <span className="text-sm font-medium">Vozidlo vozového parku (náhradní vůz)</span>
                     <p className="text-xs text-muted-foreground">Vozidlo se zobrazí ve Vozidlech i ve Vozovém parku a lze ho půjčovat zákazníkům.</p>
                   </div>
-                </label>
+                </div>
               )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1 col-span-2">
