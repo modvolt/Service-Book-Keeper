@@ -99,6 +99,8 @@ router.post("/work-orders", async (req, res): Promise<void> => {
     timing: parsed.data.timing ?? false,
     airFilter: parsed.data.airFilter ?? false,
     cabinFilter: parsed.data.cabinFilter ?? false,
+    fuelFilter: parsed.data.fuelFilter ?? false,
+    sparkPlugs: parsed.data.sparkPlugs ?? false,
     stk: parsed.data.stk ?? false,
     tireChange: parsed.data.tireChange ?? false,
     diagnostics: parsed.data.diagnostics ?? false,

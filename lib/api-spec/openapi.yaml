@@ -1568,6 +1568,10 @@ components:
           type: boolean
         cabinFilter:
           type: boolean
+        fuelFilter:
+          type: boolean
+        sparkPlugs:
+          type: boolean
         stk:
           type: boolean
         tireChange:
@@ -1641,6 +1645,10 @@ components:
           type: boolean
         cabinFilter:
           type: boolean
+        fuelFilter:
+          type: boolean
+        sparkPlugs:
+          type: boolean
         stk:
           type: boolean
         tireChange:
@@ -1699,6 +1707,10 @@ components:
         airFilter:
           type: boolean
         cabinFilter:
+          type: boolean
+        fuelFilter:
+          type: boolean
+        sparkPlugs:
           type: boolean
         stk:
           type: boolean

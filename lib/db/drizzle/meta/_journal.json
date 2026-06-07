@@ -15,6 +15,13 @@
       "when": 1780868339829,
       "tag": "0001_busy_random",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780869343481,
+      "tag": "0002_friendly_mentallo",
+      "breakpoints": true
     }
   ]
 }

@@ -241,6 +241,8 @@ export interface WorkOrder {
   timing?: boolean;
   airFilter?: boolean;
   cabinFilter?: boolean;
+  fuelFilter?: boolean;
+  sparkPlugs?: boolean;
   stk?: boolean;
   tireChange?: boolean;
   diagnostics?: boolean;
@@ -570,6 +572,8 @@ export interface WorkOrderInput {
   timing?: boolean;
   airFilter?: boolean;
   cabinFilter?: boolean;
+  fuelFilter?: boolean;
+  sparkPlugs?: boolean;
   stk?: boolean;
   tireChange?: boolean;
   diagnostics?: boolean;
@@ -619,6 +623,8 @@ export interface WorkOrderUpdate {
   timing?: boolean;
   airFilter?: boolean;
   cabinFilter?: boolean;
+  fuelFilter?: boolean;
+  sparkPlugs?: boolean;
   stk?: boolean;
   tireChange?: boolean;
   diagnostics?: boolean;

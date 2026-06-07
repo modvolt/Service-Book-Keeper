@@ -20,6 +20,8 @@ export interface WorkOrderInput {
   timing?: boolean;
   airFilter?: boolean;
   cabinFilter?: boolean;
+  fuelFilter?: boolean;
+  sparkPlugs?: boolean;
   stk?: boolean;
   tireChange?: boolean;
   diagnostics?: boolean;

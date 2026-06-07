@@ -17,6 +17,8 @@ export const workOrdersTable = pgTable("work_orders", {
   timing: boolean("timing").notNull().default(false),
   airFilter: boolean("air_filter").notNull().default(false),
   cabinFilter: boolean("cabin_filter").notNull().default(false),
+  fuelFilter: boolean("fuel_filter").notNull().default(false),
+  sparkPlugs: boolean("spark_plugs").notNull().default(false),
   stk: boolean("stk").notNull().default(false),
   tireChange: boolean("tire_change").notNull().default(false),
   diagnostics: boolean("diagnostics").notNull().default(false),
