@@ -72,6 +72,7 @@ export * from './workOrder';
 export * from './workOrderInput';
 export * from './workOrderMaterial';
 export * from './workOrderMaterialInput';
+export * from './workOrderMaterialUpdateInput';
 export * from './workOrderStatus';
 export * from './workOrderUpdate';
 export * from './workOrderUpdateStatus';

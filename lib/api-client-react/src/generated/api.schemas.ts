@@ -743,6 +743,14 @@ export interface WorkOrderMaterialInput {
   unitPrice?: number | null;
 }
 
+export interface WorkOrderMaterialUpdateInput {
+  quantity?: string;
+  /** @nullable */
+  unit?: string | null;
+  /** @nullable */
+  unitPrice?: number | null;
+}
+
 export type InvoiceImportInputPdfsItem = {
   /** Base64-encoded PDF content */
   data: string;

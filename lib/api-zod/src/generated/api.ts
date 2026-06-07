@@ -301,6 +301,30 @@ export const AddWorkOrderMaterialBody = zod.object({
 
 
 /**
+ * @summary Update quantity / unit / unit price of a work order material
+ */
+export const UpdateWorkOrderMaterialParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateWorkOrderMaterialBody = zod.object({
+  "quantity": zod.string().optional(),
+  "unit": zod.string().nullish(),
+  "unitPrice": zod.number().nullish()
+})
+
+export const UpdateWorkOrderMaterialResponse = zod.object({
+  "id": zod.number(),
+  "workOrderId": zod.number(),
+  "name": zod.string(),
+  "quantity": zod.string(),
+  "unit": zod.string().nullish(),
+  "unitPrice": zod.number().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
  * @summary Remove a material from a work order
  */
 export const DeleteWorkOrderMaterialParams = zod.object({

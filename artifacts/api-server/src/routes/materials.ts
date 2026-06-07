@@ -5,6 +5,7 @@ import { getOpenAI, getOpenAIModel } from "@workspace/integrations-openai-ai-ser
 import {
   CreateMaterialBody,
   AddWorkOrderMaterialBody,
+  UpdateWorkOrderMaterialBody,
   ImportInvoiceForWorkOrderBody,
   ImportMaterialsBody,
   ListMaterialsQueryParams,
@@ -196,6 +197,37 @@ router.post("/work-orders/:id/materials", async (req, res): Promise<void> => {
   }
 
   res.status(201).json(row);
+});
+
+router.patch("/work-order-materials/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const parsed = UpdateWorkOrderMaterialBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const updates: { quantity?: string; unit?: string | null; unitPrice?: number | null } = {};
+
+  if (parsed.data.quantity !== undefined) {
+    // Normalize quantity: accept Czech comma decimals, fall back to "1" for invalid input
+    const rawQty = parsed.data.quantity.toString().trim().replace(",", ".");
+    const qtyNum = parseFloat(rawQty);
+    updates.quantity = Number.isFinite(qtyNum) && qtyNum > 0 ? String(qtyNum) : "1";
+  }
+  if (parsed.data.unit !== undefined) updates.unit = parsed.data.unit ?? null;
+  if (parsed.data.unitPrice !== undefined) updates.unitPrice = parsed.data.unitPrice ?? null;
+
+  if (Object.keys(updates).length === 0) {
+    res.status(400).json({ error: "Žádné změny k uložení." });
+    return;
+  }
+
+  const [row] = await db.update(workOrderMaterialsTable)
+    .set(updates)
+    .where(eq(workOrderMaterialsTable.id, id))
+    .returning();
+  if (!row) { res.status(404).json({ error: "Položka nenalezena" }); return; }
+  res.json(row);
 });
 
 router.delete("/work-order-materials/:id", async (req, res): Promise<void> => {

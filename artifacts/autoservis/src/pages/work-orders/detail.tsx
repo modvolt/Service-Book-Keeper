@@ -3,7 +3,7 @@ import { useRoute, Link } from "wouter";
 import { LicensePlate } from "@/components/license-plate";
 import {
   useGetWorkOrder, useUpdateWorkOrder, useListWorkOrderPhotos, useDeletePhoto, useDeleteWorkOrder,
-  useListWorkOrderMaterials, useAddWorkOrderMaterial, useDeleteWorkOrderMaterial,
+  useListWorkOrderMaterials, useAddWorkOrderMaterial, useUpdateWorkOrderMaterial, useDeleteWorkOrderMaterial,
   useListMaterials, useImportInvoiceForWorkOrder, useGetVehicleByPlate, useGetSettings,
   getGetWorkOrderQueryKey, getListWorkOrderPhotosQueryKey, getListWorkOrdersQueryKey,
   getListWorkOrderMaterialsQueryKey, getListMaterialsQueryKey
@@ -64,6 +64,7 @@ export default function WorkOrderDetail() {
   const deletePhoto = useDeletePhoto();
   const deleteOrder = useDeleteWorkOrder();
   const addMaterial = useAddWorkOrderMaterial();
+  const updateMaterial = useUpdateWorkOrderMaterial();
   const deleteMaterial = useDeleteWorkOrderMaterial();
   const importInvoice = useImportInvoiceForWorkOrder();
 
@@ -114,6 +115,11 @@ export default function WorkOrderDetail() {
   const [matQty, setMatQty] = useState("");
   const [matUnit, setMatUnit] = useState("");
   const [matPrice, setMatPrice] = useState("");
+
+  // Inline material row edit
+  const [editMatId, setEditMatId] = useState<number | null>(null);
+  const [editMatQty, setEditMatQty] = useState("");
+  const [editMatPrice, setEditMatPrice] = useState("");
 
   function adjustMatQty(delta: number) {
     setMatQty(prev => {
@@ -323,6 +329,38 @@ export default function WorkOrderDetail() {
     deleteMaterial.mutate({ id: matId }, {
       onSuccess: invalidateMaterials,
       onError: (err) => toast({ title: "Chyba", description: getApiErrorMessage(err, "Materiál se nepodařilo smazat."), variant: "destructive" }),
+    });
+  }
+
+  function startEditMaterial(m: { id: number; quantity: string; unitPrice?: number | null }) {
+    setEditMatId(m.id);
+    setEditMatQty(m.quantity);
+    setEditMatPrice(m.unitPrice != null ? String(m.unitPrice) : "");
+  }
+  function cancelEditMaterial() {
+    setEditMatId(null);
+    setEditMatQty("");
+    setEditMatPrice("");
+  }
+  function adjustEditMatQty(delta: number) {
+    setEditMatQty(prev => {
+      const current = parseFloat((prev || "0").replace(",", ".")) || 0;
+      const next = Math.max(0, current + delta);
+      return Number.isInteger(next) ? String(next) : next.toFixed(2).replace(/\.?0+$/, "");
+    });
+  }
+  function handleSaveMaterial() {
+    if (editMatId == null) return;
+    const priceStr = editMatPrice.trim();
+    updateMaterial.mutate({
+      id: editMatId,
+      data: {
+        quantity: editMatQty.trim() || "1",
+        unitPrice: priceStr ? parseInt(priceStr, 10) : null,
+      },
+    }, {
+      onSuccess: () => { cancelEditMaterial(); invalidateMaterials(); },
+      onError: (err) => toast({ title: "Chyba", description: getApiErrorMessage(err, "Materiál se nepodařilo upravit."), variant: "destructive" }),
     });
   }
 
@@ -823,6 +861,49 @@ export default function WorkOrderDetail() {
                   {materials.map(m => {
                     const q = parseFloat(m.quantity) || 0;
                     const total = (m.unitPrice ?? 0) * q;
+                    if (editMatId === m.id) {
+                      const editQ = parseFloat(editMatQty.replace(",", ".")) || 0;
+                      const editPriceNum = editMatPrice.trim() ? parseInt(editMatPrice, 10) || 0 : null;
+                      const editTotal = (editPriceNum ?? 0) * editQ;
+                      return (
+                        <tr key={m.id} className="bg-accent/30">
+                          <td className="px-3 py-2 font-medium align-middle">{m.name}</td>
+                          <td className="px-3 py-2">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button type="button" variant="outline" size="icon" className="h-8 w-8 shrink-0" onClick={() => adjustEditMatQty(-1)} aria-label="Snížit množství">
+                                <Minus className="h-3.5 w-3.5" />
+                              </Button>
+                              <Input
+                                type="text" inputMode="decimal" value={editMatQty}
+                                onChange={e => setEditMatQty(e.target.value.replace(",", "."))}
+                                className="h-8 w-20 text-center"
+                              />
+                              <Button type="button" variant="outline" size="icon" className="h-8 w-8 shrink-0" onClick={() => adjustEditMatQty(1)} aria-label="Zvýšit množství">
+                                <Plus className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2">
+                            <Input
+                              type="number" value={editMatPrice} placeholder="Cena/ks"
+                              onChange={e => setEditMatPrice(e.target.value)}
+                              className="h-8 w-24 text-right ml-auto"
+                            />
+                          </td>
+                          <td className="px-3 py-2 text-right font-semibold">{editPriceNum != null ? `${editTotal.toLocaleString("cs-CZ")} Kč` : "-"}</td>
+                          <td className="px-3 py-2">
+                            <div className="flex items-center gap-1">
+                              <Button variant="ghost" size="icon" onClick={handleSaveMaterial} disabled={updateMaterial.isPending} aria-label="Uložit">
+                                <Check className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={cancelEditMaterial} aria-label="Zrušit">
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    }
                     return (
                       <tr key={m.id}>
                         <td className="px-3 py-2 font-medium">{m.name}</td>
@@ -830,9 +911,14 @@ export default function WorkOrderDetail() {
                         <td className="px-3 py-2 text-right">{m.unitPrice != null ? `${m.unitPrice.toLocaleString("cs-CZ")} Kč` : "-"}</td>
                         <td className="px-3 py-2 text-right font-semibold">{m.unitPrice != null ? `${total.toLocaleString("cs-CZ")} Kč` : "-"}</td>
                         <td className="px-3 py-2">
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteMaterial(m.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => startEditMaterial(m)} aria-label="Upravit">
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDeleteMaterial(m.id)} aria-label="Smazat">
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     );

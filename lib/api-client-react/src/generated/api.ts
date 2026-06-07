@@ -68,6 +68,7 @@ import type {
   WorkOrderInput,
   WorkOrderMaterial,
   WorkOrderMaterialInput,
+  WorkOrderMaterialUpdateInput,
   WorkOrderUpdate
 } from './api.schemas';
 
@@ -1350,6 +1351,78 @@ export const useAddWorkOrderMaterial = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAddWorkOrderMaterialMutationOptions(options));
+    }
+
+export const getUpdateWorkOrderMaterialUrl = (id: number,) => {
+
+
+
+
+  return `/api/work-order-materials/${id}`
+}
+
+/**
+ * @summary Update quantity / unit / unit price of a work order material
+ */
+export const updateWorkOrderMaterial = async (id: number,
+    workOrderMaterialUpdateInput: WorkOrderMaterialUpdateInput, options?: RequestInit): Promise<WorkOrderMaterial> => {
+
+  return customFetch<WorkOrderMaterial>(getUpdateWorkOrderMaterialUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      workOrderMaterialUpdateInput,)
+  }
+);}
+
+
+
+
+export const getUpdateWorkOrderMaterialMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWorkOrderMaterial>>, TError,{id: number;data: BodyType<WorkOrderMaterialUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWorkOrderMaterial>>, TError,{id: number;data: BodyType<WorkOrderMaterialUpdateInput>}, TContext> => {
+
+const mutationKey = ['updateWorkOrderMaterial'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWorkOrderMaterial>>, {id: number;data: BodyType<WorkOrderMaterialUpdateInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateWorkOrderMaterial(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWorkOrderMaterialMutationResult = NonNullable<Awaited<ReturnType<typeof updateWorkOrderMaterial>>>
+    export type UpdateWorkOrderMaterialMutationBody = BodyType<WorkOrderMaterialUpdateInput>
+    export type UpdateWorkOrderMaterialMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update quantity / unit / unit price of a work order material
+ */
+export const useUpdateWorkOrderMaterial = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWorkOrderMaterial>>, TError,{id: number;data: BodyType<WorkOrderMaterialUpdateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateWorkOrderMaterial>>,
+        TError,
+        {id: number;data: BodyType<WorkOrderMaterialUpdateInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateWorkOrderMaterialMutationOptions(options));
     }
 
 export const getDeleteWorkOrderMaterialUrl = (id: number,) => {

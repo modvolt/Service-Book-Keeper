@@ -337,6 +337,29 @@ paths:
                 $ref: "#/components/schemas/WorkOrderMaterial"
 
   /work-order-materials/{id}:
+    patch:
+      operationId: updateWorkOrderMaterial
+      tags: [materials]
+      summary: Update quantity / unit / unit price of a work order material
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkOrderMaterialUpdateInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkOrderMaterial"
     delete:
       operationId: deleteWorkOrderMaterial
       tags: [materials]
@@ -1833,6 +1856,16 @@ components:
         name:
           type: string
           minLength: 1
+        quantity:
+          type: string
+        unit:
+          type: ["string", "null"]
+        unitPrice:
+          type: ["integer", "null"]
+
+    WorkOrderMaterialUpdateInput:
+      type: object
+      properties:
         quantity:
           type: string
         unit:
