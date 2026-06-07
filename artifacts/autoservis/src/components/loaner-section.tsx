@@ -47,6 +47,15 @@ export function LoanerSection({
   const { data: loaners = [] } = useListLoaners({ workOrderId: order.id });
   const loaner = loaners[0];
 
+  // Detect a double-booked replacement car: more than one concurrent active
+  // loan of the same fleet vehicle (matches the Vozový park fleet-card warning).
+  const { data: fleetActiveLoaners = [] } = useListLoaners(
+    { fleetVehicleId: loaner?.fleetVehicleId ?? 0, status: "active" },
+    { query: { enabled: !!loaner && loaner.status === "active" } as any },
+  );
+  const activeLoanCount = fleetActiveLoaners.length;
+  const doubleBooked = activeLoanCount > 1;
+
   const { data: fleetVehicles = [] } = useListVehicles({ fleet: true });
 
   const createLoaner = useCreateLoaner();
@@ -209,6 +218,13 @@ export function LoanerSection({
                 <Badge className="bg-emerald-600 text-white hover:bg-emerald-700">Vráceno</Badge>
               )}
             </div>
+
+            {doubleBooked && (
+              <div className="flex items-start gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400">
+                <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                <span>Překryv zápůjček: toto vozidlo má {activeLoanCount} souběžné aktivní zápůjčky.</span>
+              </div>
+            )}
 
             <div className="grid gap-3 sm:grid-cols-2 text-sm">
               <div>
