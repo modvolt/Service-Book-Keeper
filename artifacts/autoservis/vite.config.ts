@@ -72,25 +72,6 @@ export default defineConfig({
         enabled: false,
       },
     }),
-    // Replit-only dev plugins. Loaded exclusively on Replit (REPL_ID set) in
-    // development, so the production build is 100% Replit-free — these packages
-    // are never imported into the production bundle.
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
-      ? [
-          await import("@replit/vite-plugin-runtime-error-modal").then((m) =>
-            m.default(),
-          ),
-          await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer({
-              root: path.resolve(import.meta.dirname, ".."),
-            }),
-          ),
-          await import("@replit/vite-plugin-dev-banner").then((m) =>
-            m.devBanner(),
-          ),
-        ]
-      : []),
   ],
   resolve: {
     alias: {
