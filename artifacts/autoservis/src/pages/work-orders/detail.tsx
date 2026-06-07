@@ -28,7 +28,7 @@ import { uploadFileWithProgress, UploadError } from "@/lib/upload";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { Progress } from "@/components/ui/progress";
 import { WorkOrderStatusBadge, WORK_ORDER_STATUSES, type WorkOrderStatus } from "@/lib/work-order-status";
-import { DEFAULT_HOURLY_RATE, computeLaborPrice } from "@/lib/labor";
+import { DEFAULT_HOURLY_RATE, computeLaborPrice, isManualLaborPrice } from "@/lib/labor";
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -186,7 +186,7 @@ export default function WorkOrderDetail() {
       laborHours: order.laborHours ?? "", laborPrice: order.laborPrice != null ? String(order.laborPrice) : "",
       serviceDate: order.serviceDate ?? "",
     });
-    setEditPriceManual(order.laborPrice != null);
+    setEditPriceManual(isManualLaborPrice(order.laborHours, order.laborPrice));
     setEditMode(true);
   }
 
@@ -199,7 +199,7 @@ export default function WorkOrderDetail() {
     if (!order) return;
     setLaborHoursInput(order.laborHours ?? "");
     setLaborPriceInput(order.laborPrice != null ? String(order.laborPrice) : "");
-    setLaborPriceManual(order.laborPrice != null);
+    setLaborPriceManual(isManualLaborPrice(order.laborHours, order.laborPrice));
     setLaborEditing(true);
   }
 
