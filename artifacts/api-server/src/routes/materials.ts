@@ -1,7 +1,7 @@
 import { Router, type IRouter, json } from "express";
 import { eq, ilike, asc, sql } from "drizzle-orm";
 import { db, materialsCatalogTable, workOrderMaterialsTable, workOrdersTable } from "@workspace/db";
-import { getOpenAI } from "@workspace/integrations-openai-ai-server";
+import { getOpenAI, getOpenAIModel } from "@workspace/integrations-openai-ai-server";
 import {
   CreateMaterialBody,
   AddWorkOrderMaterialBody,
@@ -257,7 +257,7 @@ router.post("/work-orders/:id/import-invoice", async (req, res): Promise<void> =
     }));
 
     const response = await getOpenAI().chat.completions.create({
-      model: "gpt-5.4",
+      model: getOpenAIModel(),
       max_completion_tokens: 8192,
       response_format: { type: "json_object" },
       messages: [

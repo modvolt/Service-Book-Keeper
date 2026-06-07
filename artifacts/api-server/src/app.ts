@@ -1,3 +1,5 @@
+import path from "node:path";
+import fs from "node:fs";
 import express, { type Express, type Request, type Response, type NextFunction } from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -17,7 +19,24 @@ const app: Express = express();
 // Behind the Replit / Coolify reverse proxy — required for secure cookies and rate limiting.
 app.set("trust proxy", 1);
 
-app.use(helmet());
+// Content-Security-Policy: extend helmet's safe defaults so the single-origin
+// SPA served by this server in production works without loosening script-src.
+// - img-src adds blob: for client-side photo previews (URL.createObjectURL).
+// - worker-src adds blob: for the PWA service worker / workbox runtime.
+// Google Fonts (style + font fetches) are already covered by the default
+// style-src/font-src "https:" allowance. In dev the SPA is served by Vite and
+// this CSP only applies to /api responses, so it is inert there.
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        "img-src": ["'self'", "data:", "blob:"],
+        "worker-src": ["'self'", "blob:"],
+      },
+    },
+  }),
+);
 
 app.use(
   pinoHttp({
@@ -88,6 +107,47 @@ app.use("/api", authRouter);
 
 // --- Protected routes (require authenticated session) ---
 app.use("/api", requireAuth, router);
+
+// --- Static frontend (production single-container deploy) ---
+// In production the built SPA is served by this same server so the whole app
+// runs from one origin (no separate static host, no CORS). In dev the frontend
+// is served by Vite, so this block stays inert unless STATIC_DIR is set.
+// STATIC_DIR overrides the location; otherwise it defaults to the autoservis
+// build output resolved relative to this bundle (artifacts/api-server/dist ->
+// artifacts/autoservis/dist/public).
+const staticDir =
+  process.env.STATIC_DIR?.trim() ||
+  (process.env.NODE_ENV === "production"
+    ? path.resolve(__dirname, "../../autoservis/dist/public")
+    : null);
+
+if (staticDir) {
+  if (!fs.existsSync(path.join(staticDir, "index.html"))) {
+    logger.warn({ staticDir }, "STATIC_DIR has no index.html; SPA will not be served");
+  }
+  // Serve hashed assets with long-lived caching; index.html stays uncached so a
+  // new deploy is picked up immediately (the service worker handles the rest).
+  app.use(
+    express.static(staticDir, {
+      index: false,
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith("index.html")) {
+          res.setHeader("Cache-Control", "no-cache");
+        }
+      },
+    }),
+  );
+
+  // SPA fallback: any non-/api GET that didn't match a static file returns
+  // index.html so client-side (wouter) routing works on hard refresh.
+  app.get(/^\/(?!api(?:\/|$)).*/, (req: Request, res: Response, next: NextFunction): void => {
+    if (req.method !== "GET") {
+      next();
+      return;
+    }
+    res.sendFile(path.join(staticDir, "index.html"));
+  });
+}
 
 // --- Global error handler ---
 app.use((err: unknown, req: Request, res: Response, next: NextFunction): void => {

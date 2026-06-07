@@ -12,6 +12,16 @@ Czech-language auto service management app for a self-employed mechanic — trac
 - Required env: `DATABASE_URL` — Postgres connection string
 - Auth/session env: `APP_PASSWORD` (login password, bootstraps the single auth row), `SESSION_SECRET` (signing key; fail-fast in production), `ALLOWED_ORIGINS` (comma-separated CORS allowlist; reflected in dev)
 - Storage env: `STORAGE_DRIVER` = `replit-gcs` (default, dev) or `s3` (prod). For `s3`: `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_REGION` (default `auto`), `S3_FORCE_PATH_STYLE` (default `true`), `S3_PRIVATE_PREFIX` (default `private`), `S3_PUBLIC_PREFIX` (default `public`)
+- AI env: `AI_INTEGRATIONS_OPENAI_BASE_URL` + `AI_INTEGRATIONS_OPENAI_API_KEY` (provided by the Replit OpenAI integration in dev; set manually in prod, e.g. base URL `https://api.openai.com/v1`). `OPENAI_MODEL` selects the chat model (default `gpt-5.4`)
+- Email env (optional): `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `SMTP_PORT` (default 587), `SMTP_SECURE`, `MAIL_FROM`; `APP_URL` is the trusted public origin for password-reset links
+
+## Self-hosted deploy (Coolify / Docker)
+
+- Production runs as a single Replit-free container: `Dockerfile` builds the Vite frontend (with `BASE_PATH=/`) and the esbuild API bundle, then one Node process serves both the SPA (static + SPA fallback) and `/api` from the same origin (no CORS needed).
+- `docker-compose.yaml` defines the `app` + a `postgres:16` `db` (named volume `db-data`). `.env.example` documents every variable; copy to `.env` and fill in. Deploy: `docker compose up -d --build`. In Coolify, use a Docker Compose resource (its proxy provides HTTPS in front of `app`'s port 8080).
+- The container entrypoint (`docker-entrypoint.sh`) runs `drizzle-kit push --force` on boot (idempotent; also creates the `user_sessions` table) before starting the server. The runtime image keeps full `node_modules` because the esbuild bundle externalizes native packages (`@aws-sdk/*`, `@google-cloud/*`, `nodemailer`) and the boot-time push needs `drizzle-kit`.
+- Replit-free production: `@replit/*` Vite plugins are gated behind `REPL_ID` (dev-only) in both `autoservis` and `mockup-sandbox` vite configs, so they are never imported into the production bundle while Replit dev stays unchanged.
+- When the SPA is served by Express in prod, helmet's CSP applies to the HTML: `img-src`/`worker-src` add `blob:` (photo previews, service worker) and the PWA registers via an external `registerSW.js` (`injectRegister: "script"`) to satisfy `script-src 'self'`.
 
 ## Stack
 

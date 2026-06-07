@@ -20,3 +20,14 @@ export function getOpenAI(): OpenAI {
   });
   return cached;
 }
+
+const DEFAULT_OPENAI_MODEL = "gpt-5.4";
+
+/**
+ * The chat model used for all completions. Configurable via the OPENAI_MODEL
+ * environment variable so the deployment can switch models without a code
+ * change; defaults to {@link DEFAULT_OPENAI_MODEL} (the value used in dev).
+ */
+export function getOpenAIModel(): string {
+  return process.env.OPENAI_MODEL?.trim() || DEFAULT_OPENAI_MODEL;
+}

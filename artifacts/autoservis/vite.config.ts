@@ -2,7 +2,6 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { VitePWA } from "vite-plugin-pwa";
 
 const rawPort = process.env.PORT;
@@ -36,9 +35,13 @@ export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    runtimeErrorOverlay(),
     VitePWA({
       registerType: "autoUpdate",
+      // Register the service worker via an external same-origin script
+      // (registerSW.js) rather than an inline <script>, so the production
+      // Content-Security-Policy (script-src 'self') applied when the SPA is
+      // served by the API server allows it without 'unsafe-inline'.
+      injectRegister: "script",
       includeAssets: ["favicon.svg", "apple-touch-icon.png"],
       manifest: {
         name: "AutoServis",
@@ -69,9 +72,15 @@ export default defineConfig({
         enabled: false,
       },
     }),
+    // Replit-only dev plugins. Loaded exclusively on Replit (REPL_ID set) in
+    // development, so the production build is 100% Replit-free — these packages
+    // are never imported into the production bundle.
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
+          await import("@replit/vite-plugin-runtime-error-modal").then((m) =>
+            m.default(),
+          ),
           await import("@replit/vite-plugin-cartographer").then((m) =>
             m.cartographer({
               root: path.resolve(import.meta.dirname, ".."),

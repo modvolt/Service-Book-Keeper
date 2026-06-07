@@ -1,5 +1,5 @@
 import { Router, type IRouter, json } from "express";
-import { getOpenAI } from "@workspace/integrations-openai-ai-server";
+import { getOpenAI, getOpenAIModel } from "@workspace/integrations-openai-ai-server";
 import { ImportVehicleFromTpBody } from "@workspace/api-zod";
 import { normalizeSpzOrNull } from "../lib/spz";
 
@@ -55,7 +55,7 @@ router.post("/vehicles/import-tp", largeJson, async (req, res): Promise<void> =>
     }));
 
     const response = await getOpenAI().chat.completions.create({
-      model: "gpt-5.4",
+      model: getOpenAIModel(),
       max_completion_tokens: 4096,
       response_format: { type: "json_object" },
       messages: [
