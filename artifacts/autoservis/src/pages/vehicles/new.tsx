@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ArrowLeft, Sparkles, Upload, X, Loader2, Camera, ClipboardPaste } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -57,6 +58,9 @@ export default function NewVehicle() {
     brakesIntervalMonths: "", timingIntervalKm: "", timingIntervalMonths: "",
     brakeFluidIntervalMonths: DEFAULT_BRAKE_FLUID_MONTHS,
   });
+
+  const fleetMode = new URLSearchParams(window.location.search).get("fleet") === "1";
+  const [isFleet, setIsFleet] = useState(() => fleetMode);
 
   const [importOpen, setImportOpen] = useState(false);
   const [importFiles, setImportFiles] = useState<File[]>([]);
@@ -124,11 +128,12 @@ export default function NewVehicle() {
         timingIntervalMonths: toInt(form.timingIntervalMonths),
         lastBrakeFluidDate: form.lastBrakeFluidDate || null,
         brakeFluidIntervalMonths: toInt(form.brakeFluidIntervalMonths),
+        isFleet,
       }
     }, {
       onSuccess: (vehicle) => {
         queryClient.invalidateQueries({ queryKey: getListVehiclesQueryKey() });
-        toast({ title: "Vozidlo přidáno" });
+        toast({ title: isFleet ? "Vozidlo přidáno do vozového parku" : "Vozidlo přidáno" });
         navigate(`/vehicles/${vehicle.id}`);
       },
       onError: () => {
@@ -303,6 +308,15 @@ export default function NewVehicle() {
 
             <div className="space-y-4">
               <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Vozidlo</h3>
+              {fleetMode && (
+                <label className="flex items-center gap-3 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3 cursor-pointer select-none">
+                  <Checkbox checked={isFleet} onCheckedChange={(v) => setIsFleet(v === true)} />
+                  <div>
+                    <span className="text-sm font-medium">Vozidlo vozového parku (náhradní vůz)</span>
+                    <p className="text-xs text-muted-foreground">Vozidlo se zobrazí ve Vozidlech i ve Vozovém parku a lze ho půjčovat zákazníkům.</p>
+                  </div>
+                </label>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1 col-span-2">
                   <Label>SPZ *</Label>

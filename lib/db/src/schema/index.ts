@@ -4,6 +4,7 @@ export * from "./work-orders";
 export * from "./photos";
 export * from "./materials";
 export * from "./appointments";
+export * from "./loaners";
 export * from "./settings";
 export * from "./customer-reminders";
 export * from "./auth";

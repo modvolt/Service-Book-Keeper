@@ -194,6 +194,11 @@ paths:
           in: query
           schema:
             type: string
+        - name: fleet
+          in: query
+          description: When true, only return fleet vehicles (Vozový park).
+          schema:
+            type: boolean
       responses:
         "200":
           description: List of vehicles
@@ -828,6 +833,159 @@ paths:
         "204":
           description: Deleted
 
+  /loaners:
+    get:
+      operationId: listLoaners
+      tags: [loaners]
+      summary: List loaners, optionally filtered
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: fleetVehicleId
+          in: query
+          schema:
+            type: integer
+        - name: workOrderId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, returned]
+        - name: from
+          in: query
+          description: Include loaners overlapping this date or later (by endDate).
+          schema:
+            type: string
+        - name: to
+          in: query
+          description: Include loaners overlapping this date or earlier (by startDate).
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Loaners
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Loaner"
+    post:
+      operationId: createLoaner
+      tags: [loaners]
+      summary: Create a loaner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoanerInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Loaner"
+
+  /loaners/check-overlap:
+    get:
+      operationId: checkLoanerOverlap
+      tags: [loaners]
+      summary: Find active loaners of a fleet vehicle overlapping a date range (soft warning)
+      parameters:
+        - name: fleetVehicleId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: startDate
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: endDate
+          in: query
+          schema:
+            type: ["string", "null"]
+        - name: excludeId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Overlapping loaners
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Loaner"
+
+  /loaners/customer-suggestions:
+    get:
+      operationId: listLoanerCustomerSuggestions
+      tags: [loaners]
+      summary: Suggest known customers (vehicle owners) for a loaner borrower
+      parameters:
+        - name: search
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matching known customers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LoanerCustomerSuggestion"
+
+  /loaners/{id}:
+    patch:
+      operationId: updateLoaner
+      tags: [loaners]
+      summary: Update a loaner
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoanerUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Loaner"
+    delete:
+      operationId: deleteLoaner
+      tags: [loaners]
+      summary: Delete a loaner
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
   /ares/{ico}:
     get:
       operationId: lookupAres
@@ -1136,7 +1294,7 @@ components:
 
     Vehicle:
       type: object
-      required: [id, licensePlate, make, model, ownerType, createdAt]
+      required: [id, licensePlate, make, model, ownerType, isFleet, createdAt]
       properties:
         id:
           type: integer
@@ -1146,6 +1304,8 @@ components:
           type: string
         model:
           type: string
+        isFleet:
+          type: boolean
         year:
           type: ["integer", "null"]
         color:
@@ -1218,7 +1378,7 @@ components:
 
     VehicleDetail:
       type: object
-      required: [id, licensePlate, make, model, ownerType, createdAt, serviceRecords, openWorkOrders, completedWorkOrders]
+      required: [id, licensePlate, make, model, ownerType, isFleet, createdAt, serviceRecords, openWorkOrders, completedWorkOrders]
       properties:
         id:
           type: integer
@@ -1228,6 +1388,8 @@ components:
           type: string
         model:
           type: string
+        isFleet:
+          type: boolean
         year:
           type: ["integer", "null"]
         color:
@@ -1323,6 +1485,8 @@ components:
         model:
           type: string
           minLength: 1
+        isFleet:
+          type: ["boolean", "null"]
         year:
           type: ["integer", "null"]
         color:
@@ -1395,6 +1559,8 @@ components:
           type: string
         model:
           type: string
+        isFleet:
+          type: ["boolean", "null"]
         year:
           type: ["integer", "null"]
         color:
@@ -2022,6 +2188,114 @@ components:
         notes:
           type: ["string", "null"]
 
+    Loaner:
+      type: object
+      required: [id, fleetVehicleId, startDate, manualEndDate, status, createdAt]
+      properties:
+        id:
+          type: integer
+        fleetVehicleId:
+          type: integer
+        workOrderId:
+          type: ["integer", "null"]
+        customerVehicleId:
+          type: ["integer", "null"]
+        customerName:
+          type: ["string", "null"]
+        customerPhone:
+          type: ["string", "null"]
+        startDate:
+          type: string
+        endDate:
+          type: ["string", "null"]
+        manualEndDate:
+          type: boolean
+        status:
+          type: string
+          enum: [active, returned]
+        note:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        fleetLicensePlate:
+          type: ["string", "null"]
+        fleetMake:
+          type: ["string", "null"]
+        fleetModel:
+          type: ["string", "null"]
+        customerLicensePlate:
+          type: ["string", "null"]
+
+    LoanerCustomerSuggestion:
+      type: object
+      required: [vehicleId, licensePlate]
+      properties:
+        vehicleId:
+          type: integer
+        licensePlate:
+          type: string
+        ownerName:
+          type: ["string", "null"]
+        ownerPhone:
+          type: ["string", "null"]
+        make:
+          type: ["string", "null"]
+        model:
+          type: ["string", "null"]
+
+    LoanerInput:
+      type: object
+      required: [fleetVehicleId, startDate]
+      properties:
+        fleetVehicleId:
+          type: integer
+        workOrderId:
+          type: ["integer", "null"]
+        customerVehicleId:
+          type: ["integer", "null"]
+        customerName:
+          type: ["string", "null"]
+        customerPhone:
+          type: ["string", "null"]
+        startDate:
+          type: string
+          minLength: 1
+        endDate:
+          type: ["string", "null"]
+        manualEndDate:
+          type: ["boolean", "null"]
+        status:
+          type: ["string", "null"]
+          enum: [active, returned, null]
+        note:
+          type: ["string", "null"]
+
+    LoanerUpdate:
+      type: object
+      properties:
+        fleetVehicleId:
+          type: ["integer", "null"]
+        workOrderId:
+          type: ["integer", "null"]
+        customerVehicleId:
+          type: ["integer", "null"]
+        customerName:
+          type: ["string", "null"]
+        customerPhone:
+          type: ["string", "null"]
+        startDate:
+          type: ["string", "null"]
+        endDate:
+          type: ["string", "null"]
+        manualEndDate:
+          type: ["boolean", "null"]
+        status:
+          type: ["string", "null"]
+          enum: [active, returned, null]
+        note:
+          type: ["string", "null"]
+
     AresResult:
       type: object
       required: [ico, name]
@@ -2142,6 +2416,8 @@ components:
           type: integer
         appointmentCount:
           type: integer
+        loanerCount:
+          type: integer
     GdprSearchResult:
       type: object
       required: [vehicles]
@@ -2152,7 +2428,7 @@ components:
             $ref: "#/components/schemas/GdprVehicleMatch"
     GdprExport:
       type: object
-      required: [exportedAt, vehicle, serviceRecords, workOrders, appointments]
+      required: [exportedAt, vehicle, serviceRecords, workOrders, appointments, loaners]
       properties:
         exportedAt:
           type: string
@@ -2170,6 +2446,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Appointment"
+        loaners:
+          type: array
+          items:
+            $ref: "#/components/schemas/Loaner"
     SetConsentInput:
       type: object
       required: [given]

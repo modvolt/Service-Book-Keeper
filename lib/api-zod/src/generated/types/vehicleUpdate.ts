@@ -13,6 +13,8 @@ export interface VehicleUpdate {
   make?: string;
   model?: string;
   /** @nullable */
+  isFleet?: boolean | null;
+  /** @nullable */
   year?: number | null;
   /** @nullable */
   color?: string | null;

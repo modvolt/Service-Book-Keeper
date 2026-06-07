@@ -24,6 +24,7 @@ import TpScanPage from "@/pages/tp-scan";
 import AlertsPage from "@/pages/alerts";
 import StatisticsPage from "@/pages/statistics";
 import GdprPage from "@/pages/gdpr";
+import FleetPage from "@/pages/fleet";
 import { useScanHandoff } from "@/hooks/use-scan-handoff";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ function Router() {
       <Switch>
         <Route path="/" component={Dashboard} />
         <Route path="/vehicles" component={VehiclesList} />
+        <Route path="/vozovy-park" component={FleetPage} />
         <Route path="/vehicles/new" component={VehicleNew} />
         <Route path="/vehicles/:id" component={VehicleDetail} />
         <Route path="/work-orders" component={WorkOrdersList} />

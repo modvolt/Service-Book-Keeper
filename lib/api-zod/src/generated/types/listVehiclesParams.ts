@@ -8,4 +8,8 @@
 
 export type ListVehiclesParams = {
 search?: string;
+/**
+ * When true, only return fleet vehicles (Vozový park).
+ */
+fleet?: boolean;
 };

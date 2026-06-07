@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Appointment } from './appointment';
+import type { Loaner } from './loaner';
 import type { ServiceRecord } from './serviceRecord';
 import type { Vehicle } from './vehicle';
 import type { WorkOrder } from './workOrder';
@@ -16,4 +17,5 @@ export interface GdprExport {
   serviceRecords: ServiceRecord[];
   workOrders: WorkOrder[];
   appointments: Appointment[];
+  loaners: Loaner[];
 }

@@ -155,6 +155,7 @@ export default function VehicleDetail() {
 
   const [editForm, setEditForm] = useState({
     make: "", model: "", year: "", color: "", vin: "", currentKm: "", notes: "", stkValidUntil: "",
+    isFleet: false,
     engineDisplacement: "",
     transmission: "manual" as "manual" | "automatic",
     ownerType: "private" as "private" | "company",
@@ -190,6 +191,7 @@ export default function VehicleDetail() {
       make: vehicle.make, model: vehicle.model, year: vehicle.year?.toString() ?? "",
       color: vehicle.color ?? "", vin: vehicle.vin ?? "", currentKm: vehicle.currentKm?.toString() ?? "",
       notes: vehicle.notes ?? "", stkValidUntil: vehicle.stkValidUntil ?? "",
+      isFleet: vehicle.isFleet ?? false,
       engineDisplacement: vehicle.engineDisplacement?.toString() ?? "",
       transmission: (vehicle.transmission === "automatic" ? "automatic" : "manual"),
       ownerType: (vehicle.ownerType === "company" ? "company" : "private"),
@@ -257,6 +259,7 @@ export default function VehicleDetail() {
         color: editForm.color || null,
         vin: editForm.vin || null,
         notes: editForm.notes || null,
+        isFleet: editForm.isFleet,
       }
     }, {
       onSuccess: () => {
@@ -785,6 +788,10 @@ export default function VehicleDetail() {
             </div>
 
             <div className="space-y-1"><Label>Poznámky</Label><Textarea value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} /></div>
+            <label className="flex items-center gap-3 rounded-md border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30 p-3 cursor-pointer select-none">
+              <Checkbox checked={editForm.isFleet} onCheckedChange={(v) => setEditForm(f => ({ ...f, isFleet: v === true }))} />
+              <span className="text-sm font-medium">Vozidlo vozového parku (náhradní vůz)</span>
+            </label>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Zrušit</Button>
               <Button type="submit" disabled={updateVehicle.isPending}>Uložit změny</Button>

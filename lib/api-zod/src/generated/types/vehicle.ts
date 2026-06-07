@@ -13,6 +13,7 @@ export interface Vehicle {
   licensePlate: string;
   make: string;
   model: string;
+  isFleet: boolean;
   /** @nullable */
   year?: number | null;
   /** @nullable */

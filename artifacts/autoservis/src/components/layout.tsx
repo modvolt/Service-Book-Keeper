@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar, Settings as SettingsIcon, ScanLine, AlertTriangle, BarChart3, LogOut, Shield } from "lucide-react";
+import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar, Settings as SettingsIcon, ScanLine, AlertTriangle, BarChart3, LogOut, Shield, KeyRound } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGetSettings, useLogout, getGetAuthStatusQueryKey } from "@workspace/api-client-react";
@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { href: "/kalendar", label: "Kalendář", icon: Calendar, color: "text-violet-600 dark:text-violet-400", bg: "hover:bg-violet-50 dark:hover:bg-violet-950/40" },
   { href: "/sklad", label: "Sklad", icon: Package, color: "text-amber-600 dark:text-amber-400", bg: "hover:bg-amber-50 dark:hover:bg-amber-950/40" },
   { href: "/statistiky", label: "Statistiky", icon: BarChart3, color: "text-cyan-600 dark:text-cyan-400", bg: "hover:bg-cyan-50 dark:hover:bg-cyan-950/40" },
+  { href: "/vozovy-park", label: "Vozový park", icon: KeyRound, color: "text-orange-600 dark:text-orange-400", bg: "hover:bg-orange-50 dark:hover:bg-orange-950/40" },
   { href: "/nacteni-vozu", label: "Načtení vozu", icon: ScanLine, color: "text-teal-600 dark:text-teal-400", bg: "hover:bg-teal-50 dark:hover:bg-teal-950/40" },
 ];
 

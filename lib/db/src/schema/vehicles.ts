@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, date, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -7,6 +7,10 @@ export const vehiclesTable = pgTable("vehicles", {
   licensePlate: text("license_plate").notNull().unique(),
   make: text("make").notNull(),
   model: text("model").notNull(),
+  // Fleet flag: when true the vehicle is part of the shop's own fleet ("Vozový
+  // park") and can be lent to customers as a loaner. It still appears in the
+  // normal vehicle list with full service-status tracking.
+  isFleet: boolean("is_fleet").notNull().default(false),
   year: integer("year"),
   color: text("color"),
   vin: text("vin"),

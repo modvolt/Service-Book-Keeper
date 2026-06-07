@@ -14,6 +14,7 @@ import storageRouter from "./storage";
 import backupRouter from "./backup";
 import gdprRouter from "./gdpr";
 import scanHandoffRouter from "./scan-handoff";
+import loanersRouter from "./loaners";
 
 const router: IRouter = Router();
 
@@ -31,6 +32,7 @@ router.use(aresRouter);
 router.use(backupRouter);
 router.use(gdprRouter);
 router.use(scanHandoffRouter);
+router.use(loanersRouter);
 router.use("/storage", storageRouter);
 
 export default router;

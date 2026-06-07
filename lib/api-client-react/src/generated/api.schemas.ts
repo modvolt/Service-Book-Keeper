@@ -93,6 +93,7 @@ export interface Vehicle {
   licensePlate: string;
   make: string;
   model: string;
+  isFleet: boolean;
   /** @nullable */
   year?: number | null;
   /** @nullable */
@@ -286,6 +287,7 @@ export interface VehicleDetail {
   licensePlate: string;
   make: string;
   model: string;
+  isFleet: boolean;
   /** @nullable */
   year?: number | null;
   /** @nullable */
@@ -385,6 +387,8 @@ export interface VehicleInput {
   /** @minLength 1 */
   model: string;
   /** @nullable */
+  isFleet?: boolean | null;
+  /** @nullable */
   year?: number | null;
   /** @nullable */
   color?: string | null;
@@ -472,6 +476,8 @@ export interface VehicleUpdate {
   licensePlate?: string;
   make?: string;
   model?: string;
+  /** @nullable */
+  isFleet?: boolean | null;
   /** @nullable */
   year?: number | null;
   /** @nullable */
@@ -881,6 +887,123 @@ export interface AppointmentUpdate {
   notes?: string | null;
 }
 
+export type LoanerStatus = typeof LoanerStatus[keyof typeof LoanerStatus];
+
+
+export const LoanerStatus = {
+  active: 'active',
+  returned: 'returned',
+} as const;
+
+export interface Loaner {
+  id: number;
+  fleetVehicleId: number;
+  /** @nullable */
+  workOrderId?: number | null;
+  /** @nullable */
+  customerVehicleId?: number | null;
+  /** @nullable */
+  customerName?: string | null;
+  /** @nullable */
+  customerPhone?: string | null;
+  startDate: string;
+  /** @nullable */
+  endDate?: string | null;
+  manualEndDate: boolean;
+  status: LoanerStatus;
+  /** @nullable */
+  note?: string | null;
+  createdAt: string;
+  /** @nullable */
+  fleetLicensePlate?: string | null;
+  /** @nullable */
+  fleetMake?: string | null;
+  /** @nullable */
+  fleetModel?: string | null;
+  /** @nullable */
+  customerLicensePlate?: string | null;
+}
+
+export interface LoanerCustomerSuggestion {
+  vehicleId: number;
+  licensePlate: string;
+  /** @nullable */
+  ownerName?: string | null;
+  /** @nullable */
+  ownerPhone?: string | null;
+  /** @nullable */
+  make?: string | null;
+  /** @nullable */
+  model?: string | null;
+}
+
+/**
+ * @nullable
+ */
+export type LoanerInputStatus = typeof LoanerInputStatus[keyof typeof LoanerInputStatus] | null;
+
+
+export const LoanerInputStatus = {
+  active: 'active',
+  returned: 'returned',
+} as const;
+
+export interface LoanerInput {
+  fleetVehicleId: number;
+  /** @nullable */
+  workOrderId?: number | null;
+  /** @nullable */
+  customerVehicleId?: number | null;
+  /** @nullable */
+  customerName?: string | null;
+  /** @nullable */
+  customerPhone?: string | null;
+  /** @minLength 1 */
+  startDate: string;
+  /** @nullable */
+  endDate?: string | null;
+  /** @nullable */
+  manualEndDate?: boolean | null;
+  /** @nullable */
+  status?: LoanerInputStatus;
+  /** @nullable */
+  note?: string | null;
+}
+
+/**
+ * @nullable
+ */
+export type LoanerUpdateStatus = typeof LoanerUpdateStatus[keyof typeof LoanerUpdateStatus] | null;
+
+
+export const LoanerUpdateStatus = {
+  active: 'active',
+  returned: 'returned',
+} as const;
+
+export interface LoanerUpdate {
+  /** @nullable */
+  fleetVehicleId?: number | null;
+  /** @nullable */
+  workOrderId?: number | null;
+  /** @nullable */
+  customerVehicleId?: number | null;
+  /** @nullable */
+  customerName?: string | null;
+  /** @nullable */
+  customerPhone?: string | null;
+  /** @nullable */
+  startDate?: string | null;
+  /** @nullable */
+  endDate?: string | null;
+  /** @nullable */
+  manualEndDate?: boolean | null;
+  /** @nullable */
+  status?: LoanerUpdateStatus;
+  /** @nullable */
+  note?: string | null;
+}
+
 export interface AresResult {
   ico: string;
   /** @nullable */
@@ -973,6 +1096,7 @@ export interface GdprVehicleMatch {
   serviceRecordCount: number;
   workOrderCount: number;
   appointmentCount: number;
+  loanerCount?: number;
 }
 
 export interface GdprSearchResult {
@@ -985,6 +1109,7 @@ export interface GdprExport {
   serviceRecords: ServiceRecord[];
   workOrders: WorkOrder[];
   appointments: Appointment[];
+  loaners: Loaner[];
 }
 
 export interface SetConsentInput {
@@ -1016,6 +1141,10 @@ make?: string;
 
 export type ListVehiclesParams = {
 search?: string;
+/**
+ * When true, only return fleet vehicles (Vozový park).
+ */
+fleet?: boolean;
 };
 
 export type ListMaterialsParams = {
@@ -1041,6 +1170,43 @@ export const ListWorkOrdersStatus = {
 export type ListAppointmentsParams = {
 from?: string;
 to?: string;
+};
+
+export type ListLoanersParams = {
+search?: string;
+fleetVehicleId?: number;
+workOrderId?: number;
+status?: ListLoanersStatus;
+/**
+ * Include loaners overlapping this date or later (by endDate).
+ */
+from?: string;
+/**
+ * Include loaners overlapping this date or earlier (by startDate).
+ */
+to?: string;
+};
+
+export type ListLoanersStatus = typeof ListLoanersStatus[keyof typeof ListLoanersStatus];
+
+
+export const ListLoanersStatus = {
+  active: 'active',
+  returned: 'returned',
+} as const;
+
+export type CheckLoanerOverlapParams = {
+fleetVehicleId: number;
+startDate: string;
+/**
+ * @nullable
+ */
+endDate?: string | null;
+excludeId?: number;
+};
+
+export type ListLoanerCustomerSuggestionsParams = {
+search: string;
 };
 
 export type GdprSearchParams = {

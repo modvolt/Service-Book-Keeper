@@ -16,6 +16,8 @@ export interface VehicleInput {
   /** @minLength 1 */
   model: string;
   /** @nullable */
+  isFleet?: boolean | null;
+  /** @nullable */
   year?: number | null;
   /** @nullable */
   color?: string | null;

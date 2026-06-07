@@ -27,6 +27,7 @@ import type {
   AuditLogEntry,
   AuthStatus,
   ChangePasswordInput,
+  CheckLoanerOverlapParams,
   CustomerReminderLogEntry,
   DashboardSummary,
   Error,
@@ -43,10 +44,16 @@ import type {
   InvoiceImportInput,
   InvoiceImportResult,
   ListAppointmentsParams,
+  ListLoanerCustomerSuggestionsParams,
+  ListLoanersParams,
   ListMaterialsParams,
   ListVehicleModelsParams,
   ListVehiclesParams,
   ListWorkOrdersParams,
+  Loaner,
+  LoanerCustomerSuggestion,
+  LoanerInput,
+  LoanerUpdate,
   LoginInput,
   MaterialCatalogInput,
   MaterialCatalogItem,
@@ -3193,6 +3200,471 @@ export const useDeleteAppointment = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteAppointmentMutationOptions(options));
+    }
+
+export const getListLoanersUrl = (params?: ListLoanersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/loaners?${stringifiedParams}` : `/api/loaners`
+}
+
+/**
+ * @summary List loaners, optionally filtered
+ */
+export const listLoaners = async (params?: ListLoanersParams, options?: RequestInit): Promise<Loaner[]> => {
+
+  return customFetch<Loaner[]>(getListLoanersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListLoanersQueryKey = (params?: ListLoanersParams,) => {
+    return [
+    `/api/loaners`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListLoanersQueryOptions = <TData = Awaited<ReturnType<typeof listLoaners>>, TError = ErrorType<unknown>>(params?: ListLoanersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLoaners>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListLoanersQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLoaners>>> = ({ signal }) => listLoaners(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listLoaners>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListLoanersQueryResult = NonNullable<Awaited<ReturnType<typeof listLoaners>>>
+export type ListLoanersQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List loaners, optionally filtered
+ */
+
+export function useListLoaners<TData = Awaited<ReturnType<typeof listLoaners>>, TError = ErrorType<unknown>>(
+ params?: ListLoanersParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLoaners>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListLoanersQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateLoanerUrl = () => {
+
+
+
+
+  return `/api/loaners`
+}
+
+/**
+ * @summary Create a loaner
+ */
+export const createLoaner = async (loanerInput: LoanerInput, options?: RequestInit): Promise<Loaner> => {
+
+  return customFetch<Loaner>(getCreateLoanerUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      loanerInput,)
+  }
+);}
+
+
+
+
+export const getCreateLoanerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLoaner>>, TError,{data: BodyType<LoanerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createLoaner>>, TError,{data: BodyType<LoanerInput>}, TContext> => {
+
+const mutationKey = ['createLoaner'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createLoaner>>, {data: BodyType<LoanerInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createLoaner(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateLoanerMutationResult = NonNullable<Awaited<ReturnType<typeof createLoaner>>>
+    export type CreateLoanerMutationBody = BodyType<LoanerInput>
+    export type CreateLoanerMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a loaner
+ */
+export const useCreateLoaner = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLoaner>>, TError,{data: BodyType<LoanerInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createLoaner>>,
+        TError,
+        {data: BodyType<LoanerInput>},
+        TContext
+      > => {
+      return useMutation(getCreateLoanerMutationOptions(options));
+    }
+
+export const getCheckLoanerOverlapUrl = (params: CheckLoanerOverlapParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/loaners/check-overlap?${stringifiedParams}` : `/api/loaners/check-overlap`
+}
+
+/**
+ * @summary Find active loaners of a fleet vehicle overlapping a date range (soft warning)
+ */
+export const checkLoanerOverlap = async (params: CheckLoanerOverlapParams, options?: RequestInit): Promise<Loaner[]> => {
+
+  return customFetch<Loaner[]>(getCheckLoanerOverlapUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getCheckLoanerOverlapQueryKey = (params?: CheckLoanerOverlapParams,) => {
+    return [
+    `/api/loaners/check-overlap`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getCheckLoanerOverlapQueryOptions = <TData = Awaited<ReturnType<typeof checkLoanerOverlap>>, TError = ErrorType<unknown>>(params: CheckLoanerOverlapParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof checkLoanerOverlap>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getCheckLoanerOverlapQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof checkLoanerOverlap>>> = ({ signal }) => checkLoanerOverlap(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof checkLoanerOverlap>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type CheckLoanerOverlapQueryResult = NonNullable<Awaited<ReturnType<typeof checkLoanerOverlap>>>
+export type CheckLoanerOverlapQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Find active loaners of a fleet vehicle overlapping a date range (soft warning)
+ */
+
+export function useCheckLoanerOverlap<TData = Awaited<ReturnType<typeof checkLoanerOverlap>>, TError = ErrorType<unknown>>(
+ params: CheckLoanerOverlapParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof checkLoanerOverlap>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getCheckLoanerOverlapQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListLoanerCustomerSuggestionsUrl = (params: ListLoanerCustomerSuggestionsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/loaners/customer-suggestions?${stringifiedParams}` : `/api/loaners/customer-suggestions`
+}
+
+/**
+ * @summary Suggest known customers (vehicle owners) for a loaner borrower
+ */
+export const listLoanerCustomerSuggestions = async (params: ListLoanerCustomerSuggestionsParams, options?: RequestInit): Promise<LoanerCustomerSuggestion[]> => {
+
+  return customFetch<LoanerCustomerSuggestion[]>(getListLoanerCustomerSuggestionsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListLoanerCustomerSuggestionsQueryKey = (params?: ListLoanerCustomerSuggestionsParams,) => {
+    return [
+    `/api/loaners/customer-suggestions`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListLoanerCustomerSuggestionsQueryOptions = <TData = Awaited<ReturnType<typeof listLoanerCustomerSuggestions>>, TError = ErrorType<unknown>>(params: ListLoanerCustomerSuggestionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLoanerCustomerSuggestions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListLoanerCustomerSuggestionsQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLoanerCustomerSuggestions>>> = ({ signal }) => listLoanerCustomerSuggestions(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listLoanerCustomerSuggestions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListLoanerCustomerSuggestionsQueryResult = NonNullable<Awaited<ReturnType<typeof listLoanerCustomerSuggestions>>>
+export type ListLoanerCustomerSuggestionsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Suggest known customers (vehicle owners) for a loaner borrower
+ */
+
+export function useListLoanerCustomerSuggestions<TData = Awaited<ReturnType<typeof listLoanerCustomerSuggestions>>, TError = ErrorType<unknown>>(
+ params: ListLoanerCustomerSuggestionsParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLoanerCustomerSuggestions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListLoanerCustomerSuggestionsQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateLoanerUrl = (id: number,) => {
+
+
+
+
+  return `/api/loaners/${id}`
+}
+
+/**
+ * @summary Update a loaner
+ */
+export const updateLoaner = async (id: number,
+    loanerUpdate: LoanerUpdate, options?: RequestInit): Promise<Loaner> => {
+
+  return customFetch<Loaner>(getUpdateLoanerUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      loanerUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateLoanerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateLoaner>>, TError,{id: number;data: BodyType<LoanerUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateLoaner>>, TError,{id: number;data: BodyType<LoanerUpdate>}, TContext> => {
+
+const mutationKey = ['updateLoaner'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateLoaner>>, {id: number;data: BodyType<LoanerUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateLoaner(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateLoanerMutationResult = NonNullable<Awaited<ReturnType<typeof updateLoaner>>>
+    export type UpdateLoanerMutationBody = BodyType<LoanerUpdate>
+    export type UpdateLoanerMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Update a loaner
+ */
+export const useUpdateLoaner = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateLoaner>>, TError,{id: number;data: BodyType<LoanerUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateLoaner>>,
+        TError,
+        {id: number;data: BodyType<LoanerUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateLoanerMutationOptions(options));
+    }
+
+export const getDeleteLoanerUrl = (id: number,) => {
+
+
+
+
+  return `/api/loaners/${id}`
+}
+
+/**
+ * @summary Delete a loaner
+ */
+export const deleteLoaner = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteLoanerUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteLoanerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteLoaner>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteLoaner>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteLoaner'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteLoaner>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteLoaner(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteLoanerMutationResult = NonNullable<Awaited<ReturnType<typeof deleteLoaner>>>
+
+    export type DeleteLoanerMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete a loaner
+ */
+export const useDeleteLoaner = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteLoaner>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteLoaner>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteLoanerMutationOptions(options));
     }
 
 export const getLookupAresUrl = (ico: string,) => {

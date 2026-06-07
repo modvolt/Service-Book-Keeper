@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, ilike, or, desc } from "drizzle-orm";
+import { eq, ilike, or, desc, and } from "drizzle-orm";
 import { db, vehiclesTable, serviceRecordsTable, workOrdersTable, customerReminderLogTable } from "@workspace/db";
 import {
   ListVehiclesQueryParams,
@@ -22,24 +22,27 @@ router.get("/vehicles", async (req, res): Promise<void> => {
     return;
   }
 
-  let vehicles;
+  const conds = [];
   if (query.data.search) {
     const s = `%${query.data.search}%`;
-    vehicles = await db
-      .select()
-      .from(vehiclesTable)
-      .where(
-        or(
-          ilike(vehiclesTable.licensePlate, s),
-          ilike(vehiclesTable.make, s),
-          ilike(vehiclesTable.model, s),
-          ilike(vehiclesTable.ownerName, s),
-        ),
-      )
-      .orderBy(vehiclesTable.licensePlate);
-  } else {
-    vehicles = await db.select().from(vehiclesTable).orderBy(vehiclesTable.licensePlate);
+    conds.push(
+      or(
+        ilike(vehiclesTable.licensePlate, s),
+        ilike(vehiclesTable.make, s),
+        ilike(vehiclesTable.model, s),
+        ilike(vehiclesTable.ownerName, s),
+      ),
+    );
   }
+  if (query.data.fleet != null) {
+    conds.push(eq(vehiclesTable.isFleet, query.data.fleet));
+  }
+
+  const vehicles = await db
+    .select()
+    .from(vehiclesTable)
+    .where(conds.length ? and(...conds) : undefined)
+    .orderBy(vehiclesTable.licensePlate);
 
   res.json(vehicles);
 });
@@ -51,11 +54,12 @@ router.post("/vehicles", async (req, res): Promise<void> => {
     return;
   }
 
-  const { ownerType, ...rest } = parsed.data;
+  const { ownerType, isFleet, ...rest } = parsed.data;
   const values = {
     ...rest,
     licensePlate: normalizeSpz(parsed.data.licensePlate),
     ...(ownerType ? { ownerType } : {}),
+    ...(isFleet != null ? { isFleet } : {}),
   };
   const [vehicle] = await db.insert(vehiclesTable).values(values).returning();
   res.status(201).json(vehicle);
@@ -143,10 +147,11 @@ router.patch("/vehicles/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const { ownerType, ...restUpdates } = parsed.data;
+  const { ownerType, isFleet, ...restUpdates } = parsed.data;
   const updates: Record<string, unknown> = { ...restUpdates };
   if (parsed.data.licensePlate) updates.licensePlate = normalizeSpz(parsed.data.licensePlate);
   if (ownerType) updates.ownerType = ownerType;
+  if (isFleet != null) updates.isFleet = isFleet;
 
   const [vehicle] = await db
     .update(vehiclesTable)

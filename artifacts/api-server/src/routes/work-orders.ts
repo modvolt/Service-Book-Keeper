@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, ilike, and, sql } from "drizzle-orm";
 import multer from "multer";
-import { db, workOrdersTable, vehiclesTable, photosTable } from "@workspace/db";
+import { db, workOrdersTable, vehiclesTable, photosTable, loanersTable } from "@workspace/db";
 import { getObjectStorageService } from "../lib/storage";
 import { validateImageUpload } from "../lib/fileValidation";
 import {
@@ -155,6 +155,20 @@ router.patch("/work-orders/:id", async (req, res): Promise<void> => {
     .where(eq(workOrdersTable.id, params.data.id)).returning();
 
   if (!order) { res.status(404).json({ error: "Zakázka nenalezena" }); return; }
+
+  // When the work order is marked as invoiced (Vyfakturováno / paid), any
+  // active loaner running off this work order is auto-returned today — unless
+  // the user already set the return date by hand (manualEndDate).
+  if (parsed.data.paid === true) {
+    const today = new Date().toISOString().slice(0, 10);
+    await db.update(loanersTable)
+      .set({ endDate: today, status: "returned" })
+      .where(and(
+        eq(loanersTable.workOrderId, order.id),
+        eq(loanersTable.status, "active"),
+        eq(loanersTable.manualEndDate, false),
+      ));
+  }
 
   await propagateWorkOrderToVehicle(order.id);
 

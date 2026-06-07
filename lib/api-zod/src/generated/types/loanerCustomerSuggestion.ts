@@ -6,20 +6,15 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface GdprVehicleMatch {
-  id: number;
+export interface LoanerCustomerSuggestion {
+  vehicleId: number;
   licensePlate: string;
-  ownerType: string;
   /** @nullable */
   ownerName?: string | null;
   /** @nullable */
   ownerPhone?: string | null;
   /** @nullable */
-  ownerEmail?: string | null;
+  make?: string | null;
   /** @nullable */
-  consentGivenAt?: string | null;
-  serviceRecordCount: number;
-  workOrderCount: number;
-  appointmentCount: number;
-  loanerCount?: number;
+  model?: string | null;
 }

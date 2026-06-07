@@ -107,7 +107,8 @@ export const ListVehicleModelsResponse = zod.array(ListVehicleModelsResponseItem
  * @summary List all vehicles
  */
 export const ListVehiclesQueryParams = zod.object({
-  "search": zod.coerce.string().optional()
+  "search": zod.coerce.string().optional(),
+  "fleet": zod.coerce.boolean().optional().describe('When true, only return fleet vehicles (Vozový park).')
 })
 
 export const ListVehiclesResponseItem = zod.object({
@@ -115,6 +116,7 @@ export const ListVehiclesResponseItem = zod.object({
   "licensePlate": zod.string(),
   "make": zod.string(),
   "model": zod.string(),
+  "isFleet": zod.boolean(),
   "year": zod.number().nullish(),
   "color": zod.string().nullish(),
   "vin": zod.string().nullish(),
@@ -164,6 +166,7 @@ export const CreateVehicleBody = zod.object({
   "licensePlate": zod.string().min(1),
   "make": zod.string().min(1),
   "model": zod.string().min(1),
+  "isFleet": zod.boolean().nullish(),
   "year": zod.number().nullish(),
   "color": zod.string().nullish(),
   "vin": zod.string().nullish(),
@@ -397,6 +400,7 @@ export const GetVehicleByPlateResponse = zod.object({
   "licensePlate": zod.string(),
   "make": zod.string(),
   "model": zod.string(),
+  "isFleet": zod.boolean(),
   "year": zod.number().nullish(),
   "color": zod.string().nullish(),
   "vin": zod.string().nullish(),
@@ -445,6 +449,7 @@ export const GetVehicleResponse = zod.object({
   "licensePlate": zod.string(),
   "make": zod.string(),
   "model": zod.string(),
+  "isFleet": zod.boolean(),
   "year": zod.number().nullish(),
   "color": zod.string().nullish(),
   "vin": zod.string().nullish(),
@@ -600,6 +605,7 @@ export const UpdateVehicleBody = zod.object({
   "licensePlate": zod.string().optional(),
   "make": zod.string().optional(),
   "model": zod.string().optional(),
+  "isFleet": zod.boolean().nullish(),
   "year": zod.number().nullish(),
   "color": zod.string().nullish(),
   "vin": zod.string().nullish(),
@@ -637,6 +643,7 @@ export const UpdateVehicleResponse = zod.object({
   "licensePlate": zod.string(),
   "make": zod.string(),
   "model": zod.string(),
+  "isFleet": zod.boolean(),
   "year": zod.number().nullish(),
   "color": zod.string().nullish(),
   "vin": zod.string().nullish(),
@@ -693,6 +700,7 @@ export const RecomputeVehicleStatusResponse = zod.object({
   "licensePlate": zod.string(),
   "make": zod.string(),
   "model": zod.string(),
+  "isFleet": zod.boolean(),
   "year": zod.number().nullish(),
   "color": zod.string().nullish(),
   "vin": zod.string().nullish(),
@@ -1180,6 +1188,156 @@ export const DeleteAppointmentParams = zod.object({
 
 
 /**
+ * @summary List loaners, optionally filtered
+ */
+export const ListLoanersQueryParams = zod.object({
+  "search": zod.coerce.string().optional(),
+  "fleetVehicleId": zod.coerce.number().optional(),
+  "workOrderId": zod.coerce.number().optional(),
+  "status": zod.enum(['active', 'returned']).optional(),
+  "from": zod.coerce.string().optional().describe('Include loaners overlapping this date or later (by endDate).'),
+  "to": zod.coerce.string().optional().describe('Include loaners overlapping this date or earlier (by startDate).')
+})
+
+export const ListLoanersResponseItem = zod.object({
+  "id": zod.number(),
+  "fleetVehicleId": zod.number(),
+  "workOrderId": zod.number().nullish(),
+  "customerVehicleId": zod.number().nullish(),
+  "customerName": zod.string().nullish(),
+  "customerPhone": zod.string().nullish(),
+  "startDate": zod.string(),
+  "endDate": zod.string().nullish(),
+  "manualEndDate": zod.boolean(),
+  "status": zod.enum(['active', 'returned']),
+  "note": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "fleetLicensePlate": zod.string().nullish(),
+  "fleetMake": zod.string().nullish(),
+  "fleetModel": zod.string().nullish(),
+  "customerLicensePlate": zod.string().nullish()
+})
+export const ListLoanersResponse = zod.array(ListLoanersResponseItem)
+
+
+/**
+ * @summary Create a loaner
+ */
+
+
+
+export const CreateLoanerBody = zod.object({
+  "fleetVehicleId": zod.number(),
+  "workOrderId": zod.number().nullish(),
+  "customerVehicleId": zod.number().nullish(),
+  "customerName": zod.string().nullish(),
+  "customerPhone": zod.string().nullish(),
+  "startDate": zod.string().min(1),
+  "endDate": zod.string().nullish(),
+  "manualEndDate": zod.boolean().nullish(),
+  "status": zod.union([zod.literal('active'),zod.literal('returned'),zod.literal(null)]).nullish(),
+  "note": zod.string().nullish()
+})
+
+
+/**
+ * @summary Find active loaners of a fleet vehicle overlapping a date range (soft warning)
+ */
+export const CheckLoanerOverlapQueryParams = zod.object({
+  "fleetVehicleId": zod.coerce.number(),
+  "startDate": zod.coerce.string(),
+  "endDate": zod.coerce.string().nullish(),
+  "excludeId": zod.coerce.number().optional()
+})
+
+export const CheckLoanerOverlapResponseItem = zod.object({
+  "id": zod.number(),
+  "fleetVehicleId": zod.number(),
+  "workOrderId": zod.number().nullish(),
+  "customerVehicleId": zod.number().nullish(),
+  "customerName": zod.string().nullish(),
+  "customerPhone": zod.string().nullish(),
+  "startDate": zod.string(),
+  "endDate": zod.string().nullish(),
+  "manualEndDate": zod.boolean(),
+  "status": zod.enum(['active', 'returned']),
+  "note": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "fleetLicensePlate": zod.string().nullish(),
+  "fleetMake": zod.string().nullish(),
+  "fleetModel": zod.string().nullish(),
+  "customerLicensePlate": zod.string().nullish()
+})
+export const CheckLoanerOverlapResponse = zod.array(CheckLoanerOverlapResponseItem)
+
+
+/**
+ * @summary Suggest known customers (vehicle owners) for a loaner borrower
+ */
+export const ListLoanerCustomerSuggestionsQueryParams = zod.object({
+  "search": zod.coerce.string()
+})
+
+export const ListLoanerCustomerSuggestionsResponseItem = zod.object({
+  "vehicleId": zod.number(),
+  "licensePlate": zod.string(),
+  "ownerName": zod.string().nullish(),
+  "ownerPhone": zod.string().nullish(),
+  "make": zod.string().nullish(),
+  "model": zod.string().nullish()
+})
+export const ListLoanerCustomerSuggestionsResponse = zod.array(ListLoanerCustomerSuggestionsResponseItem)
+
+
+/**
+ * @summary Update a loaner
+ */
+export const UpdateLoanerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateLoanerBody = zod.object({
+  "fleetVehicleId": zod.number().nullish(),
+  "workOrderId": zod.number().nullish(),
+  "customerVehicleId": zod.number().nullish(),
+  "customerName": zod.string().nullish(),
+  "customerPhone": zod.string().nullish(),
+  "startDate": zod.string().nullish(),
+  "endDate": zod.string().nullish(),
+  "manualEndDate": zod.boolean().nullish(),
+  "status": zod.union([zod.literal('active'),zod.literal('returned'),zod.literal(null)]).nullish(),
+  "note": zod.string().nullish()
+})
+
+export const UpdateLoanerResponse = zod.object({
+  "id": zod.number(),
+  "fleetVehicleId": zod.number(),
+  "workOrderId": zod.number().nullish(),
+  "customerVehicleId": zod.number().nullish(),
+  "customerName": zod.string().nullish(),
+  "customerPhone": zod.string().nullish(),
+  "startDate": zod.string(),
+  "endDate": zod.string().nullish(),
+  "manualEndDate": zod.boolean(),
+  "status": zod.enum(['active', 'returned']),
+  "note": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "fleetLicensePlate": zod.string().nullish(),
+  "fleetMake": zod.string().nullish(),
+  "fleetModel": zod.string().nullish(),
+  "customerLicensePlate": zod.string().nullish()
+})
+
+
+/**
+ * @summary Delete a loaner
+ */
+export const DeleteLoanerParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary Look up company info by IČO in ARES registry
  */
 export const LookupAresParams = zod.object({
@@ -1338,7 +1496,8 @@ export const GdprSearchResponse = zod.object({
   "consentGivenAt": zod.string().nullish(),
   "serviceRecordCount": zod.number(),
   "workOrderCount": zod.number(),
-  "appointmentCount": zod.number()
+  "appointmentCount": zod.number(),
+  "loanerCount": zod.number().optional()
 }))
 })
 
@@ -1357,6 +1516,7 @@ export const GdprExportVehicleResponse = zod.object({
   "licensePlate": zod.string(),
   "make": zod.string(),
   "model": zod.string(),
+  "isFleet": zod.boolean(),
   "year": zod.number().nullish(),
   "color": zod.string().nullish(),
   "vin": zod.string().nullish(),
@@ -1465,6 +1625,24 @@ export const GdprExportVehicleResponse = zod.object({
   "status": zod.enum(['planned', 'done', 'cancelled']),
   "notes": zod.string().nullish(),
   "createdAt": zod.coerce.date()
+})),
+  "loaners": zod.array(zod.object({
+  "id": zod.number(),
+  "fleetVehicleId": zod.number(),
+  "workOrderId": zod.number().nullish(),
+  "customerVehicleId": zod.number().nullish(),
+  "customerName": zod.string().nullish(),
+  "customerPhone": zod.string().nullish(),
+  "startDate": zod.string(),
+  "endDate": zod.string().nullish(),
+  "manualEndDate": zod.boolean(),
+  "status": zod.enum(['active', 'returned']),
+  "note": zod.string().nullish(),
+  "createdAt": zod.coerce.date(),
+  "fleetLicensePlate": zod.string().nullish(),
+  "fleetMake": zod.string().nullish(),
+  "fleetModel": zod.string().nullish(),
+  "customerLicensePlate": zod.string().nullish()
 }))
 })
 
@@ -1512,6 +1690,7 @@ export const SetVehicleConsentResponse = zod.object({
   "licensePlate": zod.string(),
   "make": zod.string(),
   "model": zod.string(),
+  "isFleet": zod.boolean(),
   "year": zod.number().nullish(),
   "color": zod.string().nullish(),
   "vin": zod.string().nullish(),

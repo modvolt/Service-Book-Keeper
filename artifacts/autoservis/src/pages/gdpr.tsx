@@ -241,7 +241,7 @@ export default function GdprPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-center text-sm text-muted-foreground">
-                        {v.serviceRecordCount + v.workOrderCount + v.appointmentCount}
+                        {v.serviceRecordCount + v.workOrderCount + v.appointmentCount + (v.loanerCount ?? 0)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-1">

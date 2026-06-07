@@ -9,6 +9,7 @@ import {
   photosTable,
   auditLogTable,
   customerReminderLogTable,
+  loanersTable,
 } from "@workspace/db";
 import { SetVehicleConsentBody } from "@workspace/api-zod";
 import { getObjectStorageService } from "../lib/storage";
@@ -30,6 +31,15 @@ async function countFor(
     .select({ c: sql<number>`count(*)::int` })
     .from(table)
     .where(eq(table.vehicleId, vehicleId));
+  return row?.c ?? 0;
+}
+
+// Loaners linked to this vehicle as the borrowing customer.
+async function loanerCountFor(vehicleId: number): Promise<number> {
+  const [row] = await db
+    .select({ c: sql<number>`count(*)::int` })
+    .from(loanersTable)
+    .where(eq(loanersTable.customerVehicleId, vehicleId));
   return row?.c ?? 0;
 }
 
@@ -59,6 +69,24 @@ router.get("/gdpr/search", async (req, res): Promise<void> => {
     new Set(apptRows.map((r) => r.vid).filter((v): v is number => v != null)),
   );
 
+  // Vehicles linked (as the borrowing customer) to loaners whose free-text
+  // customer name/phone matches the query.
+  const loanerRows = await db
+    .select({ vid: loanersTable.customerVehicleId })
+    .from(loanersTable)
+    .where(
+      and(
+        isNotNull(loanersTable.customerVehicleId),
+        or(
+          ilike(loanersTable.customerName, pattern),
+          ilike(loanersTable.customerPhone, pattern),
+        ),
+      ),
+    );
+  const loanerVehicleIds = Array.from(
+    new Set(loanerRows.map((r) => r.vid).filter((v): v is number => v != null)),
+  );
+
   const conditions = [
     ilike(vehiclesTable.licensePlate, pattern),
     ilike(vehiclesTable.ownerName, pattern),
@@ -70,6 +98,9 @@ router.get("/gdpr/search", async (req, res): Promise<void> => {
   ];
   if (apptVehicleIds.length > 0) {
     conditions.push(inArray(vehiclesTable.id, apptVehicleIds));
+  }
+  if (loanerVehicleIds.length > 0) {
+    conditions.push(inArray(vehiclesTable.id, loanerVehicleIds));
   }
 
   const rows = await db
@@ -90,6 +121,7 @@ router.get("/gdpr/search", async (req, res): Promise<void> => {
       serviceRecordCount: await countFor(serviceRecordsTable, v.id),
       workOrderCount: await countFor(workOrdersTable, v.id),
       appointmentCount: await countFor(appointmentsTable, v.id),
+      loanerCount: await loanerCountFor(v.id),
     })),
   );
 
@@ -108,10 +140,11 @@ router.get("/gdpr/export/:vehicleId", async (req, res): Promise<void> => {
     res.status(404).json({ error: "Vozidlo nenalezeno" });
     return;
   }
-  const [serviceRecords, workOrders, appointments] = await Promise.all([
+  const [serviceRecords, workOrders, appointments, loaners] = await Promise.all([
     db.select().from(serviceRecordsTable).where(eq(serviceRecordsTable.vehicleId, id)),
     db.select().from(workOrdersTable).where(eq(workOrdersTable.vehicleId, id)),
     db.select().from(appointmentsTable).where(eq(appointmentsTable.vehicleId, id)),
+    db.select().from(loanersTable).where(eq(loanersTable.customerVehicleId, id)),
   ]);
 
   await audit("gdpr_export", {
@@ -126,6 +159,7 @@ router.get("/gdpr/export/:vehicleId", async (req, res): Promise<void> => {
     serviceRecords,
     workOrders,
     appointments,
+    loaners,
   });
 });
 
@@ -162,6 +196,13 @@ router.post("/gdpr/anonymize/:vehicleId", async (req, res): Promise<void> => {
       .update(appointmentsTable)
       .set({ customerName: null, customerPhone: null })
       .where(eq(appointmentsTable.vehicleId, id));
+
+    // Strip the borrower's free-text PII from loaners but keep the technical
+    // lending record (which fleet vehicle, dates).
+    await tx
+      .update(loanersTable)
+      .set({ customerName: null, customerPhone: null })
+      .where(eq(loanersTable.customerVehicleId, id));
 
     // Drop the customer-reminder ledger so a future re-consent starts clean.
     await tx
@@ -227,6 +268,9 @@ router.delete("/gdpr/vehicle/:vehicleId", async (req, res): Promise<void> => {
     }
     // Appointments use set-null on vehicle delete, so remove them explicitly.
     await tx.delete(appointmentsTable).where(eq(appointmentsTable.vehicleId, id));
+    // Loaners reference the customer vehicle with set-null, so remove the
+    // borrower's lending records explicitly. (Fleet-vehicle loaners cascade.)
+    await tx.delete(loanersTable).where(eq(loanersTable.customerVehicleId, id));
     // service_records cascade with the vehicle.
     await tx.delete(vehiclesTable).where(eq(vehiclesTable.id, id));
   });

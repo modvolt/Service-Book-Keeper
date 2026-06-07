@@ -118,7 +118,12 @@ export default function VehiclesList() {
                           </Link>
                         </td>
                         <td className="px-4 py-3 font-medium">
-                          {v.make} {v.model}
+                          <span className="inline-flex items-center gap-2">
+                            {v.make} {v.model}
+                            {v.isFleet && (
+                              <Badge variant="secondary" className="bg-orange-100 text-orange-800 hover:bg-orange-100">Vozový park</Badge>
+                            )}
+                          </span>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground">
                           {v.ownerName || "-"}

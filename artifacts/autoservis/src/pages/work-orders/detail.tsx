@@ -9,6 +9,7 @@ import {
   getListWorkOrderMaterialsQueryKey, getListMaterialsQueryKey
 } from "@workspace/api-client-react";
 import { WorkOrderExportDialog } from "@/components/work-order-export-dialog";
+import { LoanerSection } from "@/components/loaner-section";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -556,6 +557,8 @@ export default function WorkOrderDetail() {
           </AlertDialog>
         </div>
       </div>
+
+      <LoanerSection order={order} linkedVehicle={linkedVehicle} />
 
       <div className="grid gap-4 md:grid-cols-2">
         {/* Details */}
