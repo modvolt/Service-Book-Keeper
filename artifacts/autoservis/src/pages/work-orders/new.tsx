@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Link, useLocation, useSearch } from "wouter";
 import { LicensePlate } from "@/components/license-plate";
 import { takeWorkOrderPrefill } from "@/lib/scan-prefill";
-import { useCreateWorkOrder, useGetVehicleByPlate, useListVehicles, getListWorkOrdersQueryKey } from "@workspace/api-client-react";
+import { useCreateWorkOrder, useCreateLoaner, useGetVehicleByPlate, useListVehicles, getListWorkOrdersQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Search, Car } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, Search, Car, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function NewWorkOrder() {
@@ -19,6 +20,8 @@ export default function NewWorkOrder() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const createWorkOrder = useCreateWorkOrder();
+  const createLoaner = useCreateLoaner();
+  const { data: fleetVehicles = [] } = useListVehicles({ fleet: true });
 
   const params = new URLSearchParams(search);
   const initialSpz = params.get("spz") ?? "";
@@ -56,6 +59,13 @@ export default function NewWorkOrder() {
     serviceDate: today,
   });
 
+  // Optional loaner assignment from the fleet (Vozový park) during creation.
+  const [loanerFleetId, setLoanerFleetId] = useState("");
+  const [loanerCustomerName, setLoanerCustomerName] = useState("");
+  const [loanerCustomerPhone, setLoanerCustomerPhone] = useState("");
+  const [loanerCustomerTouched, setLoanerCustomerTouched] = useState(false);
+  const [loanerNote, setLoanerNote] = useState("");
+
   // Pre-fill the odometer reading when arriving from a vehicle scan handoff.
   useEffect(() => {
     const pre = takeWorkOrderPrefill();
@@ -63,6 +73,13 @@ export default function NewWorkOrder() {
       setForm((f) => ({ ...f, km: String(pre.km) }));
     }
   }, []);
+
+  // Pre-fill the borrower from the serviced vehicle's owner until edited.
+  useEffect(() => {
+    if (loanerCustomerTouched) return;
+    setLoanerCustomerName(foundVehicle?.ownerName ?? "");
+    setLoanerCustomerPhone(foundVehicle?.ownerPhone ?? "");
+  }, [foundVehicle, loanerCustomerTouched]);
 
   function handleSpzChange(value: string) {
     setSpz(value);
@@ -114,6 +131,30 @@ export default function NewWorkOrder() {
     }, {
       onSuccess: (order) => {
         queryClient.invalidateQueries({ queryKey: getListWorkOrdersQueryKey() });
+        if (loanerFleetId) {
+          const startDate = order.createdAt ? order.createdAt.slice(0, 10) : today;
+          createLoaner.mutate({
+            data: {
+              fleetVehicleId: parseInt(loanerFleetId, 10),
+              workOrderId: order.id,
+              customerVehicleId: foundVehicle?.id ?? order.vehicleId ?? null,
+              customerName: loanerCustomerName.trim() || null,
+              customerPhone: loanerCustomerPhone.trim() || null,
+              startDate,
+              note: loanerNote.trim() || null,
+            },
+          }, {
+            onSuccess: () => {
+              toast({ title: "Zakázka i zápůjčka vytvořeny" });
+              navigate(`/work-orders/${order.id}`);
+            },
+            onError: () => {
+              toast({ title: "Zakázka vytvořena", description: "Náhradní vozidlo se nepodařilo přiřadit, zkuste to v detailu zakázky.", variant: "destructive" });
+              navigate(`/work-orders/${order.id}`);
+            },
+          });
+          return;
+        }
         toast({ title: "Zakázka vytvořena" });
         navigate(`/work-orders/${order.id}`);
       },
@@ -243,6 +284,73 @@ export default function NewWorkOrder() {
               <Label>Ostatní servisní úkony</Label>
               <Textarea placeholder="Další servisní úkony mimo standardní položky..." value={form.otherServices} onChange={e => setForm(f => ({ ...f, otherServices: e.target.value }))} />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5" /> Náhradní vozidlo (zápůjčka)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Volitelně přidělte zákazníkovi náhradní vozidlo z vozového parku.
+            </p>
+            <div className="space-y-1">
+              <Label>Vozidlo z vozového parku</Label>
+              {fleetVehicles.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Žádná vozidla ve vozovém parku.{" "}
+                  <Link href="/vehicles/new?fleet=1" className="underline">Přidat vozidlo</Link>
+                </p>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Select value={loanerFleetId} onValueChange={setLoanerFleetId}>
+                    <SelectTrigger><SelectValue placeholder="Bez náhradního vozidla" /></SelectTrigger>
+                    <SelectContent>
+                      {fleetVehicles.map((v) => (
+                        <SelectItem key={v.id} value={String(v.id)}>
+                          {v.licensePlate} — {v.make} {v.model}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {loanerFleetId && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setLoanerFleetId("")}>
+                      Zrušit výběr
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {loanerFleetId && (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <Label>Zákazník (jméno)</Label>
+                    <Input
+                      value={loanerCustomerName}
+                      onChange={(e) => { setLoanerCustomerName(e.target.value); setLoanerCustomerTouched(true); }}
+                      placeholder="Jméno zákazníka"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Telefon</Label>
+                    <Input
+                      value={loanerCustomerPhone}
+                      onChange={(e) => { setLoanerCustomerPhone(e.target.value); setLoanerCustomerTouched(true); }}
+                      placeholder="Telefon zákazníka"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label>Poznámka</Label>
+                  <Textarea value={loanerNote} onChange={(e) => setLoanerNote(e.target.value)} rows={2} />
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
