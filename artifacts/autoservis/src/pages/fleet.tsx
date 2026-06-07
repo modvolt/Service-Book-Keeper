@@ -16,6 +16,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogFooter,
+  AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { ChevronLeft, ChevronRight, Plus, KeyRound, Car, AlertTriangle, Search, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -93,6 +97,7 @@ export default function FleetPage() {
   const [historySearch, setHistorySearch] = useState("");
   const [nameTouched, setNameTouched] = useState(false);
   const [nameSuggestOpen, setNameSuggestOpen] = useState(false);
+  const [confirmOverlapOpen, setConfirmOverlapOpen] = useState(false);
 
   const gridStart = useMemo(() => addDays(cursor, -14), [cursor]);
   const gridEnd = useMemo(() => addDays(cursor, 14 + 6), [cursor]);
@@ -147,6 +152,16 @@ export default function FleetPage() {
     return map;
   }, [activeLoaners]);
 
+  // Number of concurrently active loans per fleet vehicle. More than one means
+  // the same replacement car is double-booked (overlapping loans).
+  const activeCountByFleetId = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const l of activeLoaners) {
+      map.set(l.fleetVehicleId, (map.get(l.fleetVehicleId) ?? 0) + 1);
+    }
+    return map;
+  }, [activeLoaners]);
+
   const grid = useMemo(() => {
     const days: { date: Date; inCurrentWeek: boolean }[] = [];
     for (let i = 0; i < 35; i++) {
@@ -194,7 +209,7 @@ export default function FleetPage() {
     queryClient.invalidateQueries({ queryKey: getListLoanersQueryKey({ status: "active" }) });
   }
 
-  async function handleSave() {
+  function handleSave() {
     if (!form.fleetVehicleId) {
       toast({ title: "Vyberte vozidlo z vozového parku", variant: "destructive" });
       return;
@@ -203,6 +218,15 @@ export default function FleetPage() {
       toast({ title: "Chybí datum zapůjčení", variant: "destructive" });
       return;
     }
+    // Overlapping loan: ask for explicit confirmation, but never block.
+    if (hasOverlap) {
+      setConfirmOverlapOpen(true);
+      return;
+    }
+    void doSave();
+  }
+
+  async function doSave() {
     const payload = {
       fleetVehicleId: parseInt(form.fleetVehicleId, 10),
       customerVehicleId: linkedVehicle?.id ?? null,
@@ -224,6 +248,7 @@ export default function FleetPage() {
       }
       invalidate();
       setDialogOpen(false);
+      setConfirmOverlapOpen(false);
     } catch (e: any) {
       toast({ title: "Chyba", description: String(e?.message ?? e), variant: "destructive" });
     }
@@ -287,8 +312,13 @@ export default function FleetPage() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {fleetVehicles.map(v => {
                 const active = activeByFleetId.get(v.id);
+                const activeCount = activeCountByFleetId.get(v.id) ?? 0;
+                const doubleBooked = activeCount > 1;
                 return (
-                  <div key={v.id} className="rounded-lg border p-3 flex flex-col gap-2">
+                  <div
+                    key={v.id}
+                    className={`rounded-lg border p-3 flex flex-col gap-2 ${doubleBooked ? "border-amber-400 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/30" : ""}`}
+                  >
                     <div className="flex items-center justify-between gap-2">
                       <LicensePlate plate={v.licensePlate} size="sm" />
                       {active ? (
@@ -298,6 +328,12 @@ export default function FleetPage() {
                       )}
                     </div>
                     <div className="text-sm font-medium">{[v.make, v.model].filter(Boolean).join(" ") || "—"}</div>
+                    {doubleBooked && (
+                      <div className="flex items-start gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400">
+                        <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
+                        <span>Překryv zápůjček: toto vozidlo má {activeCount} souběžné aktivní zápůjčky.</span>
+                      </div>
+                    )}
                     {active && (
                       <div className="text-xs text-muted-foreground">
                         {active.customerName || active.customerLicensePlate || "zákazník"} — od {fmtDate(active.startDate)}
@@ -507,6 +543,30 @@ export default function FleetPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={confirmOverlapOpen} onOpenChange={setConfirmOverlapOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-600" /> Možný překryv zápůjček
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Toto vozidlo je v daném období již zapůjčeno. Pokud budete pokračovat,
+              vznikne souběžná (překrývající se) zápůjčka stejného náhradního vozidla.
+              Opravdu chcete pokračovat?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-amber-600 text-white hover:bg-amber-700"
+              onClick={(e) => { e.preventDefault(); void doSave(); }}
+            >
+              Pokračovat i tak
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

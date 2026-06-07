@@ -15,6 +15,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogFooter,
+  AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
 import { LicensePlate } from "@/components/license-plate";
 import { Car, KeyRound, AlertTriangle, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -57,6 +61,7 @@ export function LoanerSection({
   const [customerVehicleId, setCustomerVehicleId] = useState<number | null>(null);
   const [customerTouched, setCustomerTouched] = useState(false);
   const [suggestOpen, setSuggestOpen] = useState(false);
+  const [confirmOverlapOpen, setConfirmOverlapOpen] = useState(false);
 
   // The loan runs automatically from the work order's creation date until the
   // order is marked as invoiced (Zaplaceno), unless returned manually.
@@ -104,6 +109,15 @@ export function LoanerSection({
       toast({ title: "Vyberte náhradní vozidlo", variant: "destructive" });
       return;
     }
+    // Overlapping loan: ask for explicit confirmation, but never block.
+    if ((overlap.data?.length ?? 0) > 0) {
+      setConfirmOverlapOpen(true);
+      return;
+    }
+    doCreate();
+  }
+
+  function doCreate() {
     createLoaner.mutate({
       data: {
         fleetVehicleId: parseInt(fleetId, 10),
@@ -118,6 +132,7 @@ export function LoanerSection({
       onSuccess: () => {
         invalidate();
         setDialogOpen(false);
+        setConfirmOverlapOpen(false);
         setFleetId("");
         setNote("");
         setCustomerName("");
@@ -321,6 +336,30 @@ export function LoanerSection({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={confirmOverlapOpen} onOpenChange={setConfirmOverlapOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-600" /> Možný překryv zápůjček
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Toto vozidlo je v daném období již zapůjčeno. Pokud budete pokračovat,
+              vznikne souběžná (překrývající se) zápůjčka stejného náhradního vozidla.
+              Opravdu chcete pokračovat?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-amber-600 text-white hover:bg-amber-700"
+              onClick={(e) => { e.preventDefault(); doCreate(); }}
+            >
+              Pokračovat i tak
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
