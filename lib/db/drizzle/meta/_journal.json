@@ -8,6 +8,13 @@
       "when": 1780850059306,
       "tag": "0000_thin_bulldozer",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1780868339829,
+      "tag": "0001_busy_random",
+      "breakpoints": true
     }
   ]
 }

@@ -230,6 +230,7 @@ export interface WorkOrder {
   /** @nullable */
   ownerName?: string | null;
   status: WorkOrderStatus;
+  paid: boolean;
   /** @nullable */
   km?: number | null;
   /** @nullable */
@@ -558,6 +559,7 @@ export interface ServiceRecordInput {
 export interface WorkOrderInput {
   /** @minLength 1 */
   licensePlate: string;
+  paid?: boolean;
   /** @nullable */
   km?: number | null;
   /** @nullable */
@@ -606,6 +608,7 @@ export const WorkOrderUpdateStatus = {
 
 export interface WorkOrderUpdate {
   status?: WorkOrderUpdateStatus;
+  paid?: boolean;
   /** @nullable */
   km?: number | null;
   /** @nullable */

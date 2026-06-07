@@ -58,7 +58,7 @@ Czech-language auto service management app for a self-employed mechanic — trac
 - Dashboard: open work orders count, completions this month, STK expiry warnings, recent orders list
 - Vehicles: list by SPZ (license plate) with STK status indicators, search, add/edit vehicle
 - Vehicle detail: basic info, service status (STK, oil change, brakes, timing), service history log
-- Work orders: create with SPZ entry (auto-resolves vehicle), service item checkboxes, status tracking
+- Work orders: create with SPZ entry (auto-resolves vehicle), service item checkboxes, status tracking, paid flag (Zaplaceno) toggled on the detail page and shown as a badge in the list
 - Work order detail: edit status/items, add photos from mobile camera or file upload (XHR upload progress bar + Czech error toasts)
 - Načtení vozu (`/nacteni-vozu`, old `/nacteni-tp` kept as alias): mobile-first scan of vehicle docs (TP, or SPZ + VIN) plus optional dashboard photo; AI extracts SPZ/VIN/make/model/year/displacement and odometer km. Live phone→PC handoff via SSE: phone POSTs the scan, server resolves SPZ and broadcasts a routing decision to other open sessions — unknown SPZ → pre-filled new-vehicle form, known SPZ → new work order. Km is prefilled only when scanned km > stored `currentKm`. Phone shows "Odesláno do PC" (delivered) or an open-on-PC message (no PC connected). Always review-then-confirm; nothing is saved silently.
 - Materials catalog (`/materials`): manage stock/parts catalog (name, product number, unit, default price, supplier); items suggested when writing work orders. Supplier price-list import (CSV/XLSX) with client-side parse, column mapping, supplier override, and server-side upsert matched by product number (case-insensitive) with name fallback
@@ -79,6 +79,7 @@ Czech-language auto service management app for a self-employed mechanic — trac
 - `materials_catalog` uniqueness is case-insensitive via a `lower(name)` unique index (not the plain column). The import upsert branches on a case-insensitive existing-name set; bulk import uses a route-local 10mb JSON parser (global limit is 1mb).
 - `vite` is pinned in the catalog alongside `terser` (catalog entry). `terser` must stay a devDependency of every vite-consuming package (autoservis, mockup-sandbox) — `vite-plugin-pwa` pulls terser and otherwise splits vite into two TS-incompatible variants, breaking an unrelated package's typecheck.
 - `BASE_PATH` is normalized in `vite.config.ts` to always have leading+trailing slashes so PWA `start_url`/`scope`/`navigateFallback` concatenate correctly.
+- `drizzle-kit generate` fails with an ENOENT on `.//home/...snapshot.json` because the config's `out` is an absolute path and drizzle prepends `./`. Run it from cwd `/` (e.g. `cd / && lib/db/node_modules/.bin/drizzle-kit generate --config <abs path>`) so the `.//abs` collapses to the correct absolute path. `push`/`migrate` are unaffected.
 
 ## Pointers
 

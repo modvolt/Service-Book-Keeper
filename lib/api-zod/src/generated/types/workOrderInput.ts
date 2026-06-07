@@ -9,6 +9,7 @@
 export interface WorkOrderInput {
   /** @minLength 1 */
   licensePlate: string;
+  paid?: boolean;
   /** @nullable */
   km?: number | null;
   /** @nullable */

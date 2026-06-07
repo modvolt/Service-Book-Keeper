@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -226,6 +227,13 @@ export default function WorkOrderDetail() {
     updateOrder.mutate({ id, data: { status: value as WorkOrderStatus } }, {
       onSuccess: () => { invalidateOrder(); toast({ title: "Stav změněn" }); },
       onError: (err) => toast({ title: "Chyba", description: getApiErrorMessage(err, "Stav se nepodařilo změnit."), variant: "destructive" }),
+    });
+  }
+
+  function handleTogglePaid(value: boolean) {
+    updateOrder.mutate({ id, data: { paid: value } }, {
+      onSuccess: () => { invalidateOrder(); toast({ title: value ? "Označeno jako zaplaceno" : "Označeno jako nezaplaceno" }); },
+      onError: (err) => toast({ title: "Chyba", description: getApiErrorMessage(err, "Stav platby se nepodařilo změnit."), variant: "destructive" }),
     });
   }
 
@@ -478,6 +486,9 @@ export default function WorkOrderDetail() {
           <div className="flex items-center gap-3 flex-wrap">
             <LicensePlate plate={order.licensePlate} size="xl" />
             <WorkOrderStatusBadge status={order.status} />
+            {order.paid && (
+              <Badge className="bg-emerald-600 text-white hover:bg-emerald-700 text-sm px-3 py-1">Zaplaceno</Badge>
+            )}
           </div>
           <p className="text-muted-foreground text-sm mt-1">
             Zakázka #{order.id} — {order.serviceDate
@@ -497,6 +508,10 @@ export default function WorkOrderDetail() {
               </SelectContent>
             </Select>
           </div>
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <Checkbox checked={order.paid} onCheckedChange={(v) => handleTogglePaid(v === true)} disabled={updateOrder.isPending} />
+            <span className="text-sm">Zaplaceno</span>
+          </label>
           {!editMode ? (
             <>
               <WorkOrderExportDialog

@@ -20,6 +20,7 @@ export interface WorkOrder {
   /** @nullable */
   ownerName?: string | null;
   status: WorkOrderStatus;
+  paid: boolean;
   /** @nullable */
   km?: number | null;
   /** @nullable */

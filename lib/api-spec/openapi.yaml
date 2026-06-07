@@ -1533,7 +1533,7 @@ components:
 
     WorkOrder:
       type: object
-      required: [id, licensePlate, status, createdAt]
+      required: [id, licensePlate, status, paid, createdAt]
       properties:
         id:
           type: integer
@@ -1550,6 +1550,8 @@ components:
         status:
           type: string
           enum: [open, in_progress, waiting_parts, needs_return, completed]
+        paid:
+          type: boolean
         km:
           type: ["integer", "null"]
         description:
@@ -1621,6 +1623,8 @@ components:
         licensePlate:
           type: string
           minLength: 1
+        paid:
+          type: boolean
         km:
           type: ["integer", "null"]
         description:
@@ -1678,6 +1682,8 @@ components:
         status:
           type: string
           enum: [open, in_progress, waiting_parts, needs_return, completed]
+        paid:
+          type: boolean
         km:
           type: ["integer", "null"]
         description:

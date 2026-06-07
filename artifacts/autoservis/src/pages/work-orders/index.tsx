@@ -120,6 +120,9 @@ export default function WorkOrdersList() {
                           <span className="text-sm text-muted-foreground">{wo.ownerName}</span>
                         )}
                         <WorkOrderStatusBadge status={wo.status} size="sm" />
+                        {wo.paid && (
+                          <Badge className="bg-emerald-600 text-white hover:bg-emerald-700">Zaplaceno</Badge>
+                        )}
                         {wo.photos && wo.photos.length > 0 && (
                           <span className="flex items-center gap-1 text-xs text-muted-foreground">
                             <ImageIcon className="h-3 w-3" />{wo.photos.length}

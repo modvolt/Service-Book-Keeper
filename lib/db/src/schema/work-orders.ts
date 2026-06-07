@@ -8,6 +8,7 @@ export const workOrdersTable = pgTable("work_orders", {
   vehicleId: integer("vehicle_id").references(() => vehiclesTable.id, { onDelete: "set null" }),
   licensePlate: text("license_plate").notNull(),
   status: text("status").notNull().default("open"),
+  paid: boolean("paid").notNull().default(false),
   km: integer("km"),
   description: text("description"),
   oilChange: boolean("oil_change").notNull().default(false),

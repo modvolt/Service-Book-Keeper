@@ -93,6 +93,7 @@ router.post("/work-orders", async (req, res): Promise<void> => {
     ...parsed.data,
     licensePlate: plate,
     vehicleId: vehicle?.id ?? null,
+    paid: parsed.data.paid ?? false,
     oilChange: parsed.data.oilChange ?? false,
     brakes: parsed.data.brakes ?? false,
     timing: parsed.data.timing ?? false,

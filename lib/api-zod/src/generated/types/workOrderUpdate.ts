@@ -9,6 +9,7 @@ import type { WorkOrderUpdateStatus } from './workOrderUpdateStatus';
 
 export interface WorkOrderUpdate {
   status?: WorkOrderUpdateStatus;
+  paid?: boolean;
   /** @nullable */
   km?: number | null;
   /** @nullable */
