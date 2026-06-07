@@ -51,7 +51,8 @@ export default function WorkOrdersList() {
     return wo.licensePlate.toLowerCase().includes(s) ||
       wo.description?.toLowerCase().includes(s) ||
       wo.make?.toLowerCase().includes(s) ||
-      wo.model?.toLowerCase().includes(s);
+      wo.model?.toLowerCase().includes(s) ||
+      wo.ownerName?.toLowerCase().includes(s);
   });
 
   const dateStr = (d: string) => {
@@ -75,7 +76,7 @@ export default function WorkOrdersList() {
           <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input
             className="pl-9"
-            placeholder="Hledat podle SPZ nebo popisu..."
+            placeholder="Hledat podle SPZ, zákazníka nebo popisu..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -114,6 +115,9 @@ export default function WorkOrdersList() {
                         <LicensePlate plate={wo.licensePlate} size="lg" />
                         {(wo.make || wo.model) && (
                           <span className="font-medium text-sm">{[wo.make, wo.model].filter(Boolean).join(" ")}</span>
+                        )}
+                        {wo.ownerName && (
+                          <span className="text-sm text-muted-foreground">{wo.ownerName}</span>
                         )}
                         <WorkOrderStatusBadge status={wo.status} size="sm" />
                         {wo.photos && wo.photos.length > 0 && (

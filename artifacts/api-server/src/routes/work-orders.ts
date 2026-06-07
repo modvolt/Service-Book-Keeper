@@ -52,6 +52,7 @@ router.get("/work-orders", async (req, res): Promise<void> => {
       order: workOrdersTable,
       make: vehiclesTable.make,
       model: vehiclesTable.model,
+      ownerName: vehiclesTable.ownerName,
     })
     .from(workOrdersTable)
     .leftJoin(vehiclesTable, eq(workOrdersTable.vehicleId, vehiclesTable.id))
@@ -64,13 +65,14 @@ router.get("/work-orders", async (req, res): Promise<void> => {
       r.order.licensePlate.toLowerCase().includes(s) ||
       r.order.description?.toLowerCase().includes(s) ||
       r.make?.toLowerCase().includes(s) ||
-      r.model?.toLowerCase().includes(s)
+      r.model?.toLowerCase().includes(s) ||
+      r.ownerName?.toLowerCase().includes(s)
     );
   }
 
   const withPhotos = await Promise.all(rows.map(async (r) => {
     const photos = await db.select().from(photosTable).where(eq(photosTable.workOrderId, r.order.id));
-    return { ...r.order, make: r.make ?? null, model: r.model ?? null, photos };
+    return { ...r.order, make: r.make ?? null, model: r.model ?? null, ownerName: r.ownerName ?? null, photos };
   }));
 
   res.json(withPhotos);

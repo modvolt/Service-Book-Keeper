@@ -1545,6 +1545,8 @@ components:
           type: ["string", "null"]
         model:
           type: ["string", "null"]
+        ownerName:
+          type: ["string", "null"]
         status:
           type: string
           enum: [open, in_progress, waiting_parts, needs_return, completed]

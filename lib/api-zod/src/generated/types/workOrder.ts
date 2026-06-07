@@ -17,6 +17,8 @@ export interface WorkOrder {
   make?: string | null;
   /** @nullable */
   model?: string | null;
+  /** @nullable */
+  ownerName?: string | null;
   status: WorkOrderStatus;
   /** @nullable */
   km?: number | null;
