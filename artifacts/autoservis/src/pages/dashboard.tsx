@@ -208,6 +208,9 @@ export default function Dashboard() {
                           {(order.make || order.model) && (
                             <span className="font-medium text-sm">{[order.make, order.model].filter(Boolean).join(" ")}</span>
                           )}
+                          {order.ownerName && (
+                            <span className="text-sm text-muted-foreground">{order.ownerName}</span>
+                          )}
                           {getStatusBadge(order.status)}
                         </div>
                         <p className="text-sm text-muted-foreground line-clamp-1">
