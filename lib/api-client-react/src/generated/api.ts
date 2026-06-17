@@ -26,6 +26,8 @@ import type {
   AresResult,
   AuditLogEntry,
   AuthStatus,
+  Backup,
+  BackupRunResult,
   ChangePasswordInput,
   CheckLoanerOverlapParams,
   CustomerReminderLogEntry,
@@ -3960,6 +3962,153 @@ export const useSendTestReminder = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getSendTestReminderMutationOptions(options));
+    }
+
+export const getGetBackupsUrl = () => {
+
+
+
+
+  return `/api/backups`
+}
+
+/**
+ * @summary List recent automatic backups (newest first)
+ */
+export const getBackups = async ( options?: RequestInit): Promise<Backup[]> => {
+
+  return customFetch<Backup[]>(getGetBackupsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetBackupsQueryKey = () => {
+    return [
+    `/api/backups`
+    ] as const;
+    }
+
+
+export const getGetBackupsQueryOptions = <TData = Awaited<ReturnType<typeof getBackups>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBackups>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetBackupsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getBackups>>> = ({ signal }) => getBackups({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getBackups>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetBackupsQueryResult = NonNullable<Awaited<ReturnType<typeof getBackups>>>
+export type GetBackupsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List recent automatic backups (newest first)
+ */
+
+export function useGetBackups<TData = Awaited<ReturnType<typeof getBackups>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getBackups>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetBackupsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getRunBackupUrl = () => {
+
+
+
+
+  return `/api/backups/run`
+}
+
+/**
+ * @summary Create a database backup now and upload it to the object store
+ */
+export const runBackup = async ( options?: RequestInit): Promise<BackupRunResult> => {
+
+  return customFetch<BackupRunResult>(getRunBackupUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getRunBackupMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runBackup>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof runBackup>>, TError,void, TContext> => {
+
+const mutationKey = ['runBackup'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof runBackup>>, void> = () => {
+
+
+          return  runBackup(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RunBackupMutationResult = NonNullable<Awaited<ReturnType<typeof runBackup>>>
+
+    export type RunBackupMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create a database backup now and upload it to the object store
+ */
+export const useRunBackup = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runBackup>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof runBackup>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getRunBackupMutationOptions(options));
     }
 
 export const getGetDashboardSummaryUrl = () => {

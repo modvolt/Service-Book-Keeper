@@ -7,6 +7,7 @@ export * from "./appointments";
 export * from "./loaners";
 export * from "./settings";
 export * from "./customer-reminders";
+export * from "./backups";
 export * from "./auth";
 export * from "./audit";
 export * from "./session";

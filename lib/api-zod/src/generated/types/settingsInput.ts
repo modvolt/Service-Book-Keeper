@@ -35,4 +35,6 @@ export interface SettingsInput {
   reminderServiceDays?: number | null;
   /** @nullable */
   notificationEmail?: string | null;
+  /** @nullable */
+  backupsEnabled?: boolean | null;
 }

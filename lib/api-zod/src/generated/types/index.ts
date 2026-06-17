@@ -15,6 +15,8 @@ export * from './appointmentUpdateStatus';
 export * from './aresResult';
 export * from './auditLogEntry';
 export * from './authStatus';
+export * from './backup';
+export * from './backupRunResult';
 export * from './changePasswordInput';
 export * from './checkLoanerOverlapParams';
 export * from './customerReminderLogEntry';

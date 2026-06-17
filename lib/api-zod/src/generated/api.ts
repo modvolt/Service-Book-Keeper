@@ -1369,7 +1369,9 @@ export const GetSettingsResponse = zod.object({
   "emailRemindersEnabled": zod.boolean(),
   "reminderStkDays": zod.number(),
   "reminderServiceDays": zod.number(),
-  "notificationEmail": zod.string().nullish()
+  "notificationEmail": zod.string().nullish(),
+  "backupsEnabled": zod.boolean().optional(),
+  "lastBackupAt": zod.string().nullish()
 })
 
 
@@ -1390,7 +1392,8 @@ export const UpdateSettingsBody = zod.object({
   "emailRemindersEnabled": zod.boolean().nullish(),
   "reminderStkDays": zod.number().nullish(),
   "reminderServiceDays": zod.number().nullish(),
-  "notificationEmail": zod.string().nullish()
+  "notificationEmail": zod.string().nullish(),
+  "backupsEnabled": zod.boolean().nullish()
 })
 
 export const UpdateSettingsResponse = zod.object({
@@ -1407,7 +1410,9 @@ export const UpdateSettingsResponse = zod.object({
   "emailRemindersEnabled": zod.boolean(),
   "reminderStkDays": zod.number(),
   "reminderServiceDays": zod.number(),
-  "notificationEmail": zod.string().nullish()
+  "notificationEmail": zod.string().nullish(),
+  "backupsEnabled": zod.boolean().optional(),
+  "lastBackupAt": zod.string().nullish()
 })
 
 
@@ -1417,6 +1422,35 @@ export const UpdateSettingsResponse = zod.object({
 export const SendTestReminderResponse = zod.object({
   "sent": zod.boolean(),
   "message": zod.string()
+})
+
+
+/**
+ * @summary List recent automatic backups (newest first)
+ */
+export const GetBackupsResponseItem = zod.object({
+  "id": zod.number(),
+  "filename": zod.string(),
+  "sizeBytes": zod.number(),
+  "status": zod.string(),
+  "createdAt": zod.string()
+})
+export const GetBackupsResponse = zod.array(GetBackupsResponseItem)
+
+
+/**
+ * @summary Create a database backup now and upload it to the object store
+ */
+export const RunBackupResponse = zod.object({
+  "ok": zod.boolean(),
+  "message": zod.string(),
+  "backup": zod.object({
+  "id": zod.number(),
+  "filename": zod.string(),
+  "sizeBytes": zod.number(),
+  "status": zod.string(),
+  "createdAt": zod.string()
+}).optional()
 })
 
 

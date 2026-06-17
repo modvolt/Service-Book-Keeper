@@ -48,6 +48,18 @@ export class ObjectStorageService {
     return `/objects/${entityId}`;
   }
 
+  /**
+   * Store a backup blob under the stable `backups/` prefix using a caller-chosen
+   * filename (unlike {@link uploadPrivateObject}, the key is deterministic so the
+   * row in the `backups` table maps to a known object). Returns the
+   * `/objects/backups/<filename>` path used to serve or delete it later.
+   */
+  async putBackupObject(filename: string, body: Buffer, contentType: string): Promise<string> {
+    const entityId = `backups/${filename}`;
+    await this.driver.putPrivateObject(entityId, body, contentType);
+    return `/objects/${entityId}`;
+  }
+
   /** Open a private object by its `/objects/<entityId>` path. */
   async serveObject(objectPath: string): Promise<StoredObject> {
     if (!objectPath.startsWith("/objects/")) {

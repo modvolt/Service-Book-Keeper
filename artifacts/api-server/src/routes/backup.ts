@@ -1,6 +1,7 @@
 import { Router, type IRouter, json } from "express";
-import { getTableColumns, sql } from "drizzle-orm";
+import { getTableColumns, sql, eq } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
+import { gunzipSync } from "zlib";
 import { z } from "zod";
 import {
   db,
@@ -12,11 +13,12 @@ import {
   photosTable,
   appointmentsTable,
   settingsTable,
+  backupsTable,
 } from "@workspace/db";
+import { getObjectStorageService, ObjectNotFoundError } from "../lib/storage";
+import { createBackupSnapshot, listBackups, runBackup } from "../lib/backups";
 
 const router: IRouter = Router();
-
-const BACKUP_VERSION = 1;
 
 /**
  * GET /backup/export
@@ -25,44 +27,89 @@ const BACKUP_VERSION = 1;
  */
 router.get("/backup/export", async (req, res): Promise<void> => {
   try {
-    // Read every table inside one transaction for a consistent point-in-time snapshot.
-    const {
-      vehicles,
-      serviceRecords,
-      workOrders,
-      materialsCatalog,
-      workOrderMaterials,
-      photos,
-      appointments,
-      settings,
-    } = await db.transaction(async (tx) => ({
-      vehicles: await tx.select().from(vehiclesTable),
-      serviceRecords: await tx.select().from(serviceRecordsTable),
-      workOrders: await tx.select().from(workOrdersTable),
-      materialsCatalog: await tx.select().from(materialsCatalogTable),
-      workOrderMaterials: await tx.select().from(workOrderMaterialsTable),
-      photos: await tx.select().from(photosTable),
-      appointments: await tx.select().from(appointmentsTable),
-      settings: await tx.select().from(settingsTable),
-    }));
-
-    res.json({
-      version: BACKUP_VERSION,
-      exportedAt: new Date().toISOString(),
-      data: {
-        vehicles,
-        serviceRecords,
-        workOrders,
-        materialsCatalog,
-        workOrderMaterials,
-        photos,
-        appointments,
-        settings,
-      },
-    });
+    const snapshot = await createBackupSnapshot();
+    res.json(snapshot);
   } catch (err) {
     req.log.error({ err }, "Backup export failed");
     res.status(500).json({ error: "Export zálohy selhal" });
+  }
+});
+
+/**
+ * GET /backups
+ *
+ * List the most recent automatic backups (newest first).
+ */
+router.get("/backups", async (req, res): Promise<void> => {
+  try {
+    res.json(await listBackups());
+  } catch (err) {
+    req.log.error({ err }, "Listing backups failed");
+    res.status(500).json({ error: "Načtení záloh selhalo" });
+  }
+});
+
+/**
+ * POST /backups/run
+ *
+ * Create a backup now and upload it to the object store (manual trigger).
+ */
+router.post("/backups/run", async (req, res): Promise<void> => {
+  try {
+    const result = await runBackup();
+    res.json(result);
+  } catch (err) {
+    req.log.error({ err }, "Manual backup failed");
+    res.status(500).json({
+      error: "Vytvoření zálohy selhalo. Zkontrolujte nastavení úložiště (S3).",
+    });
+  }
+});
+
+/**
+ * GET /backups/:id/download
+ *
+ * Stream a stored backup as a plain JSON file (decompressed on the fly) so it
+ * can be restored directly through the existing "Obnovit ze zálohy" import.
+ */
+router.get("/backups/:id/download", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    res.status(400).json({ error: "Neplatné ID zálohy" });
+    return;
+  }
+  try {
+    const [row] = await db
+      .select()
+      .from(backupsTable)
+      .where(eq(backupsTable.id, id));
+    if (!row) {
+      res.status(404).json({ error: "Záloha nenalezena" });
+      return;
+    }
+
+    const storage = getObjectStorageService();
+    const obj = await storage.serveObject(row.objectPath);
+    const chunks: Buffer[] = [];
+    for await (const chunk of obj.stream) {
+      chunks.push(Buffer.from(chunk));
+    }
+    const json = gunzipSync(Buffer.concat(chunks));
+
+    const downloadName = row.filename.replace(/\.gz$/, "");
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${downloadName}"`,
+    );
+    res.send(json);
+  } catch (err) {
+    if (err instanceof ObjectNotFoundError) {
+      res.status(404).json({ error: "Soubor zálohy nebyl v úložišti nalezen" });
+      return;
+    }
+    req.log.error({ err }, "Backup download failed");
+    res.status(500).json({ error: "Stažení zálohy selhalo" });
   }
 });
 

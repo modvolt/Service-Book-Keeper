@@ -19,6 +19,8 @@ export const settingsTable = pgTable("settings", {
   reminderServiceDays: integer("reminder_service_days").notNull().default(14),
   notificationEmail: text("notification_email"),
   lastStkReminderSentAt: timestamp("last_stk_reminder_sent_at", { withTimezone: true }),
+  backupsEnabled: boolean("backups_enabled").notNull().default(false),
+  lastBackupAt: timestamp("last_backup_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

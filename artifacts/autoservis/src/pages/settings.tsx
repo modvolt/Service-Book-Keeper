@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   useGetSettings, useUpdateSettings, useSendTestReminder, getGetSettingsQueryKey,
+  useGetBackups, useRunBackup, getGetBackupsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Upload, Image as ImageIcon, Mail, Palette, Building2, Trash2, Sun, Moon, Check, Monitor, PenLine, Database, Download, Loader2, FileText } from "lucide-react";
+import { Upload, Image as ImageIcon, Mail, Palette, Building2, Trash2, Sun, Moon, Check, Monitor, PenLine, Database, Download, Loader2, FileText, CloudUpload } from "lucide-react";
 import { AresButton } from "@/components/ares-button";
 import { openDataBackupPdf } from "@/lib/data-backup-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +32,7 @@ type Form = {
   reminderStkDays: string;
   reminderServiceDays: string;
   notificationEmail: string;
+  backupsEnabled: boolean;
 };
 
 const COLOR_PRESETS = [
@@ -48,6 +50,9 @@ export default function SettingsPage() {
   const { data: settings, isLoading } = useGetSettings();
   const updateSettings = useUpdateSettings();
   const sendTestReminder = useSendTestReminder();
+  const { data: backups } = useGetBackups();
+  const runBackup = useRunBackup();
+  const [downloadingBackupId, setDownloadingBackupId] = useState<number | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const signatureInputRef = useRef<HTMLInputElement>(null);
   const backupInputRef = useRef<HTMLInputElement>(null);
@@ -63,7 +68,7 @@ export default function SettingsPage() {
     companyName: "", companyAddress: "", companyPhone: "", companyEmail: "",
     companyIco: "", companyDic: "", signatureName: "", primaryColor: "",
     emailRemindersEnabled: false, reminderStkDays: "30", reminderServiceDays: "14",
-    notificationEmail: "",
+    notificationEmail: "", backupsEnabled: false,
   });
 
   useEffect(() => {
@@ -81,6 +86,7 @@ export default function SettingsPage() {
       reminderStkDays: String(settings.reminderStkDays),
       reminderServiceDays: String(settings.reminderServiceDays),
       notificationEmail: settings.notificationEmail ?? "",
+      backupsEnabled: settings.backupsEnabled ?? false,
     });
   }, [settings]);
 
@@ -99,6 +105,7 @@ export default function SettingsPage() {
         reminderStkDays: parseInt(form.reminderStkDays, 10) || 30,
         reminderServiceDays: parseInt(form.reminderServiceDays, 10) || 14,
         notificationEmail: form.notificationEmail.trim() || null,
+        backupsEnabled: form.backupsEnabled,
       }});
       await queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
       toast({ title: "Nastavení uloženo" });
@@ -123,6 +130,48 @@ export default function SettingsPage() {
           : "Odeslání souhrnu selhalo.";
       toast({ title: "Chyba", description, variant: "destructive" });
     }
+  }
+
+  async function handleRunBackup() {
+    try {
+      const result = await runBackup.mutateAsync();
+      toast({ title: "Záloha vytvořena", description: result.message });
+      await queryClient.invalidateQueries({ queryKey: getGetBackupsQueryKey() });
+      await queryClient.invalidateQueries({ queryKey: getGetSettingsQueryKey() });
+    } catch (e: any) {
+      const description =
+        e?.data && typeof e.data === "object" && "error" in e.data
+          ? String((e.data as { error: unknown }).error)
+          : "Vytvoření zálohy selhalo.";
+      toast({ title: "Chyba", description, variant: "destructive" });
+    }
+  }
+
+  async function handleDownloadBackup(id: number, filename: string) {
+    setDownloadingBackupId(id);
+    try {
+      const res = await fetch(`/api/backups/${id}/download`);
+      if (!res.ok) throw new Error("Stažení zálohy selhalo");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename.replace(/\.gz$/, "");
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast({ title: "Chyba", description: String(e?.message ?? e), variant: "destructive" });
+    } finally {
+      setDownloadingBackupId(null);
+    }
+  }
+
+  function formatBackupSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} kB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   }
 
   async function handleLogoUpload(file: File) {
@@ -509,6 +558,70 @@ export default function SettingsPage() {
                 ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Odesílám…</>
                 : <><Mail className="h-4 w-4 mr-2" /> Odeslat zkušební souhrn</>}
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><CloudUpload className="h-5 w-5" /> Automatické zálohy na server (S3)</CardTitle>
+          <CardDescription>Jednou denně se vytvoří záloha všech dat a nahraje se do úložiště (S3 v produkci)</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Alert>
+            <AlertTitle>Jak to funguje</AlertTitle>
+            <AlertDescription>
+              Při zapnutí se každý den automaticky vytvoří komprimovaná záloha (vozidla, zakázky, servisní historie, materiály, nastavení) a nahraje se do úložiště aplikace. Uchovává se posledních několik záloh, starší se automaticky mažou. Zálohu lze kdykoli stáhnout a obnovit přes „Obnovit ze zálohy".
+            </AlertDescription>
+          </Alert>
+
+          <div className="flex items-center justify-between rounded-md border p-3">
+            <div>
+              <Label htmlFor="backups-enabled" className="text-base">Zapnout automatické zálohy</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">Denní záloha do úložiště. Nezapomeňte uložit nastavení.</p>
+            </div>
+            <Switch id="backups-enabled" checked={form.backupsEnabled}
+              onCheckedChange={(v) => setForm({ ...form, backupsEnabled: v })} />
+          </div>
+
+          <div className="rounded-md border p-3 flex items-center justify-between gap-3 flex-wrap">
+            <div>
+              <div className="font-medium text-sm">Spustit zálohu nyní</div>
+              <p className="text-xs text-muted-foreground mt-0.5">Vytvoří zálohu okamžitě a nahraje ji do úložiště.</p>
+            </div>
+            <Button variant="outline" onClick={handleRunBackup} disabled={runBackup.isPending}>
+              {runBackup.isPending
+                ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Zálohuji…</>
+                : <><CloudUpload className="h-4 w-4 mr-2" /> Spustit zálohu nyní</>}
+            </Button>
+          </div>
+
+          <div>
+            <div className="font-medium text-sm mb-2">Poslední zálohy</div>
+            {!backups || backups.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Zatím nebyla vytvořena žádná záloha.</p>
+            ) : (
+              <div className="rounded-md border divide-y">
+                {backups.map((b) => (
+                  <div key={b.id} className="flex items-center justify-between gap-3 p-3 flex-wrap">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium truncate">
+                        {new Date(b.createdAt).toLocaleString("cs-CZ")}
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {b.filename} · {formatBackupSize(b.sizeBytes)}
+                      </div>
+                    </div>
+                    <Button variant="ghost" size="sm" onClick={() => handleDownloadBackup(b.id, b.filename)}
+                      disabled={downloadingBackupId === b.id}>
+                      {downloadingBackupId === b.id
+                        ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Stahuji…</>
+                        : <><Download className="h-4 w-4 mr-2" /> Stáhnout</>}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

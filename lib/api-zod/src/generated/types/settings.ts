@@ -32,4 +32,7 @@ export interface Settings {
   reminderServiceDays: number;
   /** @nullable */
   notificationEmail?: string | null;
+  backupsEnabled?: boolean;
+  /** @nullable */
+  lastBackupAt?: string | null;
 }

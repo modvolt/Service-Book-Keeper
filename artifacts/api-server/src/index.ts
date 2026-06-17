@@ -6,6 +6,7 @@ import {
   maybeRunScheduledDigest,
   maybeRunScheduledCustomerReminders,
 } from "./lib/reminders";
+import { maybeRunScheduledBackup } from "./lib/backups";
 
 // Capture process-level failures into the diagnostics buffer (and the logs)
 // instead of letting them vanish. We do not exit: a single instance staying up
@@ -56,6 +57,7 @@ app.listen(port, (err) => {
   const tick = (): void => {
     void maybeRunScheduledDigest();
     void maybeRunScheduledCustomerReminders();
+    void maybeRunScheduledBackup();
   };
   setTimeout(tick, 30_000);
   const timer = setInterval(tick, REMINDER_TICK_MS);

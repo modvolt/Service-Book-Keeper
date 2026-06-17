@@ -1050,6 +1050,34 @@ paths:
               schema:
                 $ref: "#/components/schemas/TestReminderResult"
 
+  /backups:
+    get:
+      operationId: getBackups
+      tags: [backups]
+      summary: List recent automatic backups (newest first)
+      responses:
+        "200":
+          description: Backup history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Backup"
+
+  /backups/run:
+    post:
+      operationId: runBackup
+      tags: [backups]
+      summary: Create a database backup now and upload it to the object store
+      responses:
+        "200":
+          description: Result of the backup attempt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BackupRunResult"
+
   /dashboard/summary:
     get:
       operationId: getDashboardSummary
@@ -2341,6 +2369,10 @@ components:
           type: integer
         notificationEmail:
           type: ["string", "null"]
+        backupsEnabled:
+          type: boolean
+        lastBackupAt:
+          type: ["string", "null"]
 
     SettingsInput:
       type: object
@@ -2373,6 +2405,34 @@ components:
           type: ["integer", "null"]
         notificationEmail:
           type: ["string", "null"]
+        backupsEnabled:
+          type: ["boolean", "null"]
+
+    Backup:
+      type: object
+      required: [id, filename, sizeBytes, status, createdAt]
+      properties:
+        id:
+          type: integer
+        filename:
+          type: string
+        sizeBytes:
+          type: integer
+        status:
+          type: string
+        createdAt:
+          type: string
+
+    BackupRunResult:
+      type: object
+      required: [ok, message]
+      properties:
+        ok:
+          type: boolean
+        message:
+          type: string
+        backup:
+          $ref: "#/components/schemas/Backup"
 
     DashboardSummary:
       type: object

@@ -1039,6 +1039,9 @@ export interface Settings {
   reminderServiceDays: number;
   /** @nullable */
   notificationEmail?: string | null;
+  backupsEnabled?: boolean;
+  /** @nullable */
+  lastBackupAt?: string | null;
 }
 
 export interface SettingsInput {
@@ -1070,6 +1073,22 @@ export interface SettingsInput {
   reminderServiceDays?: number | null;
   /** @nullable */
   notificationEmail?: string | null;
+  /** @nullable */
+  backupsEnabled?: boolean | null;
+}
+
+export interface Backup {
+  id: number;
+  filename: string;
+  sizeBytes: number;
+  status: string;
+  createdAt: string;
+}
+
+export interface BackupRunResult {
+  ok: boolean;
+  message: string;
+  backup?: Backup;
 }
 
 export interface DashboardSummary {
