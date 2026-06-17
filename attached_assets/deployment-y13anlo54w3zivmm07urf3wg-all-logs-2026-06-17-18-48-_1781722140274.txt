@@ -1,0 +1,430 @@
+2026-Jun-17 18:43:40.181838 Docker 29.5.2 with BuildKit and Buildx detected on deployment server (localhost).
+2026-Jun-17 18:43:40.204918 Starting deployment of service--book--keeper:main-h7iql9s7swpx8eyxrxdtvmqq to localhost.
+2026-Jun-17 18:43:40.675452 Preparing container with helper image: ghcr.io/coollabsio/coolify-helper:1.0.14
+2026-Jun-17 18:43:40.872793 [DEBUG] [CMD]: docker stop --time=30 y13anlo54w3zivmm07urf3wg
+2026-Jun-17 18:43:40.872793 [DEBUG] Flag --time has been deprecated, use --timeout instead
+2026-Jun-17 18:43:40.877629 [DEBUG] Error response from daemon: No such container: y13anlo54w3zivmm07urf3wg
+2026-Jun-17 18:43:41.180865 [DEBUG] [CMD]: docker run -d --network 'coolify' --name y13anlo54w3zivmm07urf3wg  --rm -v /root/.docker/buildx:/root/.docker/buildx -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/coollabsio/coolify-helper:1.0.14
+2026-Jun-17 18:43:41.180865 [DEBUG] e902751a03c29c465a21eff8168b6b50ca3005daeb4391813d81874719e5abfa
+2026-Jun-17 18:43:43.548858 [DEBUG] [CMD]: docker exec y13anlo54w3zivmm07urf3wg bash -c 'GIT_SSH_COMMAND="ssh -o ConnectTimeout=30 -p 22 -o Port=22 -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git ls-remote '\''https://x-access-token:<REDACTED>@github.com/modvolt/Service-Book-Keeper.git'\'' '\''refs/heads/main'\'''
+2026-Jun-17 18:43:43.548858 [DEBUG] a289b0422ae5066ea8d32507f5bfa95b780a1845	refs/heads/main
+2026-Jun-17 18:43:43.920945 ----------------------------------------
+2026-Jun-17 18:43:43.937425 Importing modvolt/Service-Book-Keeper:main (commit sha a289b0422ae5066ea8d32507f5bfa95b780a1845) to /artifacts/y13anlo54w3zivmm07urf3wg.
+2026-Jun-17 18:43:44.218874 [DEBUG] [CMD]: docker exec y13anlo54w3zivmm07urf3wg bash -c 'git -c '\''url.https://x-access-token:<REDACTED>@github.com/.insteadOf=https://github.com/'\'' -c http.version=HTTP/1.1 clone --depth=1 --recurse-submodules --shallow-submodules -b '\''main'\'' '\''https:<REDACTED>@github.com/modvolt/Service-Book-Keeper.git'\'' '\''/artifacts/y13anlo54w3zivmm07urf3wg'\'' && cd '\''/artifacts/y13anlo54w3zivmm07urf3wg'\'' && GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git -c '\''url.https://x-access-token:<REDACTED>@github.com/.insteadOf=https://github.com/'\'' -c http.version=HTTP/1.1 fetch --depth=1 origin '\''a289b0422ae5066ea8d32507f5bfa95b780a1845'\'' && git -c '\''url.https:<REDACTED>@github.com/.insteadOf=https://github.com/'\'' -c http.version=HTTP/1.1 -c advice.detachedHead=false checkout '\''a289b0422ae5066ea8d32507f5bfa95b780a1845'\'' >/dev/null 2>&1 && cd '\''/artifacts/y13anlo54w3zivmm07urf3wg'\'' && if [ -f .gitmodules ]; then git -c '\''url.https:<REDACTED>@github.com/.insteadOf=https://github.com/'\'' -c http.version=HTTP/1.1 submodule sync && GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git -c '\''url.https:<REDACTED>@github.com/.insteadOf=https://github.com/'\'' -c http.version=HTTP/1.1 submodule update --init --recursive --depth=1; fi && cd '\''/artifacts/y13anlo54w3zivmm07urf3wg'\'' && GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null" git -c '\''url.https:<REDACTED>@github.com/.insteadOf=https://github.com/'\'' -c http.version=HTTP/1.1 lfs pull'
+2026-Jun-17 18:<REDACTED>@workspace/autoservis run build
+2026-Jun-17 18:43:51.372611 [DEBUG] 
+2026-Jun-17 18:43:51.372611 [DEBUG] # Build the API server bundle (esbuild -> artifacts/api-server/dist/index.mjs).
+2026-Jun-17 18:43:51.372611 [DEBUG] RUN pnpm --filter @workspace/api-server run build
+2026-Jun-17 18:43:51.372611 [DEBUG] 
+2026-Jun-17 18:43:51.372611 [DEBUG] # ---------- Runtime ----------
+2026-Jun-17 18:43:51.372611 [DEBUG] FROM node:24-bookworm-slim AS runtime
+2026-Jun-17 18:43:51.372611 [DEBUG] RUN corepack enable
+2026-Jun-17 18:43:51.372611 [DEBUG] WORKDIR /app
+2026-Jun-17 18:43:51.372611 [DEBUG] ENV NODE_ENV=production
+2026-Jun-17 18:43:51.372611 [DEBUG] 
+2026-Jun-17 18:43:51.372611 [DEBUG] # Copy the fully built workspace: the API bundle + pino workers, the frontend
+2026-Jun-17 18:43:51.372611 [DEBUG] # build output (served as static files), and node_modules. node_modules is kept
+2026-Jun-17 18:43:51.372611 [DEBUG] # whole because the esbuild bundle externalizes native packages (@aws-sdk/*,
+2026-Jun-17 18:43:51.372611 [DEBUG] # @google-cloud/*, nodemailer, ...) that must exist at runtime, and the
+2026-Jun-17 18:43:51.372611 [DEBUG] # boot-time migration step uses drizzle-kit + the committed lib/db/drizzle files.
+2026-Jun-17 18:43:51.372611 [DEBUG] COPY --from=builder /app /app
+2026-Jun-17 18:43:51.372611 [DEBUG] 
+2026-Jun-17 18:43:51.372611 [DEBUG] EXPOSE 8080
+2026-Jun-17 18:43:51.372611 [DEBUG] 
+2026-Jun-17 18:43:51.372611 [DEBUG] # Entrypoint applies committed DB migrations (drizzle-kit migrate) then starts
+2026-Jun-17 18:43:51.372611 [DEBUG] # the server. The script is invoked via sh so no executable bit is required.
+2026-Jun-17 18:43:51.372611 [DEBUG] ENTRYPOINT ["sh", "/app/docker-entrypoint.sh"]
+2026-Jun-17 18:43:51.692847 Added 54 ARG declarations to Dockerfile for service app (multi-stage build, added to 2 stages).
+2026-Jun-17 18:43:51.703579 Pulling & building required images.
+2026-Jun-17 18:43:51.960992 [DEBUG] Creating build-time .env file in /artifacts (outside Docker context).
+2026-Jun-17 18:43:52.207190 Adding build arguments to Docker Compose build command.
+2026-Jun-17 18:43:52.831448 [DEBUG] [CMD]: docker exec y13anlo54w3zivmm07urf3wg bash -c 'DOCKER_BUILDKIT=1 COOLIFY_BRANCH='\''main'\'' COOLIFY_RESOURCE_UUID=h7iql9s7swpx8eyxrxdtvmqq  docker compose --env-file /artifacts/build-time.env --project-name h7iql9s7swpx8eyxrxdtvmqq --project-directory /artifacts/y13anlo54w3zivmm07urf3wg -f /artifacts/y13anlo54w3zivmm07urf3wg/docker-compose.yaml build --pull --build-arg COOLIFY_FQDN --build-arg POSTGRES_USER --build-arg APP_PASSWORD --build-arg POSTGRES_DB --build-arg APP_URL --build-arg SESSION_SECRET --build-arg S3_ENDPOINT --build-arg ALLOWED_ORIGINS --build-arg LOG_LEVEL --build-arg STORAGE_DRIVER --build-arg POSTGRES_PASSWORD --build-arg S3_ACCESS_KEY_ID --build-arg S3_SECRET_ACCESS_KEY --build-arg S3_FORCE_PATH_STYLE --build-arg S3_REGION --build-arg S3_PRIVATE_PREFIX --build-arg S3_PUBLIC_PREFIX --build-arg AI_INTEGRATIONS_OPENAI_BASE_URL --build-arg AI_INTEGRATIONS_OPENAI_API_KEY --build-arg S3_BUCKET --build-arg OPENAI_MODEL --build-arg SMTP_HOST --build-arg SMTP_USER --build-arg SMTP_PASS --build-arg SMTP_PORT --build-arg SMTP_SECURE --build-arg MAIL_FROM --build-arg COOLIFY_BUILD_SECRETS_HASH=00053b5d01c14be3d832737783db142596c4e048606277b682c01d96c9ad1d9d'
+2026-Jun-17 18:43:52.831448 [DEBUG] #1 [internal] load local bake definitions
+2026-Jun-17 18:43:52.943654 [DEBUG] #1 reading from stdin 1.73kB done
+2026-Jun-17 18:43:52.943654 [DEBUG] #1 DONE 0.0s
+2026-Jun-17 18:43:52.943654 [DEBUG] 
+2026-Jun-17 18:43:52.943654 [DEBUG] #2 [internal] load build definition from Dockerfile
+2026-Jun-17 18:43:52.943654 [DEBUG] #2 transferring dockerfile:
+2026-Jun-17 18:43:53.113846 [DEBUG] #2 transferring dockerfile: 2.85kB done
+2026-Jun-17 18:43:53.113846 [DEBUG] #2 DONE 0.0s
+2026-Jun-17 18:43:53.113846 [DEBUG] 
+2026-Jun-17 18:43:53.113846 [DEBUG] #3 resolve image config for docker-image://docker.io/docker/dockerfile:1
+2026-Jun-17 18:43:53.417639 [DEBUG] #3 DONE 0.5s
+2026-Jun-17 18:43:53.604083 [DEBUG] 
+2026-Jun-17 18:43:53.612656 [DEBUG] #4 docker-image://docker.io/docker/dockerfile:1@sha256:87999aa3d42bdc6bea60565083ee17e86d1f3339802f543c0d03998580f9cb89
+2026-Jun-17 18:43:53.612656 [DEBUG] #4 resolve docker.io/docker/dockerfile:1@sha256:87999aa3d42bdc6bea60565083ee17e86d1f3339802f543c0d03998580f9cb89 0.0s done
+2026-Jun-17 18:43:53.612656 [DEBUG] #4 CACHED
+2026-Jun-17 18:43:53.688180 [DEBUG] #5 [internal] load metadata for docker.io/library/node:24-bookworm-slim
+2026-Jun-17 18:43:54.149062 [DEBUG] #5 DONE 0.5s
+2026-Jun-17 18:43:54.275105 [DEBUG] #6 [internal] load .dockerignore
+2026-Jun-17 18:43:54.281082 [DEBUG] #6 transferring context: 497B done
+2026-Jun-17 18:43:54.281082 [DEBUG] #6 DONE 0.0s
+2026-Jun-17 18:43:54.281082 [DEBUG] 
+2026-Jun-17 18:43:54.281082 [DEBUG] #7 [internal] load build context
+2026-Jun-17 18:43:54.281082 [DEBUG] #7 DONE 0.0s
+2026-Jun-17 18:43:54.281082 [DEBUG] 
+2026-Jun-17 18:43:54.281082 [DEBUG] #8 [builder 1/7] FROM docker.io/library/node:24-bookworm-slim@sha256:2c87ef9bd3c6a3bd4b472b4bec2ce9d16354b0c574f736c476489d09f560a203
+2026-Jun-17 18:43:54.281082 [DEBUG] #8 resolve docker.io/library/node:24-bookworm-slim@sha256:2c87ef9bd3c6a3bd4b472b4bec2ce9d16354b0c574f736c476489d09f560a203 0.0s done
+2026-Jun-17 18:43:54.391247 [DEBUG] #8 DONE 0.0s
+2026-Jun-17 18:43:54.391247 [DEBUG] 
+2026-Jun-17 18:43:54.391247 [DEBUG] #7 [internal] load build context
+2026-Jun-17 18:43:54.391247 [DEBUG] #7 transferring context: 3.07MB 0.1s done
+2026-Jun-17 18:43:54.541120 [DEBUG] #7 DONE 0.1s
+2026-Jun-17 18:43:54.541120 [DEBUG] 
+2026-Jun-17 18:43:54.541120 [DEBUG] #9 [builder 2/7] RUN corepack enable
+2026-Jun-17 18:43:54.541120 [DEBUG] #9 CACHED
+2026-Jun-17 18:43:54.541120 [DEBUG] 
+2026-Jun-17 18:43:54.541120 [DEBUG] #10 [builder 3/7] WORKDIR /app
+2026-Jun-17 18:43:54.541120 [DEBUG] #10 CACHED
+2026-Jun-17 18:43:54.541120 [DEBUG] 
+2026-Jun-17 18:43:54.541120 [DEBUG] #11 [builder 4/7] COPY . .
+2026-Jun-17 18:43:54.541120 [DEBUG] #11 DONE 0.1s
+2026-Jun-17 18:43:54.690904 [DEBUG] #12 [builder 5/7] RUN pnpm install --frozen-lockfile
+2026-Jun-17 18:43:55.079476 [DEBUG] #12 0.537 ! Corepack is about to download https://registry.npmjs.org/pnpm/-/pnpm-10.26.1.tgz
+2026-Jun-17 18:<REDACTED>@11.7.0   │
+2026-Jun-17 18:43:58.091571 [DEBUG] #12 3.550    │                                              │
+2026-Jun-17 18:43:58.091571 [DEBUG] #12 3.550    ╰──────────────────────────────────────────────╯
+2026-Jun-17 18:43:58.091571 [DEBUG] #12 3.550
+2026-Jun-17 18:43:58.681998 [DEBUG] #12 4.141 Progress: resolved 929, reused 0, downloaded 15, added 0
+2026-Jun-17 18:43:58.689482 [DEBUG] 
+2026-Jun-17 18:43:59.684000 [DEBUG] #12 5.143 Progress: resolved 929, reused 0, downloaded 124, added 50
+2026-Jun-17 18:44:00.687769 [DEBUG] #12 6.146 Progress: resolved 929, reused 0, downloaded 207, added 87
+2026-Jun-17 18:44:01.689072 [DEBUG] #12 7.148 Progress: resolved 929, reused 0, downloaded 269, added 110
+2026-Jun-17 18:44:02.689902 [DEBUG] #12 8.149 Progress: resolved 929, reused 0, downloaded 329, added 130
+2026-Jun-17 18:44:03.691361 [DEBUG] #12 9.150 Progress: resolved 929, reused 0, downloaded 428, added 190
+2026-Jun-17 18:44:04.706819 [DEBUG] #12 10.16 Progress: resolved 929, reused 0, downloaded 454, added 198
+2026-Jun-17 18:44:05.712850 [DEBUG] #12 11.17 Progress: resolved 929, reused 0, downloaded 465, added 202
+2026-Jun-17 18:44:06.718470 [DEBUG] #12 12.17 Progress: resolved 929, reused 0, downloaded 466, added 202
+2026-Jun-17 18:44:07.732926 [DEBUG] #12 13.19 Progress: resolved 929, reused 0, downloaded 469, added 202
+2026-Jun-17 18:44:08.733903 [DEBUG] #12 14.19 Progress: resolved 929, reused 0, downloaded 492, added 210
+2026-Jun-17 18:44:09.735374 [DEBUG] #12 15.19 Progress: resolved 929, reused 0, downloaded 592, added 321
+2026-Jun-17 18:44:10.734078 [DEBUG] #12 16.19 Progress: resolved 929, reused 0, downloaded 746, added 405
+2026-Jun-17 18:44:11.735582 [DEBUG] #12 17.19 Progress: resolved 929, reused 0, downloaded 808, added 436
+2026-Jun-17 18:44:12.733976 [DEBUG] #12 18.19 Progress: resolved 929, reused 0, downloaded 861, added 454
+2026-Jun-17 18:44:13.736335 [DEBUG] #12 19.19 Progress: resolved 929, reused 0, downloaded 890, added 462
+2026-Jun-17 18:44:14.736530 [DEBUG] #12 20.19 Progress: resolved 929, reused 0, downloaded 929, added 580
+2026-Jun-17 18:44:15.392689 [DEBUG] #12 20.85 Progress: resolved 929, reused 0, downloaded 929, added 929, done
+2026-Jun-17 18:44:15.944973 [DEBUG] #12 21.40 .../esbuild@0.27.3/node_modules/esbuild postinstall$ node install.js
+2026-Jun-17 18:44:15.951203 [DEBUG] 
+2026-Jun-17 18:44:16.112839 [DEBUG] #12 21.57 .../esbuild@0.27.3/node_modules/esbuild postinstall: Done
+2026-Jun-17 18:44:16.879309 [DEBUG] #12 22.34
+2026-Jun-17 18:44:16.879309 [DEBUG] #12 22.34 devDependencies:
+2026-Jun-17 18:44:16.879309 [DEBUG] #12 22.34 + prettier 3.8.3
+2026-Jun-17 18:44:16.879309 [DEBUG] #12 22.34 + typescript 5.9.3
+2026-Jun-17 18:44:16.879309 [DEBUG] #12 22.34
+2026-Jun-17 18:44:17.009757 [DEBUG] #12 22.44 . preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+2026-Jun-17 18:44:17.020088 [DEBUG] #12 22.46 . preinstall: Done
+2026-Jun-17 18:44:17.260385 [DEBUG] #12 22.72 Done in 20.4s using pnpm v10.26.1
+2026-Jun-17 18:44:17.742559 [DEBUG] #12 DONE 23.2s
+2026-Jun-17 18:44:17.901503 [DEBUG] 
+2026-Jun-17 18:44:17.918682 [DEBUG] #13 [builder 6/7] RUN NODE_ENV=production BASE_PATH=/ PORT=3000     pnpm --filter @workspace/autoservis run build
+2026-Jun-17 18:44:19.763589 [DEBUG] #13 2.017
+2026-Jun-17 18:44:19.773425 [DEBUG] #13 2.017 > @workspace/autoservis@0.0.0 build /app/artifacts/autoservis
+2026-Jun-17 18:44:19.773425 [DEBUG] #13 2.017 > vite build --config vite.config.ts
+2026-Jun-17 18:44:19.773425 [DEBUG] #13 2.017
+2026-Jun-17 18:44:20.591136 [DEBUG] #13 2.838 vite v7.3.3 building client environment for production...
+2026-Jun-17 18:44:20.735727 [DEBUG] #13 2.988 transforming...
+2026-Jun-17 18:44:21.913506 [DEBUG] #13 4.166 src/components/ui/tooltip.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+2026-Jun-17 18:44:24.025646 [DEBUG] #13 6.272 src/components/ui/sheet.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+2026-Jun-17 18:44:24.264366 [DEBUG] #13 6.346 src/components/ui/select.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+2026-Jun-17 18:44:24.274288 [DEBUG] #13 6.364 src/components/ui/label.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+2026-Jun-17 18:44:26.043349 [DEBUG] #13 8.296 src/components/ui/progress.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+2026-Jun-17 18:44:29.349138 [DEBUG] #13 11.60 ✓ 2709 modules transformed.
+2026-Jun-17 18:44:30.239110 [DEBUG] #13 12.49 rendering chunks...
+2026-Jun-17 18:44:30.342259 [DEBUG] #13 12.52 computing gzip size...
+2026-Jun-17 18:44:30.342259 [DEBUG] #13 12.59 dist/public/registerSW.js                  0.13 kB
+2026-Jun-17 18:44:30.494747 [DEBUG] #13 12.59 dist/public/manifest.webmanifest           0.51 kB
+2026-Jun-17 18:44:30.509975 [DEBUG] #13 12.59 dist/public/index.html                     1.97 kB │ gzip:   0.85 kB
+2026-Jun-17 18:44:30.509975 [DEBUG] #13 12.59 dist/public/assets/index-CBesnyLZ.css    120.38 kB │ gzip:  19.77 kB
+2026-Jun-17 18:44:30.509975 [DEBUG] #13 12.59 dist/public/assets/index-DPbJDPA3.js   1,136.78 kB │ gzip: 351.11 kB
+2026-Jun-17 18:44:30.509975 [DEBUG] #13 12.59
+2026-Jun-17 18:44:30.509975 [DEBUG] #13 12.59 (!) Some chunks are larger than 500 kB after minification. Consider:
+2026-Jun-17 18:44:30.509975 [DEBUG] #13 12.59 - Using dynamic import() to code-split the application
+2026-Jun-17 18:44:30.509975 [DEBUG] #13 12.59 - Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+2026-Jun-17 18:<REDACTED>@workspace/api-server run build
+2026-Jun-17 18:44:36.394947 [DEBUG] #14 1.039
+2026-Jun-17 18:44:36.394947 [DEBUG] #14 1.039 > @workspace/api-server@0.0.0 build /app/artifacts/api-server
+2026-Jun-17 18:44:36.394947 [DEBUG] #14 1.039 > node ./build.mjs
+2026-Jun-17 18:44:36.394947 [DEBUG] #14 1.039
+2026-Jun-17 18:44:37.825260 [DEBUG] #14 2.470
+2026-Jun-17 18:44:37.825260 [DEBUG] #14 2.470   dist/index.mjs                       3.3mb ⚠️
+2026-Jun-17 18:44:37.825260 [DEBUG] #14 2.470   dist/pino-worker.mjs               153.4kb
+2026-Jun-17 18:44:37.825260 [DEBUG] #14 2.470   dist/pino-file.mjs                 142.0kb
+2026-Jun-17 18:44:37.825260 [DEBUG] #14 2.470   dist/pino-pretty.mjs               114.6kb
+2026-Jun-17 18:44:37.825260 [DEBUG] #14 2.470   dist/thread-stream-worker.mjs        7.3kb
+2026-Jun-17 18:44:37.825260 [DEBUG] #14 2.470   dist/index.mjs.map                   7.2mb
+2026-Jun-17 18:44:37.825260 [DEBUG] #14 2.470   dist/pino-worker.mjs.map           256.9kb
+2026-Jun-17 18:44:37.825260 [DEBUG] #14 2.470   dist/pino-file.mjs.map             229.0kb
+2026-Jun-17 18:44:37.825260 [DEBUG] #14 2.470   dist/pino-pretty.mjs.map           204.0kb
+2026-Jun-17 18:44:37.825260 [DEBUG] #14 2.470   dist/thread-stream-worker.mjs.map   12.0kb
+2026-Jun-17 18:44:37.825260 [DEBUG] #14 2.470
+2026-Jun-17 18:44:37.825260 [DEBUG] #14 2.470 ⚡ Done in 1307ms
+2026-Jun-17 18:44:37.929890 [DEBUG] #14 DONE 2.6s
+2026-Jun-17 18:45:06.236727 [DEBUG] #15 [runtime 4/4] COPY --from=builder /app /app
+2026-Jun-17 18:45:20.682910 [DEBUG] #15 DONE 14.5s
+2026-Jun-17 18:45:20.844294 [DEBUG] 
+2026-Jun-17 18:45:20.851372 [DEBUG] #16 exporting to image
+2026-Jun-17 18:45:20.851372 [DEBUG] #16 exporting layers
+2026-Jun-17 18:46:02.711544 [DEBUG] #16 exporting layers 42.0s done
+2026-Jun-17 18:46:02.806685 [DEBUG] #16 exporting manifest sha256:a43556dd509bf8e0850d3354030947fca7824b4aa79562d067ab96838c5b2f2d 0.0s done
+2026-Jun-17 18:46:02.806685 [DEBUG] #16 exporting config sha256:8318f77d8b5b9cdc04d5f386d4712c491dff1b104b95c8ed972116af444dc15c 0.0s done
+2026-Jun-17 18:46:02.806685 [DEBUG] #16 exporting attestation manifest sha256:de9e29e793f4af6b3140e016df7c69999903c1101115e31e79571c4507faa9b7 0.0s done
+2026-Jun-17 18:46:02.806685 [DEBUG] #16 exporting manifest list sha256:b81a78d4287f11498666cc3d24c27ee6605d41644c9e17fbbcc865234dc22e05
+2026-Jun-17 18:46:02.993759 [DEBUG] #16 exporting manifest list sha256:b81a78d4287f11498666cc3d24c27ee6605d41644c9e17fbbcc865234dc22e05 0.0s done
+2026-Jun-17 18:46:02.993759 [DEBUG] #16 naming to docker.io/library/h7iql9s7swpx8eyxrxdtvmqq_app:a289b0422ae5066ea8d32507f5bfa95b780a1845 done
+2026-Jun-17 18:46:02.993759 [DEBUG] #16 unpacking to docker.io/library/h7iql9s7swpx8eyxrxdtvmqq_app:a289b0422ae5066ea8d32507f5bfa95b780a1845
+2026-Jun-17 18:46:22.700043 [DEBUG] #16 unpacking to docker.io/library/h7iql9s7swpx8eyxrxdtvmqq_app:a289b0422ae5066ea8d32507f5bfa95b780a1845 19.9s done
+2026-Jun-17 18:46:22.885768 [DEBUG] #16 DONE 62.0s
+2026-Jun-17 18:46:22.897120 [DEBUG] #17 resolving provenance for metadata file
+2026-Jun-17 18:46:22.942396 [DEBUG] #17 DONE 0.0s
+2026-Jun-17 18:46:22.951513 [DEBUG] app  Built
+2026-Jun-17 18:46:23.323651 [DEBUG] Creating .env file with runtime variables for container.
+2026-Jun-17 18:46:23.819131 Removing old containers.
+2026-Jun-17 18:46:23.984843 Starting new application.
+2026-Jun-17 18:46:24.440601 [DEBUG] [CMD]: docker exec y13anlo54w3zivmm07urf3wg bash -c 'COOLIFY_BRANCH='\''main'\'' COOLIFY_RESOURCE_UUID=h7iql9s7swpx8eyxrxdtvmqq  docker compose --env-file /artifacts/y13anlo54w3zivmm07urf3wg/.env --project-name h7iql9s7swpx8eyxrxdtvmqq --project-directory /artifacts/y13anlo54w3zivmm07urf3wg -f /artifacts/y13anlo54w3zivmm07urf3wg/docker-compose.yaml up -d'
+2026-Jun-17 18:46:25.095465 db Pulling
+2026-Jun-17 18:46:27.121797 d84bc3f3ded6 Pulling fs layer
+2026-Jun-17 18:46:27.138615 f2511ae13411 Pulling fs layer
+2026-Jun-17 18:46:27.138615 55afa1ecc21d Pulling fs layer
+2026-Jun-17 18:46:27.138615 6c2eaa02a04a Pulling fs layer
+2026-Jun-17 18:46:27.138615 0d4fedf9cad8 Pulling fs layer
+2026-Jun-17 18:46:27.138615 f7f6aac6fe13 Pulling fs layer
+2026-Jun-17 18:46:27.138615 ddab922e8d89 Pulling fs layer
+2026-Jun-17 18:46:27.138615 f63c7a8df82b Pulling fs layer
+2026-Jun-17 18:46:27.138615 ecbe26720671 Pulling fs layer
+2026-Jun-17 18:46:27.138615 95e4c51fed83 Pulling fs layer
+2026-Jun-17 18:46:27.138615 5de95df2a1fb Pulling fs layer
+2026-Jun-17 18:46:27.406760 95e4c51fed83 Download complete
+2026-Jun-17 18:46:27.406760 0d4fedf9cad8 Downloading [==================================================>]  900.3kB/900.3kB
+2026-Jun-17 18:46:27.539896 0d4fedf9cad8 Download complete
+2026-Jun-17 18:46:27.539896 d84bc3f3ded6 Download complete
+2026-Jun-17 18:46:27.583606 f2511ae13411 Download complete
+2026-Jun-17 18:46:27.583606 6c2eaa02a04a Download complete
+2026-Jun-17 18:46:27.610051 55afa1ecc21d Downloading [========================================>          ]  3.146MB/3.846MB
+2026-Jun-17 18:46:27.640901 f7f6aac6fe13 Download complete
+2026-Jun-17 18:46:27.640901 ddab922e8d89 Download complete
+2026-Jun-17 18:46:27.640901 f63c7a8df82b Downloading [>                                                  ]  1.049MB/111.3MB
+2026-Jun-17 18:46:27.640901 5de95df2a1fb Download complete
+2026-Jun-17 18:46:27.657590 ecbe26720671 Download complete
+2026-Jun-17 18:46:27.718784 55afa1ecc21d Download complete
+2026-Jun-17 18:46:27.718784 f63c7a8df82b Downloading [===>                                               ]   7.34MB/111.3MB
+2026-Jun-17 18:46:27.779313 55afa1ecc21d Extracting 1 s
+2026-Jun-17 18:46:27.802960 f63c7a8df82b Downloading [======>                                            ]  13.63MB/111.3MB
+2026-Jun-17 18:46:27.876244 55afa1ecc21d Extracting 1 s
+2026-Jun-17 18:46:27.902158 f63c7a8df82b Downloading [========>                                          ]  19.92MB/111.3MB
+2026-Jun-17 18:46:27.964605 55afa1ecc21d Extracting 1 s
+2026-Jun-17 18:46:28.010135 f63c7a8df82b Downloading [===========>                                       ]  25.17MB/111.3MB
+2026-Jun-17 18:46:28.096573 55afa1ecc21d Extracting 1 s
+2026-Jun-17 18:46:28.116573 f63c7a8df82b Downloading [=============>                                     ]  30.41MB/111.3MB
+2026-Jun-17 18:46:28.210935 55afa1ecc21d Extracting 1 s
+2026-Jun-17 18:46:28.243943 f63c7a8df82b Downloading [================>                                  ]  35.65MB/111.3MB
+2026-Jun-17 18:46:28.363493 55afa1ecc21d Extracting 1 s
+2026-Jun-17 18:46:28.387779 f63c7a8df82b Downloading [====================>                              ]  45.09MB/111.3MB
+2026-Jun-17 18:46:28.505631 55afa1ecc21d Extracting 1 s
+2026-Jun-17 18:46:28.547074 c2fa7d9e1146 Download complete
+2026-Jun-17 18:46:28.547074 f63c7a8df82b Downloading [======================>                            ]  50.33MB/111.3MB
+2026-Jun-17 18:46:28.988774 6c2eaa02a04a Pull complete
+2026-Jun-17 18:46:28.998792 f7f6aac6fe13 Pull complete
+2026-Jun-17 18:46:29.017717 55afa1ecc21d Pull complete
+2026-Jun-17 18:46:29.027109 f63c7a8df82b Downloading [===============================>                   ]  70.25MB/111.3MB
+2026-Jun-17 18:46:29.036819 bf118c795fb8 Download complete
+2026-Jun-17 18:46:29.160725 0d4fedf9cad8 Pull complete
+2026-Jun-17 18:46:29.639002 f2511ae13411 Pull complete
+2026-Jun-17 18:46:29.818866 f63c7a8df82b Download complete
+2026-Jun-17 18:46:29.896293 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:29.939254 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:30.035260 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:30.137825 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:30.240262 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:30.331028 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:30.431865 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:30.536958 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:30.619566 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:30.731534 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:30.816780 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:30.940815 f63c7a8df82b Extracting 2 s
+2026-Jun-17 18:46:31.027994 f63c7a8df82b Extracting 2 s
+2026-Jun-17 18:46:31.139002 f63c7a8df82b Extracting 2 s
+2026-Jun-17 18:46:31.223105 f63c7a8df82b Extracting 2 s
+2026-Jun-17 18:46:31.350828 f63c7a8df82b Extracting 2 s
+2026-Jun-17 18:46:31.448122 f63c7a8df82b Extracting 2 s
+2026-Jun-17 18:46:31.559832 f63c7a8df82b Extracting 2 s
+2026-Jun-17 18:46:31.622900 f63c7a8df82b Extracting 2 s
+2026-Jun-17 18:46:31.735886 f63c7a8df82b Extracting 2 s
+2026-Jun-17 18:46:31.823871 f63c7a8df82b Extracting 2 s
+2026-Jun-17 18:46:31.940985 f63c7a8df82b Extracting 3 s
+2026-Jun-17 18:46:32.033698 f63c7a8df82b Extracting 3 s
+2026-Jun-17 18:46:32.138425 f63c7a8df82b Extracting 3 s
+2026-Jun-17 18:46:32.227321 f63c7a8df82b Extracting 3 s
+2026-Jun-17 18:46:32.325935 f63c7a8df82b Extracting 3 s
+2026-Jun-17 18:46:32.432775 f63c7a8df82b Extracting 3 s
+2026-Jun-17 18:46:32.530319 f63c7a8df82b Extracting 3 s
+2026-Jun-17 18:46:32.625268 f63c7a8df82b Extracting 3 s
+2026-Jun-17 18:46:32.753698 f63c7a8df82b Extracting 3 s
+2026-Jun-17 18:46:32.976577 f63c7a8df82b Extracting 3 s
+2026-Jun-17 18:46:32.976577 f63c7a8df82b Extracting 4 s
+2026-Jun-17 18:46:33.207380 f63c7a8df82b Extracting 4 s
+2026-Jun-17 18:46:33.222079 f63c7a8df82b Extracting 4 s
+2026-Jun-17 18:46:33.258866 f63c7a8df82b Extracting 4 s
+2026-Jun-17 18:46:33.354874 f63c7a8df82b Extracting 4 s
+2026-Jun-17 18:46:33.431571 f63c7a8df82b Extracting 4 s
+2026-Jun-17 18:46:33.528733 f63c7a8df82b Extracting 4 s
+2026-Jun-17 18:46:33.624706 f63c7a8df82b Extracting 4 s
+2026-Jun-17 18:46:33.736915 f63c7a8df82b Extracting 4 s
+2026-Jun-17 18:46:33.830648 f63c7a8df82b Extracting 4 s
+2026-Jun-17 18:46:33.925424 f63c7a8df82b Extracting 5 s
+2026-Jun-17 18:46:34.030958 f63c7a8df82b Extracting 5 s
+2026-Jun-17 18:46:34.192053 f63c7a8df82b Extracting 5 s
+2026-Jun-17 18:46:34.230576 f63c7a8df82b Extracting 5 s
+2026-Jun-17 18:46:34.332883 ecbe26720671 Extracting 1 s
+2026-Jun-17 18:46:34.344343 f63c7a8df82b Pull complete
+2026-Jun-17 18:46:34.419808 95e4c51fed83 Pull complete
+2026-Jun-17 18:46:34.445455 ddab922e8d89 Pull complete
+2026-Jun-17 18:46:34.463230 5de95df2a1fb Pull complete
+2026-Jun-17 18:46:34.472742 ecbe26720671 Pull complete
+2026-Jun-17 18:46:34.506238 d84bc3f3ded6 Pull complete
+2026-Jun-17 18:46:34.556781 db Pulled
+2026-Jun-17 18:46:34.712048 Volume "h7iql9s7swpx8eyxrxdtvmqq_db-data"  Creating
+2026-Jun-17 18:46:34.724785 Volume "h7iql9s7swpx8eyxrxdtvmqq_db-data"  Created
+2026-Jun-17 18:46:34.724785 Container db-h7iql9s7swpx8eyxrxdtvmqq-184350389724  Creating
+2026-Jun-17 18:46:34.942176 Container db-h7iql9s7swpx8eyxrxdtvmqq-184350389724  Created
+2026-Jun-17 18:46:34.942176 Container app-h7iql9s7swpx8eyxrxdtvmqq-184350412125  Creating
+2026-Jun-17 18:46:35.009142 Container app-h7iql9s7swpx8eyxrxdtvmqq-184350412125  Created
+2026-Jun-17 18:46:35.048820 Container db-h7iql9s7swpx8eyxrxdtvmqq-184350389724  Starting
+2026-Jun-17 18:46:35.320042 Container db-h7iql9s7swpx8eyxrxdtvmqq-184350389724  Started
+2026-Jun-17 18:46:35.320042 Container db-h7iql9s7swpx8eyxrxdtvmqq-184350389724  Waiting
+2026-Jun-17 18:46:40.821190 Container db-h7iql9s7swpx8eyxrxdtvmqq-184350389724  Healthy
+2026-Jun-17 18:46:40.821190 Container app-h7iql9s7swpx8eyxrxdtvmqq-184350412125  Starting
+2026-Jun-17 18:46:41.236339 Error response from daemon: failed to set up container networking: driver failed programming external connectivity on endpoint app-h7iql9s7swpx8eyxrxdtvmqq-184350412125 (434194a316cfa0117b4796a7c94dbd0e23bcebec04cfb8d8de60a411aaa9f51a): Bind for 0.0.0.0:8080 failed: port is already allocated
+2026-Jun-17 18:46:41.252842 exit status 1
+2026-Jun-17 18:46:41.358543 ========================================
+2026-Jun-17 18:46:41.379671 Deployment failed: Command execution failed (exit code 1): docker exec y13anlo54w3zivmm07urf3wg bash -c 'COOLIFY_BRANCH='\''main'\'' COOLIFY_RESOURCE_UUID=h7iql9s7swpx8eyxrxdtvmqq  docker compose --env-file /artifacts/y13anlo54w3zivmm07urf3wg/.env --project-name h7iql9s7swpx8eyxrxdtvmqq --project-directory /artifacts/y13anlo54w3zivmm07urf3wg -f /artifacts/y13anlo54w3zivmm07urf3wg/docker-compose.yaml up -d'
+2026-Jun-17 18:46:41.379671 Error:  db Pulling
+2026-Jun-17 18:46:41.379671 d84bc3f3ded6 Pulling fs layer
+2026-Jun-17 18:46:41.379671 f2511ae13411 Pulling fs layer
+2026-Jun-17 18:46:41.379671 55afa1ecc21d Pulling fs layer
+2026-Jun-17 18:46:41.379671 6c2eaa02a04a Pulling fs layer
+2026-Jun-17 18:46:41.379671 0d4fedf9cad8 Pulling fs layer
+2026-Jun-17 18:46:41.379671 f7f6aac6fe13 Pulling fs layer
+2026-Jun-17 18:46:41.379671 ddab922e8d89 Pulling fs layer
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Pulling fs layer
+2026-Jun-17 18:46:41.379671 ecbe26720671 Pulling fs layer
+2026-Jun-17 18:46:41.379671 95e4c51fed83 Pulling fs layer
+2026-Jun-17 18:46:41.379671 5de95df2a1fb Pulling fs layer
+2026-Jun-17 18:46:41.379671 95e4c51fed83 Download complete
+2026-Jun-17 18:46:41.379671 0d4fedf9cad8 Downloading [==================================================>]  900.3kB/900.3kB
+2026-Jun-17 18:46:41.379671 0d4fedf9cad8 Download complete
+2026-Jun-17 18:46:41.379671 d84bc3f3ded6 Download complete
+2026-Jun-17 18:46:41.379671 f2511ae13411 Download complete
+2026-Jun-17 18:46:41.379671 6c2eaa02a04a Download complete
+2026-Jun-17 18:46:41.379671 55afa1ecc21d Downloading [========================================>          ]  3.146MB/3.846MB
+2026-Jun-17 18:46:41.379671 f7f6aac6fe13 Download complete
+2026-Jun-17 18:46:41.379671 ddab922e8d89 Download complete
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Downloading [>                                                  ]  1.049MB/111.3MB
+2026-Jun-17 18:46:41.379671 5de95df2a1fb Download complete
+2026-Jun-17 18:46:41.379671 ecbe26720671 Download complete
+2026-Jun-17 18:46:41.379671 55afa1ecc21d Download complete
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Downloading [===>                                               ]   7.34MB/111.3MB
+2026-Jun-17 18:46:41.379671 55afa1ecc21d Extracting 1 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Downloading [======>                                            ]  13.63MB/111.3MB
+2026-Jun-17 18:46:41.379671 55afa1ecc21d Extracting 1 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Downloading [========>                                          ]  19.92MB/111.3MB
+2026-Jun-17 18:46:41.379671 55afa1ecc21d Extracting 1 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Downloading [===========>                                       ]  25.17MB/111.3MB
+2026-Jun-17 18:46:41.379671 55afa1ecc21d Extracting 1 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Downloading [=============>                                     ]  30.41MB/111.3MB
+2026-Jun-17 18:46:41.379671 55afa1ecc21d Extracting 1 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Downloading [================>                                  ]  35.65MB/111.3MB
+2026-Jun-17 18:46:41.379671 55afa1ecc21d Extracting 1 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Downloading [====================>                              ]  45.09MB/111.3MB
+2026-Jun-17 18:46:41.379671 55afa1ecc21d Extracting 1 s
+2026-Jun-17 18:46:41.379671 c2fa7d9e1146 Download complete
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Downloading [======================>                            ]  50.33MB/111.3MB
+2026-Jun-17 18:46:41.379671 6c2eaa02a04a Pull complete
+2026-Jun-17 18:46:41.379671 f7f6aac6fe13 Pull complete
+2026-Jun-17 18:46:41.379671 55afa1ecc21d Pull complete
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Downloading [===============================>                   ]  70.25MB/111.3MB
+2026-Jun-17 18:46:41.379671 bf118c795fb8 Download complete
+2026-Jun-17 18:46:41.379671 0d4fedf9cad8 Pull complete
+2026-Jun-17 18:46:41.379671 f2511ae13411 Pull complete
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Download complete
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 1 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 2 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 2 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 2 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 2 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 2 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 2 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 2 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 2 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 2 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 2 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 3 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 3 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 3 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 3 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 3 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 3 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 3 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 3 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 3 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 3 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 4 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 4 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 4 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 4 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 4 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 4 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 4 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 4 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 4 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 4 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 5 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 5 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 5 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Extracting 5 s
+2026-Jun-17 18:46:41.379671 ecbe26720671 Extracting 1 s
+2026-Jun-17 18:46:41.379671 f63c7a8df82b Pull complete
+2026-Jun-17 18:46:41.379671 95e4c51fed83 Pull complete
+2026-Jun-17 18:46:41.379671 ddab922e8d89 Pull complete
+2026-Jun-17 18:46:41.379671 5de95df2a1fb Pull complete
+2026-Jun-17 18:46:41.379671 ecbe26720671 Pull complete
+2026-Jun-17 18:46:41.379671 d84bc3f3ded6 Pull complete
+2026-Jun-17 18:46:41.379671 db Pulled
+2026-Jun-17 18:46:41.379671 Volume "h7iql9s7swpx8eyxrxdtvmqq_db-data"  Creating
+2026-Jun-17 18:46:41.379671 Volume "h7iql9s7swpx8eyxrxdtvmqq_db-data"  Created
+2026-Jun-17 18:46:41.379671 Container db-h7iql9s7swpx8eyxrxdtvmqq-184350389724  Creating
+2026-Jun-17 18:46:41.379671 Container db-h7iql9s7swpx8eyxrxdtvmqq-184350389724  Created
+2026-Jun-17 18:46:41.379671 Container app-h7iql9s7swpx8eyxrxdtvmqq-184350412125  Creating
+2026-Jun-17 18:46:41.379671 Container app-h7iql9s7swpx8eyxrxdtvmqq-184350412125  Created
+2026-Jun-17 18:46:41.379671 Container db-h7iql9s7swpx8eyxrxdtvmqq-184350389724  Starting
+2026-Jun-17 18:46:41.379671 Container db-h7iql9s7swpx8eyxrxdtvmqq-184350389724  Started
+2026-Jun-17 18:46:41.379671 Container db-h7iql9s7swpx8eyxrxdtvmqq-184350389724  Waiting
+2026-Jun-17 18:46:41.379671 Container db-h7iql9s7swpx8eyxrxdtvmqq-184350389724  Healthy
+2026-Jun-17 18:46:41.379671 Container app-h7iql9s7swpx8eyxrxdtvmqq-184350412125  Starting
+2026-Jun-17 18:46:41.379671 Error response from daemon: failed to set up container networking: driver failed programming external connectivity on endpoint app-h7iql9s7swpx8eyxrxdtvmqq-184350412125 (434194a316cfa0117b4796a7c94dbd0e23bcebec04cfb8d8de60a411aaa9f51a): Bind for 0.0.0.0:8080 failed: port is already allocated
+2026-Jun-17 18:46:41.379671 exit status 1
+2026-Jun-17 18:46:41.400223 [DEBUG] Error type: App\Exceptions\DeploymentException
+2026-Jun-17 18:46:41.421670 [DEBUG] Error code: 0
+2026-Jun-17 18:46:41.440431 [DEBUG] Location: /var/www/html/app/Traits/ExecuteRemoteCommand.php:242
+2026-Jun-17 18:46:41.463616 [DEBUG] Stack trace (first 5 lines):
+2026-Jun-17 18:46:41.489894 [DEBUG] #0 /var/www/html/app/Traits/ExecuteRemoteCommand.php(106): App\Jobs\ApplicationDeploymentJob->executeCommandWithProcess()
+2026-Jun-17 18:46:41.515862 [DEBUG] #1 /var/www/html/vendor/laravel/framework/src/Illuminate/Collections/Traits/EnumeratesValues.php(275): App\Jobs\ApplicationDeploymentJob->{closure:App\Traits\ExecuteRemoteCommand::execute_remote_command():72}()
+2026-Jun-17 18:46:41.536883 [DEBUG] #2 /var/www/html/app/Traits/ExecuteRemoteCommand.php(72): Illuminate\Support\Collection->each()
+2026-Jun-17 18:46:41.556133 [DEBUG] #3 /var/www/html/app/Jobs/ApplicationDeploymentJob.php(874): App\Jobs\ApplicationDeploymentJob->execute_remote_command()
+2026-Jun-17 18:46:41.578131 [DEBUG] #4 /var/www/html/app/Jobs/ApplicationDeploymentJob.php(497): App\Jobs\ApplicationDeploymentJob->deploy_docker_compose_buildpack()
+2026-Jun-17 18:46:41.598040 ========================================
+2026-Jun-17 18:46:42.075822 Gracefully shutting down build container: y13anlo54w3zivmm07urf3wg
+2026-Jun-17 18:46:42.263870 [DEBUG] [CMD]: docker stop --time=30 y13anlo54w3zivmm07urf3wg
+2026-Jun-17 18:46:42.263870 [DEBUG] Flag --time has been deprecated, use --timeout instead
+2026-Jun-17 18:46:42.431969 [DEBUG] y13anlo54w3zivmm07urf3wg
