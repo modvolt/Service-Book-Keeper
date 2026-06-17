@@ -53,6 +53,7 @@ Czech-language auto service management app for a self-employed mechanic — trac
 - Uploads always proxy through the server (multer in-memory → `storage.uploadPrivateObject(buffer, contentType)`); no presigned client-side upload, so no bucket CORS is needed. Objects use the stable `/objects/<entityId>` path regardless of backend.
 - Work order photos use direct `fetch` POST with FormData (not codegen) because multipart upload isn't in the OpenAPI spec.
 - Objects served by streaming through `/api/storage/objects/*` (private, behind `requireAuth`) and `/api/storage/public-objects/*` (public). Both stream a Node `Readable` from the active driver.
+- Readiness gate (`/api/healthz`, used by the docker-compose healthcheck + Coolify proxy) returns 200 once the **database** is reachable. Object storage is still probed and reported in the body (`storage: ok|failing`) but does NOT gate health — a degraded/misconfigured S3 only breaks photo upload/serving, it must never keep the whole site from being routed. (Storage healthCheck is a `HeadBucketCommand`, which some S3-compatible providers 403 without `s3:ListBucket` even when object GET/PUT work — another reason it can't gate the site.)
 
 ## Product
 

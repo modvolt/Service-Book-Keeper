@@ -12,8 +12,10 @@ router.get("/healthz", (_req, res) => {
     database: readiness.database,
     storage: readiness.storage,
   });
-  // 200 only once every dependency is reachable, so the platform's startup
-  // probe keeps polling (instead of cutting over) while we're still warming up.
+  // 200 once the REQUIRED dependencies are reachable (database). Storage status is
+  // still reported in the body but does not gate the probe: the platform's startup
+  // probe keeps polling (503) only while the DB is still warming up, and a degraded
+  // object store no longer makes the proxy refuse to route the whole site.
   res.status(readiness.ready ? 200 : 503).json(data);
 });
 

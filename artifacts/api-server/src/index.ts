@@ -48,7 +48,8 @@ app.listen(port, (err) => {
 
   // Begin verifying dependencies (DB + storage) in the background. The server is
   // already listening so /api/healthz can answer immediately; it reports
-  // unhealthy (503) until this probe confirms every dependency is reachable.
+  // unhealthy (503) only until the database is reachable. Storage is probed and
+  // reported too, but a degraded object store does not hold the gate down.
   startReadinessProbe();
 
   // Kick a tick shortly after boot, then hourly. Errors are handled inside.

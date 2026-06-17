@@ -6,7 +6,10 @@ import { recordError } from "./error-buffer";
 export type DependencyState = "ok" | "failing";
 
 export interface ReadinessState {
-  /** Overall: true only when every dependency is reachable. */
+  /**
+   * Health gate: true once the REQUIRED dependencies are reachable (database).
+   * Storage is reported separately and does NOT affect this flag.
+   */
   ready: boolean;
   database: DependencyState;
   storage: DependencyState;
@@ -45,7 +48,13 @@ export async function checkReadiness(): Promise<ReadinessState> {
 
   state.database = dbResult.status === "fulfilled" ? "ok" : "failing";
   state.storage = storageResult.status === "fulfilled" ? "ok" : "failing";
-  state.ready = state.database === "ok" && state.storage === "ok";
+  // Readiness gates the platform/proxy health probe (`/api/healthz`). Only the
+  // database is REQUIRED to serve the app: pages, auth, vehicles, work orders all
+  // work without object storage. Storage being unreachable only degrades photo
+  // upload/serving, so it is reported (and logged) but must NOT keep the whole
+  // site down — otherwise a single storage hiccup or an over-strict bucket probe
+  // makes the reverse proxy refuse to route any traffic at all.
+  state.ready = state.database === "ok";
   state.lastCheckedAt = new Date().toISOString();
   return getReadiness();
 }

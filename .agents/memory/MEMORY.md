@@ -13,4 +13,5 @@
 - [Docker deploy smoke testing](docker-deploy-smoke-testing.md) — nested Docker in the workspace breaks bridge nets + exec healthchecks; use host net, literal env, X-Forwarded-Proto for secure cookies. Build needs pnpm pin.
 - [Invalid date render crash](invalid-date-render-crash.md) — a present-but-invalid date (e.g. 5-digit-year scan typo in a Postgres date col) makes date-fns format throw and crash a whole list; guard with isValid, null-check isn't enough.
 - [Coolify host-port collision](coolify-port-binding.md) — Compose app that builds but dies at start with "port is already allocated" = host-port clash; use expose, not ports, under Coolify.
+- [Health gate vs object storage](readiness-health-gate.md) — /api/healthz readiness must gate on DB only; a failing/misconfigured S3 must never 503 the whole site (HeadBucket can 403 even when GET/PUT work).
 - [Post-merge codegen stale](post-merge-codegen-stale.md) — task-agent merges run drizzle push but NOT Orval codegen; rerun codegen if the merge touched openapi.yaml or frontend types go missing.
