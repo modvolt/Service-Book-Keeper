@@ -119,7 +119,7 @@ function ServiceRow({
         )}
       </div>
       <div className="text-right shrink-0">
-        {lastDate ? (
+        {lastDate && isValid(parseISO(lastDate)) ? (
           <span className="text-sm">{format(parseISO(lastDate), 'd. M. yyyy', { locale: cs })}</span>
         ) : (
           <span className="text-sm text-muted-foreground">nezadáno</span>

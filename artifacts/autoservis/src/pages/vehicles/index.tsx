@@ -7,7 +7,7 @@ import { LicensePlate } from "@/components/license-plate";
 import { Search, Plus, AlertCircle, X } from "lucide-react";
 import { Link, useSearch } from "wouter";
 import { Badge } from "@/components/ui/badge";
-import { differenceInDays, parseISO, format } from "date-fns";
+import { differenceInDays, parseISO, format, isValid } from "date-fns";
 import { cs } from "date-fns/locale";
 
 export default function VehiclesList() {
@@ -26,7 +26,9 @@ export default function VehiclesList() {
       return vehicles
         .filter((v) => {
           if (!v.stkValidUntil) return false;
-          const diff = differenceInDays(parseISO(v.stkValidUntil), new Date());
+          const parsed = parseISO(v.stkValidUntil);
+          if (!isValid(parsed)) return false;
+          const diff = differenceInDays(parsed, new Date());
           return diff <= 30;
         })
         .sort((a, b) => (a.stkValidUntil ?? "").localeCompare(b.stkValidUntil ?? ""));
@@ -42,6 +44,7 @@ export default function VehiclesList() {
   const getStkStatus = (dateString?: string | null) => {
     if (!dateString) return null;
     const date = parseISO(dateString);
+    if (!isValid(date)) return null;
     const diff = differenceInDays(date, new Date());
     const label = format(date, "LLLL yyyy", { locale: cs });
 
