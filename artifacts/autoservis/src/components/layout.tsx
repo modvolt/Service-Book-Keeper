@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar, Settings as SettingsIcon, ScanLine, AlertTriangle, BarChart3, LogOut, Shield, KeyRound } from "lucide-react";
+import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar, Settings as SettingsIcon, ScanLine, AlertTriangle, BarChart3, LogOut, Shield, KeyRound, RefreshCw } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGetSettings, useLogout, getGetAuthStatusQueryKey } from "@workspace/api-client-react";
@@ -9,6 +9,29 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useTheme } from "@/hooks/use-theme";
 import { applyCurrentPalette, usePalette } from "@/hooks/use-palette";
+import { clearCachesAndReload } from "@/lib/app-reload";
+
+function RefreshButton({ className }: { className?: string }) {
+  const [refreshing, setRefreshing] = useState(false);
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      disabled={refreshing}
+      onClick={() => {
+        setRefreshing(true);
+        void clearCachesAndReload();
+      }}
+      className={className}
+      title="Načíst aktuální data a obnovit aplikaci po aktualizaci"
+      aria-label="Obnovit"
+    >
+      <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
+      <span className="ml-2 hidden sm:inline">{refreshing ? "Obnovuji…" : "Obnovit"}</span>
+    </Button>
+  );
+}
 
 const NAV_ITEMS = [
   { href: "/", label: "Přehled", icon: LayoutDashboard, color: "text-sky-600 dark:text-sky-400", bg: "hover:bg-sky-50 dark:hover:bg-sky-950/40" },
@@ -140,8 +163,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-muted/30" style={themeStyle}>
+      <RefreshButton className="hidden md:inline-flex fixed top-3 right-3 z-50 bg-card shadow-md" />
       <header className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-card">
         <Brand />
+        <div className="flex items-center gap-2">
+          <RefreshButton />
         <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon">
@@ -160,6 +186,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </div>
           </SheetContent>
         </Sheet>
+        </div>
       </header>
 
       <aside className="hidden md:flex w-64 flex-col border-r bg-card h-screen sticky top-0">
