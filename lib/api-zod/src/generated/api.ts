@@ -293,6 +293,7 @@ export const scanMaterialsBodyImagesMax = 8;
 
 export const ScanMaterialsBody = zod.object({
   "licensePlate": zod.string().min(1).describe('Vehicle license plate (SPZ); used to locate the open work order'),
+  "workOrderId": zod.number().nullish().describe('Specific work order ID to use; when provided the server validates it is open and matches the given SPZ, then uses it directly instead of auto-selecting'),
   "images": zod.array(zod.string().describe('Base64-encoded JPEG image (without the data URI prefix)')).min(1).max(scanMaterialsBodyImagesMax)
 })
 

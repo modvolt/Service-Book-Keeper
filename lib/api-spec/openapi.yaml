@@ -2150,6 +2150,9 @@ components:
           type: string
           minLength: 1
           description: Vehicle license plate (SPZ); used to locate the open work order
+        workOrderId:
+          type: ["integer", "null"]
+          description: Specific work order ID to use; when provided the server validates it is open and matches the given SPZ, then uses it directly instead of auto-selecting
         images:
           type: array
           minItems: 1

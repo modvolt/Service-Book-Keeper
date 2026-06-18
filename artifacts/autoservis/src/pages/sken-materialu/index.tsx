@@ -134,6 +134,7 @@ export default function SkenMaterialuPage() {
   const [spzInput, setSpzInput] = useState("");
   // Set when user clicks "Potvrdit" — triggers work order lookup
   const [confirmedSpz, setConfirmedSpz] = useState("");
+  const [selectedWorkOrderId, setSelectedWorkOrderId] = useState<number | null>(null);
   const [spzPhotoLoading, setSpzPhotoLoading] = useState(false);
   const spzCamRef = useRef<HTMLInputElement>(null);
   const spzUploadRef = useRef<HTMLInputElement>(null);
@@ -141,25 +142,30 @@ export default function SkenMaterialuPage() {
 
   const spzClean = confirmedSpz.replace(/\s+/g, "").toUpperCase();
 
-  // Fetch work orders when SPZ is confirmed — search by plate, filter non-completed
+  // Fetch work orders when SPZ is confirmed — search by plate, status "open" only
   const { data: workOrders, isFetching: ordersFetching } = useListWorkOrders(
-    { search: spzClean },
+    { search: spzClean, status: "open" as const },
     { query: { enabled: spzClean.length >= 3 } as any },
   );
 
   const openWorkOrders = useMemo(() => {
     if (!workOrders || !spzClean) return [];
     return workOrders.filter(
-      (o) =>
-        (o.licensePlate ?? "").replace(/\s+/g, "").toUpperCase() === spzClean &&
-        o.status !== "completed",
+      (o) => (o.licensePlate ?? "").replace(/\s+/g, "").toUpperCase() === spzClean,
     );
   }, [workOrders, spzClean]);
 
-  // Active work order (first open one found)
-  const activeWorkOrder = openWorkOrders[0] ?? null;
+  // Active work order — auto-selected when exactly one found, or mechanic picked from multiple
+  const activeWorkOrder = useMemo(() => {
+    if (openWorkOrders.length === 1) return openWorkOrders[0]!;
+    if (openWorkOrders.length > 1 && selectedWorkOrderId != null) {
+      return openWorkOrders.find((o) => o.id === selectedWorkOrderId) ?? null;
+    }
+    return null;
+  }, [openWorkOrders, selectedWorkOrderId]);
   const workOrderResolved = spzClean.length >= 3 && !ordersFetching;
   const noOpenOrder = workOrderResolved && openWorkOrders.length === 0;
+  const multipleOpenOrders = workOrderResolved && openWorkOrders.length > 1;
 
   // Step 2 — Material photos
   const [matFiles, setMatFiles] = useState<File[]>([]);
@@ -225,7 +231,7 @@ export default function SkenMaterialuPage() {
     if (matFiles.length === 0) return;
     try {
       const images = await Promise.all(matFiles.map(compressImageToBase64));
-      scanMaterials.mutate({ data: { licensePlate: confirmedSpz, images } }, {
+      scanMaterials.mutate({ data: { licensePlate: confirmedSpz, workOrderId: activeWorkOrder?.id ?? null, images } }, {
         onSuccess: (res) => {
           setScanResult({
             workOrderId: res.workOrderId,
@@ -310,6 +316,7 @@ export default function SkenMaterialuPage() {
     setStep(1);
     setSpzInput("");
     setConfirmedSpz("");
+    setSelectedWorkOrderId(null);
     setMatFiles([]);
     setMatPreviews([]);
     setScanResult(null);
@@ -319,6 +326,7 @@ export default function SkenMaterialuPage() {
 
   function resetToSpz() {
     setConfirmedSpz("");
+    setSelectedWorkOrderId(null);
   }
 
   const canAddMore = matFiles.length < MAX_MAT_IMAGES && !scanMaterials.isPending;
@@ -357,7 +365,8 @@ export default function SkenMaterialuPage() {
                 value={spzInput}
                 onChange={(e) => {
                   setSpzInput(e.target.value.toUpperCase());
-                  setConfirmedSpz(""); // Reset lookup when SPZ changes
+                  setConfirmedSpz("");
+                  setSelectedWorkOrderId(null);
                 }}
                 className="font-mono text-lg h-12"
                 autoCapitalize="characters"
@@ -415,14 +424,15 @@ export default function SkenMaterialuPage() {
                   </div>
                 )}
 
-                {!ordersFetching && activeWorkOrder && (
+                {/* Exactly one open order */}
+                {!ordersFetching && openWorkOrders.length === 1 && activeWorkOrder && (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm text-emerald-700 dark:text-emerald-400">
                       <CheckCircle2 className="h-4 w-4 shrink-0" />
                       <span className="font-medium">Nalezena otevřená zakázka</span>
                     </div>
                     <div className="text-sm pl-6 space-y-0.5">
-                      <p>Zakázka #{activeWorkOrder.id}</p>
+                      <p className="font-medium">Zakázka #{activeWorkOrder.id}</p>
                       {activeWorkOrder.description && (
                         <p className="text-muted-foreground">{activeWorkOrder.description}</p>
                       )}
@@ -437,20 +447,70 @@ export default function SkenMaterialuPage() {
                   </div>
                 )}
 
+                {/* Multiple open orders — show selection list */}
+                {!ordersFetching && multipleOpenOrders && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
+                      <ClipboardList className="h-4 w-4 shrink-0" />
+                      <span className="font-medium">Více otevřených zakázek — vyberte jednu</span>
+                    </div>
+                    <div className="space-y-2">
+                      {openWorkOrders.map((o) => {
+                        const isSelected = selectedWorkOrderId === o.id;
+                        return (
+                          <button
+                            key={o.id}
+                            type="button"
+                            onClick={() => setSelectedWorkOrderId(o.id)}
+                            className={cn(
+                              "w-full text-left rounded-md border px-3 py-2 text-sm transition-colors",
+                              isSelected
+                                ? "border-primary bg-primary/5 ring-1 ring-primary"
+                                : "hover:bg-muted/50",
+                            )}
+                          >
+                            <span className="font-medium">Zakázka #{o.id}</span>
+                            {o.description && (
+                              <span className="ml-2 text-muted-foreground">{o.description}</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {selectedWorkOrderId != null && (
+                      <Button
+                        type="button"
+                        className="w-full h-12 text-base"
+                        onClick={() => setStep(2)}
+                      >
+                        Pokračovat na materiály
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                {/* No open orders */}
                 {!ordersFetching && noOpenOrder && (
                   <div className="space-y-3">
                     <div className="flex items-start gap-2 text-sm text-rose-700 dark:text-rose-400">
                       <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                       <span>Pro toto vozidlo neexistuje otevřená zakázka.</span>
                     </div>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={resetToSpz}
-                    >
-                      <RotateCcw className="h-4 w-4 mr-2" />Zkusit jiné vozidlo
-                    </Button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full"
+                        onClick={resetToSpz}
+                      >
+                        <RotateCcw className="h-4 w-4 mr-2" />Jiné vozidlo
+                      </Button>
+                      <Link href={`/work-orders/new?spz=${encodeURIComponent(confirmedSpz)}`}>
+                        <Button type="button" variant="default" className="w-full">
+                          <Plus className="h-4 w-4 mr-2" />Nová zakázka
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 )}
               </div>

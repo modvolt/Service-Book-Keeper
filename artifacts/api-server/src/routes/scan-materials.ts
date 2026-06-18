@@ -13,6 +13,7 @@ const largeJson = json({ limit: "15mb" });
 
 const ScanMaterialsBody = z.object({
   licensePlate: z.string().min(1),
+  workOrderId: z.number().int().positive().optional().nullable(),
   images: z.array(z.string()).min(1).max(8),
 });
 
@@ -54,38 +55,59 @@ router.post("/work-orders/scan-materials", largeJson, async (req, res): Promise<
     .from(vehiclesTable)
     .where(ilike(vehiclesTable.licensePlate, normalizedPlate));
 
-  // Find any open work order for this plate — either via vehicleId link or SPZ match.
-  // Status "completed" means closed; all other statuses (open, in_progress, waiting_parts,
-  // needs_return) are considered open.
   let openOrder: { id: number } | undefined;
 
-  if (vehicle) {
-    const rows = await db
-      .select({ id: workOrdersTable.id })
+  if (parsed.data.workOrderId) {
+    // Caller selected a specific order — validate it is open and belongs to this vehicle/SPZ
+    const [candidate] = await db
+      .select({ id: workOrdersTable.id, vehicleId: workOrdersTable.vehicleId, licensePlate: workOrdersTable.licensePlate, status: workOrdersTable.status })
       .from(workOrdersTable)
-      .where(
-        and(
-          eq(workOrdersTable.vehicleId, vehicle.id),
-          ne(workOrdersTable.status, "completed"),
-        ),
-      )
-      .limit(1);
-    openOrder = rows[0];
-  }
+      .where(eq(workOrdersTable.id, parsed.data.workOrderId));
 
-  // Fall back to SPZ-only match if vehicle not in DB or no vehicleId-linked order found
-  if (!openOrder) {
-    const rows = await db
-      .select({ id: workOrdersTable.id })
-      .from(workOrdersTable)
-      .where(
-        and(
-          ilike(workOrdersTable.licensePlate, normalizedPlate),
-          ne(workOrdersTable.status, "completed"),
-        ),
-      )
-      .limit(1);
-    openOrder = rows[0];
+    if (!candidate || candidate.status === "completed") {
+      res.status(404).json({ error: "Vybraná zakázka není otevřená." });
+      return;
+    }
+
+    const orderMatchesVehicle = vehicle && candidate.vehicleId === vehicle.id;
+    const orderMatchesPlate = (candidate.licensePlate ?? "").replace(/\s+/g, "").toUpperCase() === normalizedPlate.toUpperCase();
+    if (!orderMatchesVehicle && !orderMatchesPlate) {
+      res.status(404).json({ error: "Vybraná zakázka nepatří k tomuto vozidlu." });
+      return;
+    }
+
+    openOrder = { id: candidate.id };
+  } else {
+    // Auto-select: find any open work order for this plate — via vehicleId link or SPZ match.
+    // All non-completed statuses count as open for scan purposes.
+    if (vehicle) {
+      const rows = await db
+        .select({ id: workOrdersTable.id })
+        .from(workOrdersTable)
+        .where(
+          and(
+            eq(workOrdersTable.vehicleId, vehicle.id),
+            ne(workOrdersTable.status, "completed"),
+          ),
+        )
+        .limit(1);
+      openOrder = rows[0];
+    }
+
+    // Fall back to SPZ-only match if vehicle not in DB or no vehicleId-linked order found
+    if (!openOrder) {
+      const rows = await db
+        .select({ id: workOrdersTable.id })
+        .from(workOrdersTable)
+        .where(
+          and(
+            ilike(workOrdersTable.licensePlate, normalizedPlate),
+            ne(workOrdersTable.status, "completed"),
+          ),
+        )
+        .limit(1);
+      openOrder = rows[0];
+    }
   }
 
   if (!openOrder) {

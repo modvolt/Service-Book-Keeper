@@ -13,6 +13,11 @@ export interface ScanMaterialsInput {
      */
   licensePlate: string;
   /**
+     * Specific work order ID to use; when provided the server validates it is open and matches the given SPZ, then uses it directly instead of auto-selecting
+     * @nullable
+     */
+  workOrderId?: number | null;
+  /**
      * @minItems 1
      * @maxItems 8
      */
