@@ -14,6 +14,10 @@ export type VehiclePrefill = {
   make?: string | null;
   model?: string | null;
   currentKm?: number | null;
+  ownerName?: string | null;
+  ownerIco?: string | null;
+  ownerAddress?: string | null;
+  ownerType?: string | null;
 };
 
 export function setVehiclePrefill(data: VehiclePrefill): void {

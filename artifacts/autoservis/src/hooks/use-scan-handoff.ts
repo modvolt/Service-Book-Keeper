@@ -15,6 +15,10 @@ type HandoffEvent =
         make: string | null;
         model: string | null;
         odometerKm: number | null;
+        ownerName: string | null;
+        ownerIco: string | null;
+        ownerAddress: string | null;
+        ownerType: string | null;
       };
     }
   | {
@@ -70,6 +74,10 @@ export function useScanHandoff(): void {
             make: data.prefill?.make ?? null,
             model: data.prefill?.model ?? null,
             currentKm: data.prefill?.odometerKm ?? null,
+            ownerName: data.prefill?.ownerName ?? null,
+            ownerIco: data.prefill?.ownerIco ?? null,
+            ownerAddress: data.prefill?.ownerAddress ?? null,
+            ownerType: data.prefill?.ownerType ?? null,
           });
           toast({
             title: "Načteno z telefonu",

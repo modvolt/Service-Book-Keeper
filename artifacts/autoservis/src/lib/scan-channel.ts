@@ -23,6 +23,10 @@ export type ScanHandoffPayload = {
   make: string | null;
   model: string | null;
   odometerKm: number | null;
+  ownerName: string | null;
+  ownerIco: string | null;
+  ownerAddress: string | null;
+  ownerType: string | null;
 };
 
 export type ScanHandoffResult = {

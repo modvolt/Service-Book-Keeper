@@ -24,4 +24,24 @@ export interface ImportTpResult {
      * @nullable
      */
   odometerKm?: number | null;
+  /**
+     * Owner/operator from the TP — person name or company name, if readable
+     * @nullable
+     */
+  ownerName?: string | null;
+  /**
+     * Owner company registration number (IČ, 8 digits) if present on the TP
+     * @nullable
+     */
+  ownerIco?: string | null;
+  /**
+     * Owner/operator address as a single string, if readable
+     * @nullable
+     */
+  ownerAddress?: string | null;
+  /**
+     * Derived owner type — "company" when an IČ was detected, otherwise "private"
+     * @nullable
+     */
+  ownerType?: string | null;
 }

@@ -493,7 +493,11 @@ export const ImportVehicleFromTpResponse = zod.object({
   "engineDisplacement": zod.number().nullish(),
   "make": zod.string().nullish(),
   "model": zod.string().nullish(),
-  "odometerKm": zod.number().nullish().describe('Odometer reading (km) detected from a dashboard photo, if any')
+  "odometerKm": zod.number().nullish().describe('Odometer reading (km) detected from a dashboard photo, if any'),
+  "ownerName": zod.string().nullish().describe('Owner\/operator from the TP — person name or company name, if readable'),
+  "ownerIco": zod.string().nullish().describe('Owner company registration number (IČ, 8 digits) if present on the TP'),
+  "ownerAddress": zod.string().nullish().describe('Owner\/operator address as a single string, if readable'),
+  "ownerType": zod.string().nullish().describe('Derived owner type — \"company\" when an IČ was detected, otherwise \"private\"')
 })
 
 

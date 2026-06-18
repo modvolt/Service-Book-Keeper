@@ -78,6 +78,10 @@ export default function NewVehicle() {
       make: pre.make ?? f.make,
       model: pre.model ?? f.model,
       currentKm: pre.currentKm != null ? String(pre.currentKm) : f.currentKm,
+      ownerType: pre.ownerType === "company" || pre.ownerType === "private" ? pre.ownerType : f.ownerType,
+      ownerName: pre.ownerName ?? f.ownerName,
+      ownerAddress: pre.ownerAddress ?? f.ownerAddress,
+      ownerIco: pre.ownerIco ?? f.ownerIco,
     }));
     toast({ title: "Údaje předvyplněny", description: "Zkontrolujte je a doplňte chybějící údaje." });
   }, [toast]);
@@ -194,6 +198,10 @@ export default function NewVehicle() {
             make: result.make ?? f.make,
             model: result.model ?? f.model,
             currentKm: result.odometerKm != null ? String(result.odometerKm) : f.currentKm,
+            ownerType: result.ownerType === "company" || result.ownerType === "private" ? result.ownerType : f.ownerType,
+            ownerName: result.ownerName ?? f.ownerName,
+            ownerAddress: result.ownerAddress ?? f.ownerAddress,
+            ownerIco: result.ownerIco ?? f.ownerIco,
           }));
           setImportOpen(false);
           setImportFiles([]);

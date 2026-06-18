@@ -73,6 +73,10 @@ export default function TpScanPage() {
         make: d.make,
         model: d.model,
         odometerKm: d.odometerKm,
+        ownerName: d.ownerName,
+        ownerIco: d.ownerIco,
+        ownerAddress: d.ownerAddress,
+        ownerType: d.ownerType,
       });
       if (result.delivered > 0) {
         setHandoff({ status: "sent", kind: result.kind });
@@ -101,6 +105,10 @@ export default function TpScanPage() {
       make: data.make,
       model: data.model,
       currentKm: data.odometerKm,
+      ownerName: data.ownerName,
+      ownerIco: data.ownerIco,
+      ownerAddress: data.ownerAddress,
+      ownerType: data.ownerType,
     });
     navigate("/vehicles/new");
   }
@@ -222,6 +230,9 @@ export default function TpScanPage() {
               <div><dt className="text-muted-foreground">Rok registrace</dt><dd>{data.registrationYear ?? "—"}</dd></div>
               <div><dt className="text-muted-foreground">Objem motoru</dt><dd>{data.engineDisplacement ? `${data.engineDisplacement} cm³` : "—"}</dd></div>
               <div className="col-span-2"><dt className="text-muted-foreground flex items-center gap-1"><Gauge className="h-3.5 w-3.5" />Stav tachometru</dt><dd>{data.odometerKm != null ? `${data.odometerKm.toLocaleString("cs-CZ")} km` : "—"}</dd></div>
+              <div className="col-span-2"><dt className="text-muted-foreground">Vlastník / firma</dt><dd>{data.ownerName ?? "—"}</dd></div>
+              <div><dt className="text-muted-foreground">IČ</dt><dd className="font-mono">{data.ownerIco ?? "—"}</dd></div>
+              <div><dt className="text-muted-foreground">Adresa</dt><dd>{data.ownerAddress ?? "—"}</dd></div>
             </dl>
 
             <div className="border-t pt-4 space-y-2">

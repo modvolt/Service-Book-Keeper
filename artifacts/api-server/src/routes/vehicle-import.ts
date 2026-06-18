@@ -42,7 +42,10 @@ Schéma odpovědi:
   "engineDisplacement": number|null,  // objem motoru v cm³ (kubických cm)
   "make": string|null,                // výrobce / značka vozidla, např. "Volkswagen", "Škoda", "Renault"
   "model": string|null,               // model / typ vozidla, např. "Passat", "Octavia", "Mégane"
-  "odometerKm": number|null           // stav tachometru (počet najetých kilometrů) z fotografie přístrojové desky
+  "odometerKm": number|null,          // stav tachometru (počet najetých kilometrů) z fotografie přístrojové desky
+  "ownerName": string|null,           // vlastník/provozovatel z TP: jméno a příjmení fyzické osoby, nebo název firmy
+  "ownerIco": string|null,            // IČ (identifikační číslo) vlastníka/provozovatele, pokud je v TP uvedeno (8 číslic)
+  "ownerAddress": string|null         // adresa vlastníka/provozovatele jako jeden řetězec (ulice, číslo, město, PSČ)
 }
 
 Pravidla:
@@ -54,7 +57,10 @@ Pravidla:
 - make: pouze název výrobce s velkým prvním písmenem (např. "Volkswagen", "Škoda"). Bez modelu.
 - model: pouze označení modelu/typu (např. "Passat", "Octavia"). Výrobce do modelu nezahrnuj.
 - odometerKm: stav tachometru čti POUZE z fotografie přístrojové desky (palubky). Vrať celé číslo v kilometrech bez mezer a jednotek (např. 185000). Pokud na fotografiích žádný tachometr není, vrať null. Ignoruj denní počítadlo (trip), které bývá menší a má desetinné místo.
-- Jiné údaje (jméno, adresa, barva) nevracej.`;
+- ownerName: vlastníka nebo provozovatele čti z technického průkazu. U fyzické osoby vrať jméno a příjmení, u firmy její název. Pokud není čitelný, vrať null.
+- ownerIco: IČ (identifikační číslo organizace) vrať POUZE pokud je na TP uvedeno a má přesně 8 číslic. Bez IČ (fyzická osoba) vrať null.
+- ownerAddress: adresu vlastníka/provozovatele vrať jako jeden řetězec (např. "Hlavní 123, 110 00 Praha"). Pokud není čitelná, vrať null.
+- Barvu vozidla a další neuvedené údaje nevracej.`;
 
 router.post("/vehicles/import-tp", largeJson, async (req, res): Promise<void> => {
   const parsed = ImportVehicleFromTpBody.safeParse(req.body);
@@ -130,6 +136,17 @@ router.post("/vehicles/import-tp", largeJson, async (req, res): Promise<void> =>
     const cleanInt = (v: unknown): number | null =>
       typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.round(v) : null;
 
+    // IČ must be exactly 8 digits; keep only digits before validating so a
+    // value like "123 456 78" or "IČ 12345678" still normalizes correctly.
+    const cleanIco = (v: unknown): string | null => {
+      const digits = typeof v === "string" ? v.replace(/\D/g, "") : "";
+      return digits.length === 8 ? digits : null;
+    };
+
+    const ownerName = cleanStr(extracted.ownerName);
+    const ownerIco = cleanIco(extracted.ownerIco);
+    const ownerAddress = cleanStr(extracted.ownerAddress);
+
     res.json({
       licensePlate: normalizeSpzOrNull(extracted.licensePlate),
       vin: typeof extracted.vin === "string" && extracted.vin.length === 17 ? extracted.vin : null,
@@ -138,6 +155,10 @@ router.post("/vehicles/import-tp", largeJson, async (req, res): Promise<void> =>
       make: cleanStr(extracted.make),
       model: cleanStr(extracted.model),
       odometerKm: cleanInt(extracted.odometerKm),
+      ownerName,
+      ownerIco,
+      ownerAddress,
+      ownerType: ownerIco ? "company" : "private",
     });
   } catch (err) {
     req.log.error({ err }, "TP import failed");

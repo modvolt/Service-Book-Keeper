@@ -67,11 +67,18 @@ interface HandoffBody {
   make?: unknown;
   model?: unknown;
   odometerKm?: unknown;
+  ownerName?: unknown;
+  ownerIco?: unknown;
+  ownerAddress?: unknown;
 }
 
 const asStr = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
 const asInt = (v: unknown): number | null =>
   typeof v === "number" && Number.isFinite(v) ? Math.round(v) : null;
+const asIco = (v: unknown): string | null => {
+  const digits = typeof v === "string" ? v.replace(/\D/g, "") : "";
+  return digits.length === 8 ? digits : null;
+};
 
 /**
  * Receive a completed scan from the phone, decide where the PC should go, and
@@ -108,6 +115,7 @@ router.post("/scan/handoff", smallJson, async (req, res): Promise<void> => {
     };
   } else {
     // Unknown (or unreadable) SPZ -> new vehicle form, pre-filled.
+    const ownerIco = asIco(body.ownerIco);
     event = {
       kind: "new-vehicle",
       prefill: {
@@ -118,6 +126,10 @@ router.post("/scan/handoff", smallJson, async (req, res): Promise<void> => {
         make: asStr(body.make),
         model: asStr(body.model),
         odometerKm,
+        ownerName: asStr(body.ownerName),
+        ownerIco,
+        ownerAddress: asStr(body.ownerAddress),
+        ownerType: ownerIco ? "company" : "private",
       },
     };
   }

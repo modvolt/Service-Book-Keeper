@@ -2146,6 +2146,18 @@ components:
         odometerKm:
           type: ["integer", "null"]
           description: Odometer reading (km) detected from a dashboard photo, if any
+        ownerName:
+          type: ["string", "null"]
+          description: Owner/operator from the TP — person name or company name, if readable
+        ownerIco:
+          type: ["string", "null"]
+          description: Owner company registration number (IČ, 8 digits) if present on the TP
+        ownerAddress:
+          type: ["string", "null"]
+          description: Owner/operator address as a single string, if readable
+        ownerType:
+          type: ["string", "null"]
+          description: Derived owner type — "company" when an IČ was detected, otherwise "private"
 
     MaterialCatalogItem:
       type: object

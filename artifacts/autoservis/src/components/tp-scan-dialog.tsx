@@ -15,6 +15,10 @@ export type TpExtractedData = {
   make: string | null;
   model: string | null;
   odometerKm: number | null;
+  ownerName: string | null;
+  ownerIco: string | null;
+  ownerAddress: string | null;
+  ownerType: string | null;
 };
 
 const MAX_IMAGES = 8;
