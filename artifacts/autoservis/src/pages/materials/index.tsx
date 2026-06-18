@@ -9,11 +9,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Package, Plus, Search, Trash2, Pencil, Check, X } from "lucide-react";
+import { Package, Plus, Search, Trash2, Pencil, Check, X, QrCode } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { MaterialsImportDialog } from "@/components/materials-import-dialog";
+import { MaterialQrDialog } from "@/components/material-qr-dialog";
 
 type MaterialItem = {
   id: number;
@@ -44,6 +45,7 @@ export default function MaterialsPage() {
   const [defaultPrice, setDefaultPrice] = useState("");
   const [askQuantityOnScan, setAskQuantityOnScan] = useState(false);
   const [editState, setEditState] = useState<EditState | null>(null);
+  const [qrItemId, setQrItemId] = useState<number | null>(null);
 
   const { data: items = [], isLoading } = useListMaterials({ search: search || undefined });
   const createMutation = useCreateMaterial();
@@ -64,10 +66,12 @@ export default function MaterialsPage() {
         askQuantityOnScan,
       }
     }, {
-      onSuccess: () => {
+      onSuccess: (created) => {
         toast({ title: "Materiál přidán" });
         setName(""); setProductNumber(""); setUnit(""); setDefaultPrice(""); setAskQuantityOnScan(false);
         invalidate();
+        // QR se vytvoří automaticky při založení materiálu — rovnou nabídneme tisk štítku.
+        if (created?.id != null) setQrItemId(created.id);
       },
       onError: (err) => {
         toast({ title: "Chyba", description: getApiErrorMessage(err, "Materiál se nepodařilo přidat (možná již existuje)."), variant: "destructive" });
@@ -273,6 +277,9 @@ export default function MaterialsPage() {
                           </p>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
+                          <Button variant="ghost" size="icon" onClick={() => setQrItemId(it.id)} title="QR štítek pro tisk" aria-label="QR štítek pro tisk">
+                            <QrCode className="h-4 w-4 text-muted-foreground" />
+                          </Button>
                           <Button variant="ghost" size="icon" onClick={() => startEdit(it)} title="Upravit">
                             <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
                           </Button>
@@ -301,6 +308,10 @@ export default function MaterialsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {qrItemId !== null && (
+        <MaterialQrDialog itemId={qrItemId} onClose={() => setQrItemId(null)} />
+      )}
     </div>
   );
 }
