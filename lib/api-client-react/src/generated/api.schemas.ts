@@ -715,6 +715,8 @@ export interface MaterialCatalogItem {
   defaultPrice?: number | null;
   /** @nullable */
   supplier?: string | null;
+  /** When true, the scan review screen highlights a quantity input for this item */
+  askQuantityOnScan?: boolean;
   createdAt: string;
 }
 
@@ -729,6 +731,23 @@ export interface MaterialCatalogInput {
   defaultPrice?: number | null;
   /** @nullable */
   supplier?: string | null;
+  /** When true, the scan review screen highlights a quantity input for this item */
+  askQuantityOnScan?: boolean;
+}
+
+export interface MaterialCatalogUpdate {
+  /** @minLength 1 */
+  name?: string;
+  /** @nullable */
+  productNumber?: string | null;
+  /** @nullable */
+  unit?: string | null;
+  /** @nullable */
+  defaultPrice?: number | null;
+  /** @nullable */
+  supplier?: string | null;
+  /** When true, the scan review screen highlights a quantity input for this item */
+  askQuantityOnScan?: boolean;
 }
 
 export type ImportMaterialsInputItemsItem = {
@@ -800,11 +819,24 @@ export interface ScanMaterialsInput {
      */
   workOrderId?: number | null;
   /**
-     * @minItems 1
+     * @minItems 0
      * @maxItems 8
      */
   images: string[];
+  /** Catalog material IDs detected client-side from QR codes in the uploaded images */
+  qrMaterialIds?: number[];
 }
+
+/**
+ * Whether this suggestion came from AI image analysis or QR code detection
+ */
+export type ScanMaterialsResultSuggestionsItemSource = typeof ScanMaterialsResultSuggestionsItemSource[keyof typeof ScanMaterialsResultSuggestionsItemSource];
+
+
+export const ScanMaterialsResultSuggestionsItemSource = {
+  ai: 'ai',
+  qr: 'qr',
+} as const;
 
 export type ScanMaterialsResultSuggestionsItem = {
   name: string;
@@ -818,6 +850,10 @@ export type ScanMaterialsResultSuggestionsItem = {
      * @nullable
      */
   catalogId?: number | null;
+  /** Whether to prompt for quantity in the review step (from catalog item) */
+  askQuantityOnScan?: boolean;
+  /** Whether this suggestion came from AI image analysis or QR code detection */
+  source: ScanMaterialsResultSuggestionsItemSource;
 };
 
 export interface ScanMaterialsResult {

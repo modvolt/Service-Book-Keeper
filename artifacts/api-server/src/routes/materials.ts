@@ -4,6 +4,7 @@ import { db, materialsCatalogTable, workOrderMaterialsTable, workOrdersTable } f
 import { getOpenAI, getOpenAIModel } from "@workspace/integrations-openai-ai-server";
 import {
   CreateMaterialBody,
+  UpdateMaterialBody,
   AddWorkOrderMaterialBody,
   UpdateWorkOrderMaterialBody,
   ImportInvoiceForWorkOrderBody,
@@ -37,6 +38,7 @@ router.post("/materials", async (req, res): Promise<void> => {
       unit: parsed.data.unit ?? null,
       defaultPrice: parsed.data.defaultPrice ?? null,
       supplier: parsed.data.supplier?.trim() || null,
+      askQuantityOnScan: parsed.data.askQuantityOnScan ?? false,
     }).returning();
     res.status(201).json(item);
   } catch (err) {
@@ -136,6 +138,52 @@ router.post("/materials/import", importJson, async (req, res): Promise<void> => 
   } catch (err) {
     req.log.error({ err }, "Materials import failed");
     res.status(500).json({ error: "Import ceníku selhal." });
+  }
+});
+
+router.patch("/materials/:id", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const parsed = UpdateMaterialBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const updates: Partial<{
+    name: string;
+    productNumber: string | null;
+    unit: string | null;
+    defaultPrice: number | null;
+    supplier: string | null;
+    askQuantityOnScan: boolean;
+  }> = {};
+
+  if (parsed.data.name !== undefined) updates.name = parsed.data.name.trim();
+  if (parsed.data.productNumber !== undefined) updates.productNumber = parsed.data.productNumber?.trim() || null;
+  if (parsed.data.unit !== undefined) updates.unit = parsed.data.unit ?? null;
+  if (parsed.data.defaultPrice !== undefined) updates.defaultPrice = parsed.data.defaultPrice ?? null;
+  if (parsed.data.supplier !== undefined) updates.supplier = parsed.data.supplier?.trim() || null;
+  if (parsed.data.askQuantityOnScan !== undefined) updates.askQuantityOnScan = parsed.data.askQuantityOnScan;
+
+  if (Object.keys(updates).length === 0) {
+    res.status(400).json({ error: "Žádné změny k uložení." });
+    return;
+  }
+
+  try {
+    const [row] = await db.update(materialsCatalogTable)
+      .set(updates)
+      .where(eq(materialsCatalogTable.id, id))
+      .returning();
+    if (!row) { res.status(404).json({ error: "Materiál nenalezen" }); return; }
+    res.json(row);
+  } catch (err) {
+    const code = (err as { code?: string })?.code;
+    if (code === "23505") {
+      res.status(409).json({ error: "Materiál s tímto názvem už existuje." });
+      return;
+    }
+    req.log.error({ err }, "Material update failed");
+    res.status(500).json({ error: "Materiál se nepodařilo aktualizovat." });
   }
 });
 

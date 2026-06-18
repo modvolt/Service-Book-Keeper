@@ -18,8 +18,10 @@ export interface ScanMaterialsInput {
      */
   workOrderId?: number | null;
   /**
-     * @minItems 1
+     * @minItems 0
      * @maxItems 8
      */
   images: string[];
+  /** Catalog material IDs detected client-side from QR codes in the uploaded images */
+  qrMaterialIds?: number[];
 }

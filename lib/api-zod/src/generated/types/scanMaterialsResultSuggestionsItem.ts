@@ -5,6 +5,7 @@
  * AutoServis API
  * OpenAPI spec version: 0.1.0
  */
+import type { ScanMaterialsResultSuggestionsItemSource } from './scanMaterialsResultSuggestionsItemSource';
 
 export type ScanMaterialsResultSuggestionsItem = {
   name: string;
@@ -18,4 +19,8 @@ export type ScanMaterialsResultSuggestionsItem = {
      * @nullable
      */
   catalogId?: number | null;
+  /** Whether to prompt for quantity in the review step (from catalog item) */
+  askQuantityOnScan?: boolean;
+  /** Whether this suggestion came from AI image analysis or QR code detection */
+  source: ScanMaterialsResultSuggestionsItemSource;
 };

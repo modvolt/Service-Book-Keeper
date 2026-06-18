@@ -325,6 +325,35 @@ paths:
                 $ref: "#/components/schemas/MaterialsImportResult"
 
   /materials/{id}:
+    patch:
+      operationId: updateMaterial
+      tags: [materials]
+      summary: Update a catalog material
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MaterialCatalogUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaterialCatalogItem"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
     delete:
       operationId: deleteMaterial
       tags: [materials]
@@ -2096,6 +2125,9 @@ components:
           type: ["integer", "null"]
         supplier:
           type: ["string", "null"]
+        askQuantityOnScan:
+          type: boolean
+          description: When true, the scan review screen highlights a quantity input for this item
         createdAt:
           type: string
           format: date-time
@@ -2115,6 +2147,27 @@ components:
           type: ["integer", "null"]
         supplier:
           type: ["string", "null"]
+        askQuantityOnScan:
+          type: boolean
+          description: When true, the scan review screen highlights a quantity input for this item
+
+    MaterialCatalogUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+        productNumber:
+          type: ["string", "null"]
+        unit:
+          type: ["string", "null"]
+        defaultPrice:
+          type: ["integer", "null"]
+        supplier:
+          type: ["string", "null"]
+        askQuantityOnScan:
+          type: boolean
+          description: When true, the scan review screen highlights a quantity input for this item
 
     ImportMaterialsInput:
       type: object
@@ -2208,11 +2261,16 @@ components:
           description: Specific work order ID to use; when provided the server validates it is open and matches the given SPZ, then uses it directly instead of auto-selecting
         images:
           type: array
-          minItems: 1
+          minItems: 0
           maxItems: 8
           items:
             type: string
             description: Base64-encoded JPEG image (without the data URI prefix)
+        qrMaterialIds:
+          type: array
+          items:
+            type: integer
+          description: Catalog material IDs detected client-side from QR codes in the uploaded images
 
     ScanMaterialsResult:
       type: object
@@ -2224,7 +2282,7 @@ components:
           type: array
           items:
             type: object
-            required: [name, quantity]
+            required: [name, quantity, source]
             properties:
               name:
                 type: string
@@ -2237,6 +2295,13 @@ components:
               catalogId:
                 type: ["integer", "null"]
                 description: ID of the matching catalog item, or null if unmatched
+              askQuantityOnScan:
+                type: boolean
+                description: Whether to prompt for quantity in the review step (from catalog item)
+              source:
+                type: string
+                enum: [ai, qr]
+                description: Whether this suggestion came from AI image analysis or QR code detection
 
     MaterialQrPayload:
       type: object

@@ -1,4 +1,4 @@
-import { pgTable, text, serial, timestamp, integer, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, timestamp, integer, uniqueIndex, boolean } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { workOrdersTable } from "./work-orders";
 
@@ -9,6 +9,7 @@ export const materialsCatalogTable = pgTable("materials_catalog", {
   unit: text("unit"),
   defaultPrice: integer("default_price"),
   supplier: text("supplier"),
+  askQuantityOnScan: boolean("ask_quantity_on_scan").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   // Case-insensitive uniqueness so "Filtr" and "filtr" are the same catalog entry

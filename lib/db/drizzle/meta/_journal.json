@@ -43,6 +43,13 @@
       "when": 1781793892478,
       "tag": "0005_fine_the_santerians",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1781795985179,
+      "tag": "0006_adorable_nuke",
+      "breakpoints": true
     }
   ]
 }

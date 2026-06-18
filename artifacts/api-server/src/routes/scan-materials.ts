@@ -1,5 +1,5 @@
 import { Router, type IRouter, json } from "express";
-import { eq, ilike, ne, and } from "drizzle-orm";
+import { eq, ilike, ne, and, inArray } from "drizzle-orm";
 import { db, materialsCatalogTable, workOrdersTable, vehiclesTable } from "@workspace/db";
 import { getOpenAI, getOpenAIModel } from "@workspace/integrations-openai-ai-server";
 import { normalizeSpzOrNull } from "../lib/spz";
@@ -14,8 +14,12 @@ const largeJson = json({ limit: "15mb" });
 const ScanMaterialsBody = z.object({
   licensePlate: z.string().min(1),
   workOrderId: z.number().int().positive().optional().nullable(),
-  images: z.array(z.string()).min(1).max(8),
-});
+  images: z.array(z.string()).min(0).max(8),
+  qrMaterialIds: z.array(z.number().int().positive()).optional(),
+}).refine(
+  (d) => d.images.length > 0 || (d.qrMaterialIds && d.qrMaterialIds.length > 0),
+  { message: "Musí být nahrazen alespoň jeden obrázek nebo QR kód." },
+);
 
 const SCAN_SYSTEM_PROMPT = `Jsi asistent pro autoservis. Z přiložených fotografií (obaly, etikety, nádoby, díly) identifikuj autodíly a spotřební materiál. Vrať POUZE platné JSON bez markdown bloku.
 
@@ -116,45 +120,100 @@ router.post("/work-orders/scan-materials", largeJson, async (req, res): Promise<
   }
 
   try {
-    const imageContents = parsed.data.images.map((b64) => ({
-      type: "image_url" as const,
-      image_url: { url: `data:image/jpeg;base64,${b64}` },
-    }));
-
-    const response = await getOpenAI().chat.completions.create({
-      model: getOpenAIModel(),
-      max_completion_tokens: 4096,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: SCAN_SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Identifikuj díly a materiál z těchto fotografií:" },
-            ...imageContents,
-          ],
-        },
-      ],
-    });
-
-    const text = response.choices[0]?.message?.content ?? '{"items":[]}';
-    let extracted: { items?: unknown };
-    try {
-      extracted = JSON.parse(text);
-    } catch {
-      req.log.error({ text }, "Scan-materials JSON parse failed");
-      res.status(502).json({ error: "Nepodařilo se zpracovat odpověď AI." });
-      return;
-    }
-
-    const rawItems = Array.isArray(extracted.items) ? extracted.items : [];
-
-    // Fetch the full catalog once for fuzzy matching
+    // Fetch catalog once for fuzzy matching (AI path) and QR lookups
     const catalog = await db
-      .select({ id: materialsCatalogTable.id, name: materialsCatalogTable.name, unit: materialsCatalogTable.unit, defaultPrice: materialsCatalogTable.defaultPrice })
+      .select({
+        id: materialsCatalogTable.id,
+        name: materialsCatalogTable.name,
+        unit: materialsCatalogTable.unit,
+        defaultPrice: materialsCatalogTable.defaultPrice,
+        askQuantityOnScan: materialsCatalogTable.askQuantityOnScan,
+      })
       .from(materialsCatalogTable);
 
-    const suggestions = (
+    // ── QR-detected items ───────────────────────────────────────────────────
+    const qrIds = parsed.data.qrMaterialIds ?? [];
+    const qrSuggestions: {
+      name: string;
+      quantity: string;
+      unit: string | null;
+      unitPrice: number | null;
+      catalogId: number | null;
+      askQuantityOnScan: boolean;
+      source: "ai" | "qr";
+    }[] = [];
+
+    if (qrIds.length > 0) {
+      const qrItems = await db
+        .select({
+          id: materialsCatalogTable.id,
+          name: materialsCatalogTable.name,
+          unit: materialsCatalogTable.unit,
+          defaultPrice: materialsCatalogTable.defaultPrice,
+          askQuantityOnScan: materialsCatalogTable.askQuantityOnScan,
+        })
+        .from(materialsCatalogTable)
+        .where(inArray(materialsCatalogTable.id, qrIds));
+
+      // Preserve the order from the client-supplied ID list, dedup by ID
+      const seen = new Set<number>();
+      for (const id of qrIds) {
+        if (seen.has(id)) continue;
+        seen.add(id);
+        const item = qrItems.find((r) => r.id === id);
+        if (!item) continue;
+        qrSuggestions.push({
+          name: item.name,
+          quantity: "1",
+          unit: item.unit ?? null,
+          unitPrice: item.defaultPrice ?? null,
+          catalogId: item.id,
+          askQuantityOnScan: item.askQuantityOnScan,
+          source: "qr",
+        });
+      }
+    }
+
+    // ── AI-analysed items (images array contains only non-QR photos) ─────────
+    // Client-side: only images that did NOT contain a QR code are forwarded to AI.
+    const rawItems: unknown[] = [];
+
+    if (parsed.data.images.length > 0) {
+      const imageContents = parsed.data.images.map((b64) => ({
+        type: "image_url" as const,
+        image_url: { url: `data:image/jpeg;base64,${b64}` },
+      }));
+
+      const response = await getOpenAI().chat.completions.create({
+        model: getOpenAIModel(),
+        max_completion_tokens: 4096,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: SCAN_SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Identifikuj díly a materiál z těchto fotografií:" },
+              ...imageContents,
+            ],
+          },
+        ],
+      });
+
+      const text = response.choices[0]?.message?.content ?? '{"items":[]}';
+      let extracted: { items?: unknown };
+      try {
+        extracted = JSON.parse(text);
+      } catch {
+        req.log.error({ text }, "Scan-materials JSON parse failed");
+        res.status(502).json({ error: "Nepodařilo se zpracovat odpověď AI." });
+        return;
+      }
+
+      if (Array.isArray(extracted.items)) rawItems.push(...extracted.items);
+    }
+
+    const aiSuggestions = (
       await Promise.all(
         rawItems.map(async (raw: unknown) => {
           const it = raw as Record<string, unknown>;
@@ -173,7 +232,12 @@ router.post("/work-orders/scan-materials", largeJson, async (req, res): Promise<
 
           // Fuzzy catalog match via ilike on the extracted name
           const hits = await db
-            .select({ id: materialsCatalogTable.id, unit: materialsCatalogTable.unit, defaultPrice: materialsCatalogTable.defaultPrice })
+            .select({
+              id: materialsCatalogTable.id,
+              unit: materialsCatalogTable.unit,
+              defaultPrice: materialsCatalogTable.defaultPrice,
+              askQuantityOnScan: materialsCatalogTable.askQuantityOnScan,
+            })
             .from(materialsCatalogTable)
             .where(ilike(materialsCatalogTable.name, `%${name}%`))
             .limit(1);
@@ -185,6 +249,8 @@ router.post("/work-orders/scan-materials", largeJson, async (req, res): Promise<
             unit: hit?.unit ?? unit,
             unitPrice: hit?.defaultPrice ?? null,
             catalogId: hit?.id ?? null,
+            askQuantityOnScan: hit?.askQuantityOnScan ?? false,
+            source: "ai" as const,
           };
         }),
       )
@@ -194,7 +260,12 @@ router.post("/work-orders/scan-materials", largeJson, async (req, res): Promise<
       unit: string | null;
       unitPrice: number | null;
       catalogId: number | null;
+      askQuantityOnScan: boolean;
+      source: "ai" | "qr";
     }[];
+
+    // QR items first, then AI items
+    const suggestions = [...qrSuggestions, ...aiSuggestions];
 
     res.json({ workOrderId: openOrder.id, suggestions });
   } catch (err) {

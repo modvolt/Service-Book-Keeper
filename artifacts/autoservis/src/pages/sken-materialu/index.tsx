@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo } from "react";
+import { useRef, useState, useMemo, useCallback, useEffect } from "react";
 import { Link } from "wouter";
 import { QrCode } from "lucide-react";
 import {
@@ -72,6 +72,59 @@ function fallbackBase64(file: File): Promise<string> {
   });
 }
 
+/**
+ * Decode QR codes in a list of image files using @zxing/browser.
+ * Returns:
+ *   ids       — unique catalog material IDs found via "autoservis:material:<id>" payloads
+ *   qrIndices — indices of files that contained a valid QR code (used to exclude them from AI)
+ */
+async function detectQrMaterialIds(files: File[]): Promise<{ ids: number[]; qrIndices: Set<number> }> {
+  const ids: number[] = [];
+  const qrIndices = new Set<number>();
+  try {
+    const { BrowserMultiFormatReader } = await import("@zxing/browser");
+    const reader = new BrowserMultiFormatReader();
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]!;
+      const url = URL.createObjectURL(file);
+      try {
+        const img = new Image();
+        await new Promise<void>((resolve) => {
+          img.onload = () => resolve();
+          img.onerror = () => resolve();
+          img.src = url;
+        });
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) continue;
+        ctx.drawImage(img, 0, 0);
+        try {
+          const result = reader.decodeFromCanvas(canvas);
+          const text = result.getText();
+          // Format: autoservis:material:<id> or autoservis:material:<id>:<name>
+          const match = text.match(/^autoservis:material:(\d+)/);
+          if (match) {
+            const id = parseInt(match[1]!, 10);
+            if (!isNaN(id)) {
+              if (!ids.includes(id)) ids.push(id);
+              qrIndices.add(i);
+            }
+          }
+        } catch {
+          // No QR code found in this image — expected for most material photos
+        }
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+  } catch {
+    // @zxing/browser failed to load or run — skip QR detection silently
+  }
+  return { ids, qrIndices };
+}
+
 type Step = 1 | 2 | 3;
 
 type Suggestion = {
@@ -80,6 +133,8 @@ type Suggestion = {
   unit: string | null;
   unitPrice: number | null;
   catalogId: number | null;
+  askQuantityOnScan: boolean;
+  source: "ai" | "qr";
   selected: boolean;
 };
 
@@ -122,6 +177,15 @@ function StepIndicator({ step }: { step: Step }) {
       ))}
     </div>
   );
+}
+
+/** Input ref callback that auto-focuses the element when mounted */
+function useAutoFocusRef() {
+  return useCallback((el: HTMLInputElement | null) => {
+    if (el) {
+      requestAnimationFrame(() => el.focus());
+    }
+  }, []);
 }
 
 export default function SkenMaterialuPage() {
@@ -179,6 +243,11 @@ export default function SkenMaterialuPage() {
   const [savedCount, setSavedCount] = useState(0);
   const [done, setDone] = useState(false);
 
+  // First QR item with askQuantityOnScan that still needs focus
+  const firstQrAskIdx = scanResult?.suggestions.findIndex(
+    (s) => s.source === "qr" && s.askQuantityOnScan && s.selected,
+  ) ?? -1;
+
   function handleSpzPhotoFiles(list: FileList | null) {
     if (!list || list.length === 0) return;
     const file = list[0]!;
@@ -230,32 +299,60 @@ export default function SkenMaterialuPage() {
   async function handleScanMaterials() {
     if (matFiles.length === 0) return;
     try {
-      const images = await Promise.all(matFiles.map(compressImageToBase64));
-      scanMaterials.mutate({ data: { licensePlate: confirmedSpz, workOrderId: activeWorkOrder?.id ?? null, images } }, {
-        onSuccess: (res) => {
-          setScanResult({
-            workOrderId: res.workOrderId,
-            suggestions: (res.suggestions as Array<{ name: string; quantity: string; unit: string | null; unitPrice: number | null; catalogId: number | null }>).map((s) => ({
-              ...s,
-              selected: true,
-            })),
-          });
-          setStep(3);
+      // Client-side QR detection before compressing for AI.
+      // qrIndices tracks which files had a QR code — those are excluded from AI analysis.
+      const { ids: qrMaterialIds, qrIndices } = await detectQrMaterialIds(matFiles);
+
+      // Only non-QR images go to AI (QR-label photos would produce noisy AI suggestions)
+      const nonQrFiles = matFiles.filter((_, i) => !qrIndices.has(i));
+      const images = await Promise.all(nonQrFiles.map(compressImageToBase64));
+
+      scanMaterials.mutate(
+        {
+          data: {
+            licensePlate: confirmedSpz,
+            workOrderId: activeWorkOrder?.id ?? null,
+            images,
+            qrMaterialIds: qrMaterialIds.length > 0 ? qrMaterialIds : undefined,
+          },
         },
-        onError: (err) => {
-          toast({
-            title: "Sken selhal",
-            description: getApiErrorMessage(err, "Zkuste to znovu."),
-            variant: "destructive",
-          });
+        {
+          onSuccess: (res) => {
+            setScanResult({
+              workOrderId: res.workOrderId,
+              suggestions: (
+                res.suggestions as Array<{
+                  name: string;
+                  quantity: string;
+                  unit: string | null;
+                  unitPrice: number | null;
+                  catalogId: number | null;
+                  askQuantityOnScan?: boolean;
+                  source: "ai" | "qr";
+                }>
+              ).map((s) => ({
+                ...s,
+                askQuantityOnScan: s.askQuantityOnScan ?? false,
+                selected: true,
+              })),
+            });
+            setStep(3);
+          },
+          onError: (err) => {
+            toast({
+              title: "Sken selhal",
+              description: getApiErrorMessage(err, "Zkuste to znovu."),
+              variant: "destructive",
+            });
+          },
         },
-      });
+      );
     } catch {
       toast({ title: "Chyba", description: "Soubor se nepodařilo načíst.", variant: "destructive" });
     }
   }
 
-  function updateSuggestion(idx: number, field: keyof Omit<Suggestion, "selected" | "catalogId">, value: string) {
+  function updateSuggestion(idx: number, field: keyof Omit<Suggestion, "selected" | "catalogId" | "askQuantityOnScan" | "source">, value: string) {
     setScanResult((prev) => {
       if (!prev) return prev;
       const suggestions = prev.suggestions.map((s, i) => {
@@ -550,6 +647,7 @@ export default function SkenMaterialuPage() {
 
             <p className="text-sm text-muted-foreground">
               Vyfoťte materiály, štítky nebo části. Přidejte až {MAX_MAT_IMAGES} fotek.
+              Fotky s QR kódy ve formátu <span className="font-mono text-xs">autoservis:material:…</span> se rozpoznají automaticky.
             </p>
 
             <input
@@ -655,7 +753,7 @@ export default function SkenMaterialuPage() {
           <CardContent className="space-y-4">
             {scanResult.suggestions.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
-                <p className="mb-4">AI nenašla žádné materiály.</p>
+                <p className="mb-4">Nebyly nalezeny žádné materiály.</p>
                 <Button variant="outline" onClick={() => setStep(2)}>
                   <RotateCcw className="h-4 w-4 mr-2" />Zkusit znovu
                 </Button>
@@ -670,89 +768,15 @@ export default function SkenMaterialuPage() {
 
                 <div className="space-y-3">
                   {scanResult.suggestions.map((s, idx) => (
-                    <div
+                    <SuggestionRow
                       key={idx}
-                      className={cn(
-                        "border rounded-lg p-3 space-y-2 transition-opacity",
-                        !s.selected && "opacity-50",
-                      )}
-                    >
-                      <div className="flex items-start gap-2">
-                        <input
-                          type="checkbox"
-                          checked={s.selected}
-                          onChange={() => toggleSuggestion(idx)}
-                          className="mt-1 h-4 w-4 rounded border-gray-300 cursor-pointer"
-                        />
-                        <div className="flex-1 min-w-0 space-y-2">
-                          <Input
-                            value={s.name}
-                            onChange={(e) => updateSuggestion(idx, "name", e.target.value)}
-                            className="h-8 text-sm font-medium"
-                            disabled={!s.selected}
-                          />
-                          <div className="grid grid-cols-3 gap-2">
-                            <div className="flex items-center gap-1">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                className="h-7 w-7 shrink-0"
-                                onClick={() => adjustQty(idx, -1)}
-                                disabled={!s.selected}
-                              >
-                                <Minus className="h-3 w-3" />
-                              </Button>
-                              <Input
-                                value={s.quantity}
-                                onChange={(e) => updateSuggestion(idx, "quantity", e.target.value)}
-                                className="h-7 text-sm text-center px-1"
-                                disabled={!s.selected}
-                              />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                className="h-7 w-7 shrink-0"
-                                onClick={() => adjustQty(idx, 1)}
-                                disabled={!s.selected}
-                              >
-                                <Plus className="h-3 w-3" />
-                              </Button>
-                            </div>
-                            <Input
-                              placeholder="ks"
-                              value={s.unit ?? ""}
-                              onChange={(e) => updateSuggestion(idx, "unit", e.target.value)}
-                              className="h-7 text-sm"
-                              disabled={!s.selected}
-                            />
-                            <div className="relative">
-                              <Input
-                                placeholder="Cena"
-                                value={s.unitPrice != null ? String(s.unitPrice) : ""}
-                                onChange={(e) => updateSuggestion(idx, "unitPrice", e.target.value)}
-                                className="h-7 text-sm pr-8"
-                                type="number"
-                                min={0}
-                                disabled={!s.selected}
-                              />
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">Kč</span>
-                            </div>
-                          </div>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-muted-foreground hover:text-destructive"
-                          onClick={() => toggleSuggestion(idx)}
-                          title="Odebrat"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </div>
+                      suggestion={s}
+                      idx={idx}
+                      autoFocusQty={s.source === "qr" && s.askQuantityOnScan && idx === firstQrAskIdx}
+                      onToggle={() => toggleSuggestion(idx)}
+                      onAdjustQty={(delta) => adjustQty(idx, delta)}
+                      onUpdate={(field, value) => updateSuggestion(idx, field, value)}
+                    />
                   ))}
                 </div>
 
@@ -809,6 +833,130 @@ export default function SkenMaterialuPage() {
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+}
+
+// ── Suggestion row ──────────────────────────────────────────────────────────
+
+type SuggestionRowProps = {
+  suggestion: Suggestion;
+  idx: number;
+  autoFocusQty: boolean;
+  onToggle: () => void;
+  onAdjustQty: (delta: number) => void;
+  onUpdate: (field: keyof Omit<Suggestion, "selected" | "catalogId" | "askQuantityOnScan" | "source">, value: string) => void;
+};
+
+function SuggestionRow({ suggestion: s, autoFocusQty, onToggle, onAdjustQty, onUpdate }: SuggestionRowProps) {
+  const qtyInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (autoFocusQty && qtyInputRef.current) {
+      const el = qtyInputRef.current;
+      requestAnimationFrame(() => {
+        el.focus();
+        el.select();
+      });
+    }
+  }, [autoFocusQty]);
+
+  const isQr = s.source === "qr";
+  const needsQty = isQr && s.askQuantityOnScan;
+
+  return (
+    <div
+      className={cn(
+        "border rounded-lg p-3 space-y-2 transition-opacity",
+        !s.selected && "opacity-50",
+        isQr && "border-primary/40 bg-primary/5",
+      )}
+    >
+      {isQr && (
+        <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
+          <QrCode className="h-3.5 w-3.5" />
+          QR kód
+        </div>
+      )}
+      <div className="flex items-start gap-2">
+        <input
+          type="checkbox"
+          checked={s.selected}
+          onChange={onToggle}
+          className="mt-1 h-4 w-4 rounded border-gray-300 cursor-pointer"
+        />
+        <div className="flex-1 min-w-0 space-y-2">
+          <Input
+            value={s.name}
+            onChange={(e) => onUpdate("name", e.target.value)}
+            className="h-8 text-sm font-medium"
+            disabled={!s.selected}
+          />
+          <div className="grid grid-cols-3 gap-2">
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-7 w-7 shrink-0"
+                onClick={() => onAdjustQty(-1)}
+                disabled={!s.selected}
+              >
+                <Minus className="h-3 w-3" />
+              </Button>
+              <Input
+                ref={qtyInputRef}
+                value={s.quantity}
+                onChange={(e) => onUpdate("quantity", e.target.value)}
+                className={cn(
+                  "h-7 text-sm text-center px-1",
+                  needsQty && s.selected && "ring-2 ring-primary border-primary",
+                )}
+                disabled={!s.selected}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-7 w-7 shrink-0"
+                onClick={() => onAdjustQty(1)}
+                disabled={!s.selected}
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
+            <Input
+              placeholder="ks"
+              value={s.unit ?? ""}
+              onChange={(e) => onUpdate("unit", e.target.value)}
+              className="h-7 text-sm"
+              disabled={!s.selected}
+            />
+            <div className="relative">
+              <Input
+                placeholder="Cena"
+                value={s.unitPrice != null ? String(s.unitPrice) : ""}
+                onChange={(e) => onUpdate("unitPrice", e.target.value)}
+                className="h-7 text-sm pr-8"
+                type="number"
+                min={0}
+                disabled={!s.selected}
+              />
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">Kč</span>
+            </div>
+          </div>
+        </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+          onClick={onToggle}
+          title="Odebrat"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
     </div>
   );
 }

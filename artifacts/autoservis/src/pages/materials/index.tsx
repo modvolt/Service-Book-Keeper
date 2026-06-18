@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  useListMaterials, useCreateMaterial, useDeleteMaterial,
+  useListMaterials, useCreateMaterial, useDeleteMaterial, useUpdateMaterial,
   getListMaterialsQueryKey
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -8,11 +8,31 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Package, Plus, Search, Trash2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Package, Plus, Search, Trash2, Pencil, Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { MaterialsImportDialog } from "@/components/materials-import-dialog";
+
+type MaterialItem = {
+  id: number;
+  name: string;
+  productNumber?: string | null;
+  unit?: string | null;
+  defaultPrice?: number | null;
+  supplier?: string | null;
+  askQuantityOnScan?: boolean;
+};
+
+type EditState = {
+  id: number;
+  name: string;
+  productNumber: string;
+  unit: string;
+  defaultPrice: string;
+  askQuantityOnScan: boolean;
+};
 
 export default function MaterialsPage() {
   const { toast } = useToast();
@@ -22,9 +42,12 @@ export default function MaterialsPage() {
   const [productNumber, setProductNumber] = useState("");
   const [unit, setUnit] = useState("");
   const [defaultPrice, setDefaultPrice] = useState("");
+  const [askQuantityOnScan, setAskQuantityOnScan] = useState(false);
+  const [editState, setEditState] = useState<EditState | null>(null);
 
   const { data: items = [], isLoading } = useListMaterials({ search: search || undefined });
   const createMutation = useCreateMaterial();
+  const updateMutation = useUpdateMaterial();
   const deleteMutation = useDeleteMaterial();
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: getListMaterialsQueryKey() });
@@ -38,11 +61,12 @@ export default function MaterialsPage() {
         productNumber: productNumber.trim() || null,
         unit: unit.trim() || null,
         defaultPrice: defaultPrice ? parseInt(defaultPrice, 10) : null,
+        askQuantityOnScan,
       }
     }, {
       onSuccess: () => {
         toast({ title: "Materiál přidán" });
-        setName(""); setProductNumber(""); setUnit(""); setDefaultPrice("");
+        setName(""); setProductNumber(""); setUnit(""); setDefaultPrice(""); setAskQuantityOnScan(false);
         invalidate();
       },
       onError: (err) => {
@@ -55,6 +79,44 @@ export default function MaterialsPage() {
     deleteMutation.mutate({ id }, {
       onSuccess: () => { toast({ title: "Smazáno" }); invalidate(); },
       onError: (err) => toast({ title: "Chyba", description: getApiErrorMessage(err, "Materiál se nepodařilo smazat."), variant: "destructive" }),
+    });
+  }
+
+  function startEdit(it: MaterialItem) {
+    setEditState({
+      id: it.id,
+      name: it.name,
+      productNumber: it.productNumber ?? "",
+      unit: it.unit ?? "",
+      defaultPrice: it.defaultPrice != null ? String(it.defaultPrice) : "",
+      askQuantityOnScan: it.askQuantityOnScan ?? false,
+    });
+  }
+
+  function cancelEdit() {
+    setEditState(null);
+  }
+
+  function handleSaveEdit() {
+    if (!editState || !editState.name.trim()) return;
+    updateMutation.mutate({
+      id: editState.id,
+      data: {
+        name: editState.name.trim(),
+        productNumber: editState.productNumber.trim() || null,
+        unit: editState.unit.trim() || null,
+        defaultPrice: editState.defaultPrice ? parseInt(editState.defaultPrice, 10) : null,
+        askQuantityOnScan: editState.askQuantityOnScan,
+      }
+    }, {
+      onSuccess: () => {
+        toast({ title: "Materiál uložen" });
+        setEditState(null);
+        invalidate();
+      },
+      onError: (err) => {
+        toast({ title: "Chyba", description: getApiErrorMessage(err, "Materiál se nepodařilo uložit (možná již existuje)."), variant: "destructive" });
+      }
     });
   }
 
@@ -94,6 +156,17 @@ export default function MaterialsPage() {
                   <Input type="number" placeholder="450" value={defaultPrice} onChange={e => setDefaultPrice(e.target.value)} />
                 </div>
               </div>
+              <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2">
+                <div>
+                  <p className="text-sm font-medium">Ptát se na množství při skenování</p>
+                  <p className="text-xs text-muted-foreground">Při QR skenu zobrazí pole pro zadání množství</p>
+                </div>
+                <Switch
+                  checked={askQuantityOnScan}
+                  onCheckedChange={setAskQuantityOnScan}
+                  aria-label="Ptát se na množství při skenování"
+                />
+              </div>
               <Button type="submit" className="w-full" disabled={createMutation.isPending}>
                 <Plus className="h-4 w-4 mr-2" />Přidat do skladu
               </Button>
@@ -124,31 +197,103 @@ export default function MaterialsPage() {
             ) : (
               <div className="divide-y border rounded-lg">
                 {items.map(it => (
-                  <div key={it.id} className="flex items-center justify-between gap-4 px-4 py-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium truncate">{it.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {it.productNumber ? `Č. produktu: ${it.productNumber}` : "Bez čísla produktu"}
-                        {it.unit && ` · ${it.unit}`}
-                        {it.defaultPrice != null && ` · ${it.defaultPrice.toLocaleString("cs-CZ")} Kč`}
-                        {it.supplier && ` · ${it.supplier}`}
-                      </p>
-                    </div>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Smazat materiál?</AlertDialogTitle>
-                          <AlertDialogDescription>"{it.name}" bude odebrán z katalogu. Materiály již použité na zakázkách zůstanou zachovány.</AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Zrušit</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDelete(it.id)}>Smazat</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                  <div key={it.id}>
+                    {editState?.id === it.id ? (
+                      /* ── Inline edit form ── */
+                      <div className="px-4 py-3 space-y-3 bg-muted/30">
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="col-span-2 space-y-1">
+                            <Label className="text-xs">Název *</Label>
+                            <Input
+                              value={editState.name}
+                              onChange={e => setEditState(s => s ? { ...s, name: e.target.value } : s)}
+                              className="h-8 text-sm"
+                              autoFocus
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Č. produktu</Label>
+                            <Input
+                              value={editState.productNumber}
+                              onChange={e => setEditState(s => s ? { ...s, productNumber: e.target.value } : s)}
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Jednotka</Label>
+                            <Input
+                              value={editState.unit}
+                              onChange={e => setEditState(s => s ? { ...s, unit: e.target.value } : s)}
+                              className="h-8 text-sm"
+                              placeholder="ks, l, kg"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <Label className="text-xs">Cena (Kč)</Label>
+                            <Input
+                              type="number"
+                              value={editState.defaultPrice}
+                              onChange={e => setEditState(s => s ? { ...s, defaultPrice: e.target.value } : s)}
+                              className="h-8 text-sm"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2 bg-background">
+                          <p className="text-sm">Ptát se na množství při skenování</p>
+                          <Switch
+                            checked={editState.askQuantityOnScan}
+                            onCheckedChange={v => setEditState(s => s ? { ...s, askQuantityOnScan: v } : s)}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            className="flex-1"
+                            onClick={handleSaveEdit}
+                            disabled={updateMutation.isPending || !editState.name.trim()}
+                          >
+                            <Check className="h-3.5 w-3.5 mr-1.5" />Uložit
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={cancelEdit} disabled={updateMutation.isPending}>
+                            <X className="h-3.5 w-3.5 mr-1.5" />Zrušit
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      /* ── Normal row ── */
+                      <div className="flex items-center justify-between gap-4 px-4 py-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium truncate">{it.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {it.productNumber ? `Č. produktu: ${it.productNumber}` : "Bez čísla produktu"}
+                            {it.unit && ` · ${it.unit}`}
+                            {it.defaultPrice != null && ` · ${it.defaultPrice.toLocaleString("cs-CZ")} Kč`}
+                            {it.supplier && ` · ${it.supplier}`}
+                            {it.askQuantityOnScan && ` · ptát se na množství`}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button variant="ghost" size="icon" onClick={() => startEdit(it)} title="Upravit">
+                            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="icon"><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Smazat materiál?</AlertDialogTitle>
+                                <AlertDialogDescription>"{it.name}" bude odebrán z katalogu. Materiály již použité na zakázkách zůstanou zachovány.</AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Zrušit</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDelete(it.id)}>Smazat</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

@@ -1,0 +1,1 @@
+ALTER TABLE "materials_catalog" ADD COLUMN "ask_quantity_on_scan" boolean DEFAULT false NOT NULL;

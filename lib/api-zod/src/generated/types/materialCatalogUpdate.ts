@@ -6,9 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface MaterialCatalogItem {
-  id: number;
-  name: string;
+export interface MaterialCatalogUpdate {
+  /** @minLength 1 */
+  name?: string;
   /** @nullable */
   productNumber?: string | null;
   /** @nullable */
@@ -19,5 +19,4 @@ export interface MaterialCatalogItem {
   supplier?: string | null;
   /** When true, the scan review screen highlights a quantity input for this item */
   askQuantityOnScan?: boolean;
-  createdAt: Date;
 }

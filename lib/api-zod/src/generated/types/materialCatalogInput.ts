@@ -17,4 +17,6 @@ export interface MaterialCatalogInput {
   defaultPrice?: number | null;
   /** @nullable */
   supplier?: string | null;
+  /** When true, the scan review screen highlights a quantity input for this item */
+  askQuantityOnScan?: boolean;
 }

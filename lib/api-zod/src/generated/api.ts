@@ -230,6 +230,7 @@ export const ListMaterialsResponseItem = zod.object({
   "unit": zod.string().nullish(),
   "defaultPrice": zod.number().nullish(),
   "supplier": zod.string().nullish(),
+  "askQuantityOnScan": zod.boolean().optional().describe('When true, the scan review screen highlights a quantity input for this item'),
   "createdAt": zod.coerce.date()
 })
 export const ListMaterialsResponse = zod.array(ListMaterialsResponseItem)
@@ -246,7 +247,8 @@ export const CreateMaterialBody = zod.object({
   "productNumber": zod.string().nullish(),
   "unit": zod.string().nullish(),
   "defaultPrice": zod.number().nullish(),
-  "supplier": zod.string().nullish()
+  "supplier": zod.string().nullish(),
+  "askQuantityOnScan": zod.boolean().optional().describe('When true, the scan review screen highlights a quantity input for this item')
 })
 
 
@@ -271,6 +273,37 @@ export const ImportMaterialsResponse = zod.object({
   "imported": zod.number(),
   "updated": zod.number(),
   "skipped": zod.number()
+})
+
+
+/**
+ * @summary Update a catalog material
+ */
+export const UpdateMaterialParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateMaterialBody = zod.object({
+  "name": zod.string().min(1).optional(),
+  "productNumber": zod.string().nullish(),
+  "unit": zod.string().nullish(),
+  "defaultPrice": zod.number().nullish(),
+  "supplier": zod.string().nullish(),
+  "askQuantityOnScan": zod.boolean().optional().describe('When true, the scan review screen highlights a quantity input for this item')
+})
+
+export const UpdateMaterialResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "productNumber": zod.string().nullish(),
+  "unit": zod.string().nullish(),
+  "defaultPrice": zod.number().nullish(),
+  "supplier": zod.string().nullish(),
+  "askQuantityOnScan": zod.boolean().optional().describe('When true, the scan review screen highlights a quantity input for this item'),
+  "createdAt": zod.coerce.date()
 })
 
 
@@ -301,6 +334,7 @@ export const GetMaterialQrResponse = zod.object({
  * @summary Scan photos to extract material suggestions matched against the catalog
  */
 
+export const scanMaterialsBodyImagesMin = 0;
 export const scanMaterialsBodyImagesMax = 8;
 
 
@@ -308,7 +342,8 @@ export const scanMaterialsBodyImagesMax = 8;
 export const ScanMaterialsBody = zod.object({
   "licensePlate": zod.string().min(1).describe('Vehicle license plate (SPZ); used to locate the open work order'),
   "workOrderId": zod.number().nullish().describe('Specific work order ID to use; when provided the server validates it is open and matches the given SPZ, then uses it directly instead of auto-selecting'),
-  "images": zod.array(zod.string().describe('Base64-encoded JPEG image (without the data URI prefix)')).min(1).max(scanMaterialsBodyImagesMax)
+  "images": zod.array(zod.string().describe('Base64-encoded JPEG image (without the data URI prefix)')).min(scanMaterialsBodyImagesMin).max(scanMaterialsBodyImagesMax),
+  "qrMaterialIds": zod.array(zod.number()).optional().describe('Catalog material IDs detected client-side from QR codes in the uploaded images')
 })
 
 export const ScanMaterialsResponse = zod.object({
@@ -318,7 +353,9 @@ export const ScanMaterialsResponse = zod.object({
   "quantity": zod.string(),
   "unit": zod.string().nullish(),
   "unitPrice": zod.number().nullish(),
-  "catalogId": zod.number().nullish().describe('ID of the matching catalog item, or null if unmatched')
+  "catalogId": zod.number().nullish().describe('ID of the matching catalog item, or null if unmatched'),
+  "askQuantityOnScan": zod.boolean().optional().describe('Whether to prompt for quantity in the review step (from catalog item)'),
+  "source": zod.enum(['ai', 'qr']).describe('Whether this suggestion came from AI image analysis or QR code detection')
 }))
 })
 

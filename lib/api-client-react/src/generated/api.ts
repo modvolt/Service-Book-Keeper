@@ -59,6 +59,7 @@ import type {
   LoginInput,
   MaterialCatalogInput,
   MaterialCatalogItem,
+  MaterialCatalogUpdate,
   MaterialQrPayload,
   MaterialsImportResult,
   MessageResult,
@@ -1286,6 +1287,78 @@ export const useImportMaterials = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getImportMaterialsMutationOptions(options));
+    }
+
+export const getUpdateMaterialUrl = (id: number,) => {
+
+
+
+
+  return `/api/materials/${id}`
+}
+
+/**
+ * @summary Update a catalog material
+ */
+export const updateMaterial = async (id: number,
+    materialCatalogUpdate: MaterialCatalogUpdate, options?: RequestInit): Promise<MaterialCatalogItem> => {
+
+  return customFetch<MaterialCatalogItem>(getUpdateMaterialUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      materialCatalogUpdate,)
+  }
+);}
+
+
+
+
+export const getUpdateMaterialMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMaterial>>, TError,{id: number;data: BodyType<MaterialCatalogUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMaterial>>, TError,{id: number;data: BodyType<MaterialCatalogUpdate>}, TContext> => {
+
+const mutationKey = ['updateMaterial'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMaterial>>, {id: number;data: BodyType<MaterialCatalogUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateMaterial(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMaterialMutationResult = NonNullable<Awaited<ReturnType<typeof updateMaterial>>>
+    export type UpdateMaterialMutationBody = BodyType<MaterialCatalogUpdate>
+    export type UpdateMaterialMutationError = ErrorType<Error>
+
+    /**
+ * @summary Update a catalog material
+ */
+export const useUpdateMaterial = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMaterial>>, TError,{id: number;data: BodyType<MaterialCatalogUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMaterial>>,
+        TError,
+        {id: number;data: BodyType<MaterialCatalogUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateMaterialMutationOptions(options));
     }
 
 export const getDeleteMaterialUrl = (id: number,) => {
