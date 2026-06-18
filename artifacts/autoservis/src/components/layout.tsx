@@ -251,10 +251,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
           {SCANNER_TABS.map((tab) => {
             const active = location === tab.href || location.startsWith(tab.href + "/");
             return (
-              <Link key={tab.href} href={tab.href}>
+              <Link key={tab.href} href={tab.href} className="flex-1">
                 <div
                   className={cn(
-                    "relative flex-1 flex flex-col items-center justify-center gap-1 py-3 cursor-pointer transition-colors",
+                    "relative flex flex-col items-center justify-center gap-1 py-3 cursor-pointer transition-colors",
                     active ? "text-primary" : "text-foreground/60 hover:bg-muted/40"
                   )}
                 >
