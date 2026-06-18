@@ -1,4 +1,4 @@
-import { Switch, Route, Router as WouterRouter, useLocation } from "wouter";
+import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useGetAuthStatus, getGetAuthStatusQueryKey } from "@workspace/api-client-react";
 import { Toaster } from "@/components/ui/toaster";
@@ -25,14 +25,29 @@ import AlertsPage from "@/pages/alerts";
 import StatisticsPage from "@/pages/statistics";
 import GdprPage from "@/pages/gdpr";
 import FleetPage from "@/pages/fleet";
+import SkenMaterialuPage from "@/pages/sken-materialu/index";
+import QrStitkyPage from "@/pages/sken-materialu/qr-stitky";
 import { useScanHandoff } from "@/hooks/use-scan-handoff";
 
 const queryClient = new QueryClient();
 
+const SCANNER_ALLOWED_PREFIXES = ["/sken-materialu", "/nacteni-vozu", "/nacteni-tp"];
+
 function Router() {
   const [location] = useLocation();
+  const { data: authStatus } = useGetAuthStatus({
+    query: { queryKey: getGetAuthStatusQueryKey(), staleTime: 60_000 } as any,
+  });
+  const isScanner = authStatus?.role === "scanner";
+
   // Live phone -> PC scan handoff: this session listens for scan results.
   useScanHandoff();
+
+  // Scanner role: redirect any disallowed route to /sken-materialu
+  if (isScanner && !SCANNER_ALLOWED_PREFIXES.some((prefix) => location === prefix || location.startsWith(prefix + "/"))) {
+    return <Redirect to="/sken-materialu" />;
+  }
+
   return (
     <Layout>
       <ErrorBoundary key={location}>
@@ -54,6 +69,8 @@ function Router() {
         <Route path="/po-terminu" component={AlertsPage} />
         <Route path="/statistiky" component={StatisticsPage} />
         <Route path="/gdpr" component={GdprPage} />
+        <Route path="/sken-materialu" component={SkenMaterialuPage} />
+        <Route path="/sken-materialu/qr-stitky" component={QrStitkyPage} />
         <Route component={NotFound} />
       </Switch>
       </ErrorBoundary>

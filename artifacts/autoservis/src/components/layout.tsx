@@ -1,8 +1,8 @@
 import { Link, useLocation } from "wouter";
-import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar, Settings as SettingsIcon, ScanLine, AlertTriangle, BarChart3, LogOut, Shield, KeyRound, RefreshCw } from "lucide-react";
+import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar, Settings as SettingsIcon, ScanLine, AlertTriangle, BarChart3, LogOut, Shield, KeyRound, RefreshCw, PackageSearch } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useGetSettings, useLogout, getGetAuthStatusQueryKey } from "@workspace/api-client-react";
+import { useGetSettings, useLogout, getGetAuthStatusQueryKey, useGetAuthStatus } from "@workspace/api-client-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -36,15 +36,16 @@ function RefreshButton({ className, iconOnly }: { className?: string; iconOnly?:
 }
 
 const NAV_ITEMS = [
-  { href: "/", label: "Přehled", icon: LayoutDashboard, color: "text-sky-600 dark:text-sky-400", bg: "hover:bg-sky-50 dark:hover:bg-sky-950/40" },
-  { href: "/vehicles", label: "Vozidla", icon: Car, color: "text-indigo-600 dark:text-indigo-400", bg: "hover:bg-indigo-50 dark:hover:bg-indigo-950/40" },
-  { href: "/work-orders", label: "Zakázky", icon: ClipboardList, color: "text-emerald-600 dark:text-emerald-400", bg: "hover:bg-emerald-50 dark:hover:bg-emerald-950/40" },
-  { href: "/po-terminu", label: "Po termínu", icon: AlertTriangle, color: "text-rose-600 dark:text-rose-400", bg: "hover:bg-rose-50 dark:hover:bg-rose-950/40" },
-  { href: "/kalendar", label: "Kalendář", icon: Calendar, color: "text-violet-600 dark:text-violet-400", bg: "hover:bg-violet-50 dark:hover:bg-violet-950/40" },
-  { href: "/sklad", label: "Sklad", icon: Package, color: "text-amber-600 dark:text-amber-400", bg: "hover:bg-amber-50 dark:hover:bg-amber-950/40" },
-  { href: "/statistiky", label: "Statistiky", icon: BarChart3, color: "text-cyan-600 dark:text-cyan-400", bg: "hover:bg-cyan-50 dark:hover:bg-cyan-950/40" },
-  { href: "/vozovy-park", label: "Vozový park", icon: KeyRound, color: "text-orange-600 dark:text-orange-400", bg: "hover:bg-orange-50 dark:hover:bg-orange-950/40" },
+  { href: "/", label: "Přehled", icon: LayoutDashboard, color: "text-sky-600 dark:text-sky-400", bg: "hover:bg-sky-50 dark:hover:bg-sky-950/40", scannerHidden: true },
+  { href: "/vehicles", label: "Vozidla", icon: Car, color: "text-indigo-600 dark:text-indigo-400", bg: "hover:bg-indigo-50 dark:hover:bg-indigo-950/40", scannerHidden: true },
+  { href: "/work-orders", label: "Zakázky", icon: ClipboardList, color: "text-emerald-600 dark:text-emerald-400", bg: "hover:bg-emerald-50 dark:hover:bg-emerald-950/40", scannerHidden: true },
+  { href: "/po-terminu", label: "Po termínu", icon: AlertTriangle, color: "text-rose-600 dark:text-rose-400", bg: "hover:bg-rose-50 dark:hover:bg-rose-950/40", scannerHidden: true },
+  { href: "/kalendar", label: "Kalendář", icon: Calendar, color: "text-violet-600 dark:text-violet-400", bg: "hover:bg-violet-50 dark:hover:bg-violet-950/40", scannerHidden: true },
+  { href: "/sklad", label: "Sklad", icon: Package, color: "text-amber-600 dark:text-amber-400", bg: "hover:bg-amber-50 dark:hover:bg-amber-950/40", scannerHidden: true },
+  { href: "/statistiky", label: "Statistiky", icon: BarChart3, color: "text-cyan-600 dark:text-cyan-400", bg: "hover:bg-cyan-50 dark:hover:bg-cyan-950/40", scannerHidden: true },
+  { href: "/vozovy-park", label: "Vozový park", icon: KeyRound, color: "text-orange-600 dark:text-orange-400", bg: "hover:bg-orange-50 dark:hover:bg-orange-950/40", scannerHidden: true },
   { href: "/nacteni-vozu", label: "Načtení vozu", icon: ScanLine, color: "text-teal-600 dark:text-teal-400", bg: "hover:bg-teal-50 dark:hover:bg-teal-950/40" },
+  { href: "/sken-materialu", label: "Sken materiálu", icon: PackageSearch, color: "text-purple-600 dark:text-purple-400", bg: "hover:bg-purple-50 dark:hover:bg-purple-950/40" },
 ];
 
 const BOTTOM_NAV_ITEMS = [
@@ -88,6 +89,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
       },
     },
   });
+  const { data: authStatus } = useGetAuthStatus({
+    query: { queryKey: getGetAuthStatusQueryKey(), staleTime: 60_000 } as any,
+  });
+  const isScanner = authStatus?.role === "scanner";
   const { theme } = useTheme();
   usePalette();
 
@@ -141,13 +146,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
     );
   };
 
+  const visibleNavItems = isScanner
+    ? NAV_ITEMS.filter((item) => !item.scannerHidden)
+    : NAV_ITEMS;
+
   const NavLinksTop = () => (
-    <div className="flex flex-col space-y-1">{NAV_ITEMS.map(renderItem)}</div>
+    <div className="flex flex-col space-y-1">{visibleNavItems.map(renderItem)}</div>
   );
 
   const NavLinksBottom = () => (
     <div className="flex flex-col space-y-1">
-      {BOTTOM_NAV_ITEMS.map(renderItem)}
+      {!isScanner && BOTTOM_NAV_ITEMS.map(renderItem)}
       <button
         type="button"
         disabled={logout.isPending}
