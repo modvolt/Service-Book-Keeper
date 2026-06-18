@@ -1,5 +1,6 @@
 import { format, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
+import { attachPrintControls } from "./print-window";
 
 type Row = Record<string, any>;
 
@@ -344,8 +345,8 @@ function buildHtml(data: BackupData): string {
 <body>
   <div class="page">
     <div class="toolbar no-print">
-      <button class="btn secondary" onclick="window.close()">Zavřít</button>
-      <button class="btn" onclick="window.print()">Tisk / Uložit jako PDF</button>
+      <button class="btn secondary" data-print-action="close">Zavřít</button>
+      <button class="btn" data-print-action="print">Tisk / Uložit jako PDF</button>
     </div>
     <div class="brand">
       ${shopHeader}
@@ -400,6 +401,7 @@ export async function openDataBackupPdf(): Promise<boolean> {
     win.document.open();
     win.document.write(buildHtml(data));
     win.document.close();
+    attachPrintControls(win);
     return true;
   } catch (err) {
     win.close();

@@ -7,6 +7,7 @@ import {
   getVehicle,
 } from "@workspace/api-client-react";
 import type { WorkOrder, Vehicle, Settings } from "@workspace/api-client-react";
+import { attachPrintControls } from "@/lib/print-window";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -229,8 +230,8 @@ function buildPrintHtml(opts: {
 </head>
 <body>
   <div class="toolbar no-print">
-    <button class="btn secondary" onclick="window.close()">Zavřít</button>
-    <button class="btn" onclick="window.print()">Tisk / Uložit jako PDF</button>
+    <button class="btn secondary" data-print-action="close">Zavřít</button>
+    <button class="btn" data-print-action="print">Tisk / Uložit jako PDF</button>
   </div>
   <div class="brand">
     <div>
@@ -375,6 +376,7 @@ export default function StatisticsPage() {
         toast({ title: "Vyskakovací okno blokováno", description: "Povolte vyskakovací okna pro tuto stránku.", variant: "destructive" });
         return;
       }
+      attachPrintControls(w);
       setTimeout(() => URL.revokeObjectURL(url), 60000);
       toast({ title: "Export připraven", description: `${allOrders.length} zakázek — v okně zvolte „Uložit jako PDF".` });
     } catch (e: any) {

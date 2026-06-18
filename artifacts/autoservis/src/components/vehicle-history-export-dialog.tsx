@@ -8,6 +8,7 @@ import type { VehicleDetail, WorkOrder, WorkOrderMaterial, Settings, ServiceReco
 import { listWorkOrderMaterials } from "@workspace/api-client-react";
 import { format, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
+import { attachPrintControls } from "@/lib/print-window";
 
 const STATUS_LABEL: Record<string, string> = {
   open: "Otevřená",
@@ -362,8 +363,8 @@ function buildHtml(opts: {
 <body>
   <div class="page">
     <div class="toolbar no-print">
-      <button class="btn secondary" onclick="window.close()">Zavřít</button>
-      <button class="btn" onclick="window.print()">Tisk / Uložit jako PDF</button>
+      <button class="btn secondary" data-print-action="close">Zavřít</button>
+      <button class="btn" data-print-action="print">Tisk / Uložit jako PDF</button>
     </div>
     <div class="brand">
       ${shopHeader}
@@ -457,6 +458,7 @@ export function VehicleHistoryExportDialog({ vehicle, settings, trigger }: Props
         alert("Vyskakovací okno bylo zablokováno. Povolte vyskakovací okna pro tuto stránku.");
         return;
       }
+      attachPrintControls(w);
       setTimeout(() => URL.revokeObjectURL(url), 60000);
       setOpen(false);
     } finally {

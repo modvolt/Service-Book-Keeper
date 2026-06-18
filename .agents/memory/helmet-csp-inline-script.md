@@ -17,3 +17,15 @@ styles, so the failure is easy to miss (CSS works, JS doesn't).
 reference it with `<script src="diagnostics.js">`. A relative src resolves
 against the page's directory, so keep page + script under the same path
 prefix. Don't weaken CSP with `'unsafe-inline'` just to allow one page.
+
+**Same trap for client-created export/print popups:** the frontend's
+`window.open(blobUrl)` / `window.open("")` + `document.write` popups (work-order
+sheet, statistics export, vehicle history, data backup) are `blob:`/`about:blank`
+documents that **inherit the SPA's CSP in production** (Express + helmet). So
+inline `onclick="window.print()"` / `onclick="window.close()"` handlers silently
+die in prod but work in dev (Vite serves the SPA with no CSP) — the classic
+"works in dev, dead in prod" print regression. Fix without touching CSP: the
+popup is same-origin, so mark buttons with a `data-*` attribute and attach the
+click listeners **from the opener's** script context (its bundle is `'self'`,
+allowed) once the popup loads — see `artifacts/autoservis/src/lib/print-window.ts`
+(`attachPrintControls`). Never reach for `'unsafe-inline'`/`'unsafe-hashes'`.
