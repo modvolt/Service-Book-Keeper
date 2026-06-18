@@ -4,6 +4,7 @@ import { takeVehiclePrefill } from "@/lib/scan-prefill";
 import { useCreateVehicle, useImportVehicleFromTp, useListVehicleMakes, useListVehicleModels, getListVehiclesQueryKey } from "@workspace/api-client-react";
 import { AutocompleteInput } from "@/components/autocomplete-input";
 import { AresButton } from "@/components/ares-button";
+import { fetchAres, normalizeIco } from "@/lib/ares";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { FLEET_OWNER_NAME } from "@/lib/fleet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Sparkles, Upload, X, Loader2, Camera, ClipboardPaste } from "lucide-react";
+import { ArrowLeft, Sparkles, Upload, X, Loader2, Camera, ClipboardPaste, ShieldCheck, ScanLine } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -65,6 +66,30 @@ export default function NewVehicle() {
   const [importOpen, setImportOpen] = useState(false);
   const [importFiles, setImportFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
+  const [ownerSource, setOwnerSource] = useState<"scan" | "ares" | null>(null);
+  const [aresVerifying, setAresVerifying] = useState(false);
+
+  async function autoVerifyFromAres(ico: string | null | undefined, ownerType: string | null | undefined) {
+    if (ownerType !== "company") return;
+    const clean = normalizeIco(ico ?? "");
+    if (!/^\d{8}$/.test(clean)) return;
+    setAresVerifying(true);
+    try {
+      const result = await fetchAres(clean);
+      if (result.ok) {
+        setForm((f) => ({
+          ...f,
+          ownerName: result.data.name || f.ownerName,
+          ownerAddress: result.data.address || f.ownerAddress,
+          ownerDic: result.data.dic || f.ownerDic,
+        }));
+        setOwnerSource("ares");
+        toast({ title: "Údaje ověřeny v ARES", description: result.data.name });
+      }
+    } finally {
+      setAresVerifying(false);
+    }
+  }
 
   useEffect(() => {
     const pre = takeVehiclePrefill();
@@ -83,7 +108,9 @@ export default function NewVehicle() {
       ownerAddress: pre.ownerAddress ?? f.ownerAddress,
       ownerIco: pre.ownerIco ?? f.ownerIco,
     }));
+    if (pre.ownerName || pre.ownerAddress || pre.ownerIco) setOwnerSource("scan");
     toast({ title: "Údaje předvyplněny", description: "Zkontrolujte je a doplňte chybějící údaje." });
+    void autoVerifyFromAres(pre.ownerIco, pre.ownerType);
   }, [toast]);
 
   const { data: makeOptions = [] } = useListVehicleMakes();
@@ -203,9 +230,11 @@ export default function NewVehicle() {
             ownerAddress: result.ownerAddress ?? f.ownerAddress,
             ownerIco: result.ownerIco ?? f.ownerIco,
           }));
+          if (result.ownerName || result.ownerAddress || result.ownerIco) setOwnerSource("scan");
           setImportOpen(false);
           setImportFiles([]);
           toast({ title: "Údaje načteny", description: "Předvyplnili jsme rozpoznané údaje. Zkontrolujte je a doplňte chybějící pole." });
+          void autoVerifyFromAres(result.ownerIco, result.ownerType);
         },
         onError: () => {
           toast({ title: "Import selhal", description: "Zkuste znovu nebo vyplňte ručně.", variant: "destructive" });
@@ -245,7 +274,27 @@ export default function NewVehicle() {
             )}
             {!isFleet && (
             <div className="space-y-4">
-              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Vlastník</h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Vlastník</h3>
+                {aresVerifying && (
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Ověřuji v ARES…
+                  </span>
+                )}
+                {!aresVerifying && ownerSource === "ares" && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400">
+                    <ShieldCheck className="h-3 w-3" />
+                    Ověřeno z ARES
+                  </span>
+                )}
+                {!aresVerifying && ownerSource === "scan" && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                    <ScanLine className="h-3 w-3" />
+                    Načteno ze skenu
+                  </span>
+                )}
+              </div>
               <RadioGroup
                 value={form.ownerType}
                 onValueChange={(v) => setForm(f => ({ ...f, ownerType: v as "private" | "company" }))}
@@ -266,7 +315,7 @@ export default function NewVehicle() {
                   <Input
                     placeholder={isCompany ? "AutoFirma s.r.o." : "Jan Novák"}
                     value={form.ownerName}
-                    onChange={e => setForm(f => ({ ...f, ownerName: e.target.value }))}
+                    onChange={e => { setForm(f => ({ ...f, ownerName: e.target.value })); setOwnerSource(null); }}
                   />
                 </div>
                 <div className="space-y-1">
@@ -274,7 +323,7 @@ export default function NewVehicle() {
                   <Input
                     placeholder="Lubočinka 251, 251 68"
                     value={form.ownerAddress}
-                    onChange={e => setForm(f => ({ ...f, ownerAddress: e.target.value }))}
+                    onChange={e => { setForm(f => ({ ...f, ownerAddress: e.target.value })); setOwnerSource(null); }}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -302,17 +351,17 @@ export default function NewVehicle() {
                         <Label>IČO</Label>
                         <div className="flex gap-2">
                           <Input placeholder="12345678" value={form.ownerIco} onChange={e => setForm(f => ({ ...f, ownerIco: e.target.value }))} />
-                          <AresButton ico={form.ownerIco} onLoaded={(d) => setForm(f => ({
+                          <AresButton ico={form.ownerIco} onLoaded={(d) => { setForm(f => ({
                             ...f,
                             ownerName: d.name || f.ownerName,
                             ownerAddress: d.address || f.ownerAddress,
                             ownerDic: d.dic || f.ownerDic,
-                          }))} />
+                          })); setOwnerSource("ares"); }} />
                         </div>
                       </div>
                       <div className="space-y-1">
                         <Label>DIČ</Label>
-                        <Input placeholder="CZ12345678" value={form.ownerDic} onChange={e => setForm(f => ({ ...f, ownerDic: e.target.value }))} />
+                        <Input placeholder="CZ12345678" value={form.ownerDic} onChange={e => { setForm(f => ({ ...f, ownerDic: e.target.value })); setOwnerSource(null); }} />
                       </div>
                     </div>
                   </div>

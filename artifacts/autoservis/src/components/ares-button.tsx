@@ -2,33 +2,27 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-type AresFields = { name: string; address: string; dic: string };
+import { fetchAres, isValidIco, type AresFields } from "@/lib/ares";
 
 export function AresButton({ ico, onLoaded }: { ico: string; onLoaded: (data: AresFields) => void }) {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   async function handleClick() {
-    const clean = ico.replace(/\s+/g, "");
-    if (!/^\d{6,8}$/.test(clean)) {
+    if (!isValidIco(ico)) {
       toast({ title: "Zadejte platné IČO", description: "6–8 číslic", variant: "destructive" });
       return;
     }
     setLoading(true);
     try {
-      const res = await fetch(`/api/ares/${clean}`);
-      if (res.status === 404) { toast({ title: "Subjekt nenalezen", variant: "destructive" }); return; }
-      if (!res.ok) { toast({ title: "Chyba při načítání z ARES", variant: "destructive" }); return; }
-      const data = await res.json();
-      onLoaded({
-        name: data.name ?? "",
-        address: data.address ?? "",
-        dic: data.dic ?? "",
-      });
-      toast({ title: "Údaje načteny z ARES", description: data.name });
-    } catch {
-      toast({ title: "Chyba spojení", variant: "destructive" });
+      const result = await fetchAres(ico);
+      if (!result.ok) {
+        if (result.reason === "notfound") toast({ title: "Subjekt nenalezen", variant: "destructive" });
+        else toast({ title: "Chyba při načítání z ARES", variant: "destructive" });
+        return;
+      }
+      onLoaded(result.data);
+      toast({ title: "Údaje načteny z ARES", description: result.data.name });
     } finally {
       setLoading(false);
     }
