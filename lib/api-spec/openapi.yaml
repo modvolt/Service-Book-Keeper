@@ -1265,6 +1265,11 @@ components:
       properties:
         authenticated:
           type: boolean
+        role:
+          type: string
+          enum: [admin, scanner]
+          nullable: true
+          description: Role of the authenticated user. Null when not authenticated.
 
     LoginInput:
       type: object

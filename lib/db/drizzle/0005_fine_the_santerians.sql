@@ -1,0 +1,1 @@
+ALTER TABLE "app_auth" ADD COLUMN "role" text DEFAULT 'admin' NOT NULL;

@@ -1,5 +1,4 @@
 import { Router, type IRouter } from "express";
-import healthRouter from "./health";
 import vehiclesRouter from "./vehicles";
 import vehicleImportRouter from "./vehicle-import";
 import vehicleCatalogRouter from "./vehicle-catalog";
@@ -16,10 +15,19 @@ import gdprRouter from "./gdpr";
 import scanHandoffRouter from "./scan-handoff";
 import loanersRouter from "./loaners";
 
-const router: IRouter = Router();
+/**
+ * Routes accessible to both admin and scanner sessions (scan workflow).
+ * Mounted in app.ts with requireScannerOrAdmin.
+ */
+export const scannerRouter: IRouter = Router();
+scannerRouter.use(vehicleImportRouter);
+scannerRouter.use(scanHandoffRouter);
 
-router.use(healthRouter);
-router.use(vehicleImportRouter);
+/**
+ * Admin-only routes — the full application minus the scanner-accessible ones.
+ * Mounted in app.ts with requireAdmin.
+ */
+const router: IRouter = Router();
 router.use(vehicleCatalogRouter);
 router.use(vehiclesRouter);
 router.use(serviceRecordsRouter);
@@ -31,7 +39,6 @@ router.use(settingsRouter);
 router.use(aresRouter);
 router.use(backupRouter);
 router.use(gdprRouter);
-router.use(scanHandoffRouter);
 router.use(loanersRouter);
 router.use("/storage", storageRouter);
 

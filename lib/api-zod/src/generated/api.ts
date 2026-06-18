@@ -23,7 +23,8 @@ export const HealthCheckResponse = zod.object({
  * @summary Current authentication status
  */
 export const GetAuthStatusResponse = zod.object({
-  "authenticated": zod.boolean()
+  "authenticated": zod.boolean(),
+  "role": zod.enum(['admin', 'scanner']).nullish().describe('Role of the authenticated user. Null when not authenticated.')
 })
 
 
@@ -38,7 +39,8 @@ export const LoginBody = zod.object({
 })
 
 export const LoginResponse = zod.object({
-  "authenticated": zod.boolean()
+  "authenticated": zod.boolean(),
+  "role": zod.enum(['admin', 'scanner']).nullish().describe('Role of the authenticated user. Null when not authenticated.')
 })
 
 

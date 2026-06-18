@@ -95,7 +95,7 @@ describe("POST /auth/login", () => {
     const res = await agent.post("/auth/login").send({ password: PASSWORD });
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({ authenticated: true });
+    expect(res.body).toEqual({ authenticated: true, role: "admin" });
 
     // The session id must change on login to prevent session fixation.
     const sidAfter = sidFrom(res);
@@ -104,7 +104,7 @@ describe("POST /auth/login", () => {
 
     // The rotated session must report as authenticated on a follow-up request.
     const me = await agent.get("/auth/me");
-    expect(me.body).toEqual({ authenticated: true });
+    expect(me.body).toEqual({ authenticated: true, role: "admin" });
 
     expect(auditActions()).toContain("login");
   });
@@ -207,7 +207,7 @@ describe("POST /auth/logout", () => {
     expect(change.status).toBe(401);
 
     const me = await agent.get("/auth/me");
-    expect(me.body).toEqual({ authenticated: false });
+    expect(me.body).toEqual({ authenticated: false, role: null });
   });
 
   it("does not record a logout audit when there was no authenticated session", async () => {

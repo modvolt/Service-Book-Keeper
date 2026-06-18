@@ -9,7 +9,8 @@ import { sendMail, isMailConfigured } from "../lib/mailer";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
-const ROW_ID = 1;
+const ROW_ID = 1;         // admin account row
+const SCANNER_ROW_ID = 2; // scanner account row
 const BCRYPT_ROUNDS = 12;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -37,29 +38,44 @@ function resolveAppBaseUrl(): string | null {
 }
 
 /**
- * Ensure a password hash exists. On first run, seed it from the APP_PASSWORD
- * env var (set this as a secret). Returns the stored hash or null if not set up.
+ * Ensure a password hash exists for the given row ID. On first run, seeds it
+ * from the supplied env var (set it as a secret). Returns the stored hash or
+ * null if neither the row exists nor the env var is set.
+ *
+ * The fake-db used in tests ignores `.where()` predicates and returns ALL rows,
+ * so we filter by id in JS after the select to stay hermetic in tests.
  */
-async function getOrSeedHash(): Promise<string | null> {
-  const [existing] = await db.select().from(appAuthTable).where(eq(appAuthTable.id, ROW_ID));
+async function getOrSeedAuthRow(
+  rowId: number,
+  envVar: string,
+  role: string,
+): Promise<string | null> {
+  const rows = await db.select().from(appAuthTable).where(eq(appAuthTable.id, rowId));
+  const existing = rows.find((r) => r.id === rowId);
   if (existing) return existing.passwordHash;
 
-  const seed = process.env.APP_PASSWORD;
+  const seed = process.env[envVar];
   if (!seed) return null;
 
   const passwordHash = await bcrypt.hash(seed, BCRYPT_ROUNDS);
   const [created] = await db
     .insert(appAuthTable)
-    .values({ id: ROW_ID, passwordHash })
+    .values({ id: rowId, passwordHash, role })
     .onConflictDoNothing()
     .returning();
   if (created) return created.passwordHash;
 
   // A concurrent request won the insert — re-read the persisted hash so we
   // never authenticate against a locally computed, non-persisted value.
-  const [row] = await db.select().from(appAuthTable).where(eq(appAuthTable.id, ROW_ID));
-  return row?.passwordHash ?? null;
+  const rows2 = await db.select().from(appAuthTable).where(eq(appAuthTable.id, rowId));
+  return rows2.find((r) => r.id === rowId)?.passwordHash ?? null;
 }
+
+/** Get-or-seed the admin password hash (row id 1, APP_PASSWORD env). */
+const getOrSeedHash = () => getOrSeedAuthRow(ROW_ID, "APP_PASSWORD", "admin");
+
+/** Get-or-seed the scanner password hash (row id 2, SCANNER_PASSWORD env). */
+const getOrSeedScannerHash = () => getOrSeedAuthRow(SCANNER_ROW_ID, "SCANNER_PASSWORD", "scanner");
 
 function regenerateSession(req: { session: { regenerate: (cb: (err: unknown) => void) => void } }): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -74,7 +90,11 @@ function saveSession(req: { session: { save: (cb: (err: unknown) => void) => voi
 }
 
 router.get("/auth/me", (req, res): void => {
-  res.json({ authenticated: Boolean(req.session?.authenticated) });
+  const authenticated = Boolean(req.session?.authenticated);
+  res.json({
+    authenticated,
+    role: authenticated ? (req.session.role ?? "admin") : null,
+  });
 });
 
 router.post("/auth/login", async (req, res): Promise<void> => {
@@ -84,26 +104,40 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     return;
   }
 
-  const hash = await getOrSeedHash();
-  if (!hash) {
+  // Ensure admin row is seeded; 503 if it has never been set up.
+  const adminHash = await getOrSeedHash();
+  if (!adminHash) {
     res.status(503).json({ error: "Přihlášení není nastaveno. Nastavte proměnnou APP_PASSWORD." });
     return;
   }
 
-  const valid = await bcrypt.compare(parsed.data.password, hash);
-  if (!valid) {
-    await audit("login_failed");
-    res.status(401).json({ error: "Nesprávné heslo" });
+  // Seed scanner row if SCANNER_PASSWORD is configured (idempotent).
+  const scannerHash = await getOrSeedScannerHash();
+
+  // Try admin password first, then scanner. Rotate session on success to
+  // prevent session fixation.
+  if (await bcrypt.compare(parsed.data.password, adminHash)) {
+    await regenerateSession(req);
+    req.session.authenticated = true;
+    req.session.role = "admin";
+    await saveSession(req);
+    await audit("login");
+    res.json({ authenticated: true, role: "admin" });
     return;
   }
 
-  // Rotate the session ID on privilege elevation to prevent session fixation,
-  // then persist before reporting success.
-  await regenerateSession(req);
-  req.session.authenticated = true;
-  await saveSession(req);
-  await audit("login");
-  res.json({ authenticated: true });
+  if (scannerHash && await bcrypt.compare(parsed.data.password, scannerHash)) {
+    await regenerateSession(req);
+    req.session.authenticated = true;
+    req.session.role = "scanner";
+    await saveSession(req);
+    await audit("login");
+    res.json({ authenticated: true, role: "scanner" });
+    return;
+  }
+
+  await audit("login_failed");
+  res.status(401).json({ error: "Nesprávné heslo" });
 });
 
 router.post("/auth/logout", (req, res): void => {
@@ -123,6 +157,13 @@ router.post("/auth/logout", (req, res): void => {
 router.post("/auth/change-password", async (req, res): Promise<void> => {
   if (!req.session?.authenticated) {
     res.status(401).json({ error: "Nepřihlášen" });
+    return;
+  }
+
+  // Only the admin account can change its password via this endpoint.
+  const role = req.session.role ?? "admin";
+  if (role !== "admin") {
+    res.status(403).json({ error: "Tato akce je dostupná pouze pro administrátora." });
     return;
   }
 
@@ -241,7 +282,8 @@ router.post("/auth/reset-password", async (req, res): Promise<void> => {
     return;
   }
 
-  const [row] = await db.select().from(appAuthTable).where(eq(appAuthTable.id, ROW_ID));
+  const rows = await db.select().from(appAuthTable).where(eq(appAuthTable.id, ROW_ID));
+  const row = rows.find((r) => r.id === ROW_ID);
   if (!row || !row.resetTokenHash || !row.resetTokenExpiresAt) {
     res.status(400).json({ error: "Odkaz pro obnovu je neplatný nebo vypršel." });
     return;

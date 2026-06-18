@@ -32,8 +32,21 @@ export interface Error {
   error: string;
 }
 
+/**
+ * Role of the authenticated user. Null when not authenticated.
+ */
+export type AuthStatusRole = typeof AuthStatusRole[keyof typeof AuthStatusRole] | null;
+
+
+export const AuthStatusRole = {
+  admin: 'admin',
+  scanner: 'scanner',
+} as const;
+
 export interface AuthStatus {
   authenticated: boolean;
+  /** Role of the authenticated user. Null when not authenticated. */
+  role?: AuthStatusRole;
 }
 
 export interface LoginInput {

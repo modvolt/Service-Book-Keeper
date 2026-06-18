@@ -6,6 +6,7 @@ import { logger } from "./logger";
 declare module "express-session" {
   interface SessionData {
     authenticated?: boolean;
+    role?: "admin" | "scanner";
   }
 }
 

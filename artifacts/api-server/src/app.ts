@@ -5,12 +5,12 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
-import router from "./routes";
+import router, { scannerRouter } from "./routes";
 import healthRouter from "./routes/health";
 import diagnosticsRouter from "./routes/diagnostics";
 import authRouter from "./routes/auth";
 import { sessionMiddleware } from "./lib/session";
-import { requireAuth } from "./middlewares/requireAuth";
+import { requireAuth, requireAdmin, requireScannerOrAdmin } from "./middlewares/requireAuth";
 import { logger } from "./lib/logger";
 import { recordError } from "./lib/error-buffer";
 
@@ -115,8 +115,11 @@ app.use("/api/auth/forgot-password", passwordResetLimiter);
 app.use("/api/auth/reset-password", passwordResetLimiter);
 app.use("/api", authRouter);
 
-// --- Protected routes (require authenticated session) ---
-app.use("/api", requireAuth, router);
+// --- Protected routes: scanner + admin (scan workflow) ---
+app.use("/api", requireAuth, requireScannerOrAdmin, scannerRouter);
+
+// --- Protected routes: admin only ---
+app.use("/api", requireAuth, requireAdmin, router);
 
 // --- Static frontend (production single-container deploy) ---
 // In production the built SPA is served by this same server so the whole app

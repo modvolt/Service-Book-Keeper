@@ -5,7 +5,10 @@
  * AutoServis API
  * OpenAPI spec version: 0.1.0
  */
+import type { AuthStatusRole } from './authStatusRole';
 
 export interface AuthStatus {
   authenticated: boolean;
+  /** Role of the authenticated user. Null when not authenticated. */
+  role?: AuthStatusRole;
 }
