@@ -269,6 +269,46 @@ export const DeleteMaterialParams = zod.object({
 
 
 /**
+ * @summary Get QR code payload for a catalog material
+ */
+export const GetMaterialQrParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetMaterialQrResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "unit": zod.string().nullish(),
+  "payload": zod.string().describe('String to encode into the QR code (format autoservis:material:<id>:<name>)')
+})
+
+
+/**
+ * @summary Scan photos to extract material suggestions matched against the catalog
+ */
+
+export const scanMaterialsBodyImagesMax = 8;
+
+
+
+export const ScanMaterialsBody = zod.object({
+  "licensePlate": zod.string().min(1).describe('Vehicle license plate (SPZ); used to locate the open work order'),
+  "images": zod.array(zod.string().describe('Base64-encoded JPEG image (without the data URI prefix)')).min(1).max(scanMaterialsBodyImagesMax)
+})
+
+export const ScanMaterialsResponse = zod.object({
+  "workOrderId": zod.number(),
+  "suggestions": zod.array(zod.object({
+  "name": zod.string(),
+  "quantity": zod.string(),
+  "unit": zod.string().nullish(),
+  "unitPrice": zod.number().nullish(),
+  "catalogId": zod.number().nullish().describe('ID of the matching catalog item, or null if unmatched')
+}))
+})
+
+
+/**
  * @summary List materials on a work order
  */
 export const ListWorkOrderMaterialsParams = zod.object({

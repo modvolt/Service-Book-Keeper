@@ -147,6 +147,18 @@ router.delete("/materials/:id", async (req, res): Promise<void> => {
   res.sendStatus(204);
 });
 
+router.get("/materials/:id/qr", async (req, res): Promise<void> => {
+  const id = parseInt(req.params.id as string, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+  const [row] = await db
+    .select({ id: materialsCatalogTable.id, name: materialsCatalogTable.name, unit: materialsCatalogTable.unit })
+    .from(materialsCatalogTable)
+    .where(eq(materialsCatalogTable.id, id));
+  if (!row) { res.status(404).json({ error: "Materiál nenalezen" }); return; }
+  const payload = `autoservis:material:${row.id}:${row.name}`;
+  res.json({ id: row.id, name: row.name, unit: row.unit ?? null, payload });
+});
+
 router.get("/work-orders/:id/materials", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string, 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }

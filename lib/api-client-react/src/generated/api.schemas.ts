@@ -781,6 +781,47 @@ export interface WorkOrderMaterialUpdateInput {
   unitPrice?: number | null;
 }
 
+export interface ScanMaterialsInput {
+  /**
+     * Vehicle license plate (SPZ); used to locate the open work order
+     * @minLength 1
+     */
+  licensePlate: string;
+  /**
+     * @minItems 1
+     * @maxItems 8
+     */
+  images: string[];
+}
+
+export type ScanMaterialsResultSuggestionsItem = {
+  name: string;
+  quantity: string;
+  /** @nullable */
+  unit?: string | null;
+  /** @nullable */
+  unitPrice?: number | null;
+  /**
+     * ID of the matching catalog item, or null if unmatched
+     * @nullable
+     */
+  catalogId?: number | null;
+};
+
+export interface ScanMaterialsResult {
+  workOrderId: number;
+  suggestions: ScanMaterialsResultSuggestionsItem[];
+}
+
+export interface MaterialQrPayload {
+  id: number;
+  name: string;
+  /** @nullable */
+  unit?: string | null;
+  /** String to encode into the QR code (format autoservis:material:<id>:<name>) */
+  payload: string;
+}
+
 export type InvoiceImportInputPdfsItem = {
   /** Base64-encoded PDF content */
   data: string;

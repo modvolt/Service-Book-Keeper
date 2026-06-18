@@ -297,6 +297,56 @@ paths:
         "204":
           description: Deleted
 
+  /materials/{id}/qr:
+    get:
+      operationId: getMaterialQr
+      tags: [materials]
+      summary: Get QR code payload for a catalog material
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: QR payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaterialQrPayload"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /work-orders/scan-materials:
+    post:
+      operationId: scanMaterials
+      tags: [materials]
+      summary: Scan photos to extract material suggestions matched against the catalog
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScanMaterialsInput"
+      responses:
+        "200":
+          description: Extracted material suggestions (not persisted)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScanMaterialsResult"
+        "404":
+          description: No open work order found for the given license plate
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /work-orders/{id}/materials:
     get:
       operationId: listWorkOrderMaterials
@@ -2091,6 +2141,60 @@ components:
           type: ["string", "null"]
         unitPrice:
           type: ["integer", "null"]
+
+    ScanMaterialsInput:
+      type: object
+      required: [licensePlate, images]
+      properties:
+        licensePlate:
+          type: string
+          minLength: 1
+          description: Vehicle license plate (SPZ); used to locate the open work order
+        images:
+          type: array
+          minItems: 1
+          maxItems: 8
+          items:
+            type: string
+            description: Base64-encoded JPEG image (without the data URI prefix)
+
+    ScanMaterialsResult:
+      type: object
+      required: [workOrderId, suggestions]
+      properties:
+        workOrderId:
+          type: integer
+        suggestions:
+          type: array
+          items:
+            type: object
+            required: [name, quantity]
+            properties:
+              name:
+                type: string
+              quantity:
+                type: string
+              unit:
+                type: ["string", "null"]
+              unitPrice:
+                type: ["integer", "null"]
+              catalogId:
+                type: ["integer", "null"]
+                description: ID of the matching catalog item, or null if unmatched
+
+    MaterialQrPayload:
+      type: object
+      required: [id, name, payload]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        unit:
+          type: ["string", "null"]
+        payload:
+          type: string
+          description: String to encode into the QR code (format autoservis:material:<id>:<name>)
 
     InvoiceImportInput:
       type: object

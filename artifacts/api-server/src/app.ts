@@ -76,7 +76,7 @@ app.use(
 // import) and install their own larger parser locally, after the auth gate. The
 // global parser below MUST skip those paths — otherwise it consumes their body
 // first and rejects the upload with 413 before the route parser ever runs.
-const LARGE_BODY_PATHS = ["/api/vehicles/import-tp", "/api/materials/import"];
+const LARGE_BODY_PATHS = ["/api/vehicles/import-tp", "/api/materials/import", "/api/work-orders/scan-materials"];
 function skipLargeBodyPaths(parser: RequestHandler): RequestHandler {
   return (req, res, next) => {
     const path = req.path.length > 1 ? req.path.replace(/\/+$/, "") : req.path;

@@ -5,6 +5,7 @@ import vehicleCatalogRouter from "./vehicle-catalog";
 import serviceRecordsRouter from "./service-records";
 import workOrdersRouter from "./work-orders";
 import materialsRouter from "./materials";
+import scanMaterialsRouter from "./scan-materials";
 import dashboardRouter from "./dashboard";
 import appointmentsRouter from "./appointments";
 import settingsRouter from "./settings";
@@ -32,6 +33,8 @@ router.use(vehicleCatalogRouter);
 router.use(vehiclesRouter);
 router.use(serviceRecordsRouter);
 router.use(workOrdersRouter);
+// scan-materials must be mounted before workOrdersRouter's /:id catch-all
+router.use(scanMaterialsRouter);
 router.use(materialsRouter);
 router.use(dashboardRouter);
 router.use(appointmentsRouter);
