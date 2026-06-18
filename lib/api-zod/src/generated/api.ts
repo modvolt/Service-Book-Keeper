@@ -497,7 +497,10 @@ export const ImportVehicleFromTpResponse = zod.object({
   "ownerName": zod.string().nullish().describe('Owner\/operator from the TP — person name or company name, if readable'),
   "ownerIco": zod.string().nullish().describe('Owner company registration number (IČ, 8 digits) if present on the TP'),
   "ownerAddress": zod.string().nullish().describe('Owner\/operator address as a single string, if readable'),
-  "ownerType": zod.string().nullish().describe('Derived owner type — \"company\" when an IČ was detected, otherwise \"private\"')
+  "ownerType": zod.string().nullish().describe('Derived owner type — \"company\" when an IČ was detected, otherwise \"private\"'),
+  "color": zod.string().nullish().describe('Vehicle color read from the TP document (\"Barva\"), if readable'),
+  "colorObserved": zod.string().nullish().describe('Body color observed from a vehicle\/plate photo, if any'),
+  "colorMismatch": zod.boolean().optional().describe('True when the TP color and the photo color clearly disagree (both present)')
 })
 
 

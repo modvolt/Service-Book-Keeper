@@ -14,7 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { FLEET_OWNER_NAME } from "@/lib/fleet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { ArrowLeft, Sparkles, Upload, X, Loader2, Camera, ClipboardPaste, ShieldCheck, ScanLine } from "lucide-react";
+import { ArrowLeft, Sparkles, Upload, X, Loader2, Camera, ClipboardPaste, ShieldCheck, ScanLine, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -68,6 +68,9 @@ export default function NewVehicle() {
   const [dragActive, setDragActive] = useState(false);
   const [ownerSource, setOwnerSource] = useState<"scan" | "ares" | null>(null);
   const [aresVerifying, setAresVerifying] = useState(false);
+  // Set when the scan read one color from the TP but saw a different one on the
+  // photo — surfaced as a warning next to the Barva field for the user to check.
+  const [colorWarning, setColorWarning] = useState<{ tp: string; photo: string } | null>(null);
 
   async function autoVerifyFromAres(ico: string | null | undefined, ownerType: string | null | undefined) {
     if (ownerType !== "company") return;
@@ -102,6 +105,7 @@ export default function NewVehicle() {
       engineDisplacement: pre.engineDisplacement != null ? String(pre.engineDisplacement) : f.engineDisplacement,
       make: pre.make ?? f.make,
       model: pre.model ?? f.model,
+      color: pre.color ?? pre.colorObserved ?? f.color,
       currentKm: pre.currentKm != null ? String(pre.currentKm) : f.currentKm,
       ownerType: pre.ownerType === "company" || pre.ownerType === "private" ? pre.ownerType : f.ownerType,
       ownerName: pre.ownerName ?? f.ownerName,
@@ -109,6 +113,7 @@ export default function NewVehicle() {
       ownerIco: pre.ownerIco ?? f.ownerIco,
     }));
     if (pre.ownerName || pre.ownerAddress || pre.ownerIco) setOwnerSource("scan");
+    if (pre.colorMismatch && pre.color && pre.colorObserved) setColorWarning({ tp: pre.color, photo: pre.colorObserved });
     toast({ title: "Údaje předvyplněny", description: "Zkontrolujte je a doplňte chybějící údaje." });
     void autoVerifyFromAres(pre.ownerIco, pre.ownerType);
   }, [toast]);
@@ -224,6 +229,7 @@ export default function NewVehicle() {
             engineDisplacement: result.engineDisplacement != null ? String(result.engineDisplacement) : f.engineDisplacement,
             make: result.make ?? f.make,
             model: result.model ?? f.model,
+            color: result.color ?? result.colorObserved ?? f.color,
             currentKm: result.odometerKm != null ? String(result.odometerKm) : f.currentKm,
             ownerType: result.ownerType === "company" || result.ownerType === "private" ? result.ownerType : f.ownerType,
             ownerName: result.ownerName ?? f.ownerName,
@@ -231,6 +237,8 @@ export default function NewVehicle() {
             ownerIco: result.ownerIco ?? f.ownerIco,
           }));
           if (result.ownerName || result.ownerAddress || result.ownerIco) setOwnerSource("scan");
+          if (result.colorMismatch && result.color && result.colorObserved) setColorWarning({ tp: result.color, photo: result.colorObserved });
+          else setColorWarning(null);
           setImportOpen(false);
           setImportFiles([]);
           toast({ title: "Údaje načteny", description: "Předvyplnili jsme rozpoznané údaje. Zkontrolujte je a doplňte chybějící pole." });
@@ -417,7 +425,13 @@ export default function NewVehicle() {
                 </div>
                 <div className="space-y-1">
                   <Label>Barva</Label>
-                  <Input placeholder="Bílá" value={form.color} onChange={e => setForm(f => ({ ...f, color: e.target.value }))} />
+                  <Input placeholder="Bílá" value={form.color} onChange={e => { setForm(f => ({ ...f, color: e.target.value })); setColorWarning(null); }} />
+                  {colorWarning && (
+                    <p className="flex items-start gap-1 text-xs text-amber-700 dark:text-amber-500">
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                      <span>V TP je „{colorWarning.tp}", na fotografii vypadá „{colorWarning.photo}". Zkontrolujte.</span>
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1 col-span-2">
                   <Label>VIN</Label>

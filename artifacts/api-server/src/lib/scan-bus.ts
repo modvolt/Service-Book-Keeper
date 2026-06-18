@@ -28,6 +28,9 @@ export type ScanHandoffEvent =
         ownerIco: string | null;
         ownerAddress: string | null;
         ownerType: string | null;
+        color: string | null;
+        colorObserved: string | null;
+        colorMismatch: boolean;
       };
     }
   | {

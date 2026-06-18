@@ -729,6 +729,18 @@ export interface ImportTpResult {
      * @nullable
      */
   ownerType?: string | null;
+  /**
+     * Vehicle color read from the TP document ("Barva"), if readable
+     * @nullable
+     */
+  color?: string | null;
+  /**
+     * Body color observed from a vehicle/plate photo, if any
+     * @nullable
+     */
+  colorObserved?: string | null;
+  /** True when the TP color and the photo color clearly disagree (both present) */
+  colorMismatch?: boolean;
 }
 
 export interface MaterialCatalogItem {

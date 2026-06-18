@@ -70,6 +70,9 @@ interface HandoffBody {
   ownerName?: unknown;
   ownerIco?: unknown;
   ownerAddress?: unknown;
+  color?: unknown;
+  colorObserved?: unknown;
+  colorMismatch?: unknown;
 }
 
 const asStr = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
@@ -79,6 +82,7 @@ const asIco = (v: unknown): string | null => {
   const digits = typeof v === "string" ? v.replace(/\D/g, "") : "";
   return digits.length === 8 ? digits : null;
 };
+const asBool = (v: unknown): boolean => v === true;
 
 /**
  * Receive a completed scan from the phone, decide where the PC should go, and
@@ -116,6 +120,8 @@ router.post("/scan/handoff", smallJson, async (req, res): Promise<void> => {
   } else {
     // Unknown (or unreadable) SPZ -> new vehicle form, pre-filled.
     const ownerIco = asIco(body.ownerIco);
+    const color = asStr(body.color);
+    const colorObserved = asStr(body.colorObserved);
     event = {
       kind: "new-vehicle",
       prefill: {
@@ -130,6 +136,10 @@ router.post("/scan/handoff", smallJson, async (req, res): Promise<void> => {
         ownerIco,
         ownerAddress: asStr(body.ownerAddress),
         ownerType: ownerIco ? "company" : "private",
+        color,
+        colorObserved,
+        // Only relay a mismatch when both colors survived normalization.
+        colorMismatch: asBool(body.colorMismatch) && color != null && colorObserved != null,
       },
     };
   }

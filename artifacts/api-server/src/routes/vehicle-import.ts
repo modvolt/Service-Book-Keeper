@@ -42,7 +42,10 @@ Schéma odpovědi:
   "odometerKm": number|null,          // stav tachometru (počet najetých kilometrů) z fotografie přístrojové desky
   "ownerName": string|null,           // vlastník/provozovatel z TP: jméno a příjmení fyzické osoby, nebo název firmy
   "ownerIco": string|null,            // IČ (identifikační číslo) vlastníka/provozovatele, pokud je v TP uvedeno (8 číslic)
-  "ownerAddress": string|null         // adresa vlastníka/provozovatele jako jeden řetězec (ulice, číslo, město, PSČ)
+  "ownerAddress": string|null,        // adresa vlastníka/provozovatele jako jeden řetězec (ulice, číslo, město, PSČ)
+  "color": string|null,               // barva vozidla uvedená v technickém průkazu (kolonka "Barva")
+  "colorObserved": string|null,       // skutečná barva karoserie viditelná na fotografii vozidla
+  "colorMismatch": boolean            // true jen když se barva z TP a barva z fotografie zjevně liší
 }
 
 Pravidla:
@@ -57,7 +60,10 @@ Pravidla:
 - ownerName: vlastníka nebo provozovatele čti z technického průkazu. U fyzické osoby vrať jméno a příjmení, u firmy její název. Pokud není čitelný, vrať null.
 - ownerIco: IČ (identifikační číslo organizace) vrať POUZE pokud je na TP uvedeno a má přesně 8 číslic. Bez IČ (fyzická osoba) vrať null.
 - ownerAddress: adresu vlastníka/provozovatele vrať jako jeden řetězec (např. "Hlavní 123, 110 00 Praha"). Pokud není čitelná, vrať null.
-- Barvu vozidla a další neuvedené údaje nevracej.`;
+- color: barvu vozidla čti z technického průkazu (kolonka "Barva"). Vrať český název barvy s velkým prvním písmenem (např. "Černá", "Bílá", "Modrá", "Stříbrná", "Šedá", "Červená", "Zelená"). Pokud TP není přiložen nebo barva není čitelná, vrať null.
+- colorObserved: skutečnou barvu karoserie urči z fotografie vozidla (např. záď, bok, nebo fotka SPZ, na které je vidět karoserie). Vrať český název barvy s velkým prvním písmenem. Pokud žádná fotografie karoserie není, vrať null.
+- colorMismatch: vrať true POUZE když máš barvu z TP (color) i barvu z fotografie (colorObserved) a tyto barvy si zjevně neodpovídají (jiná barva — ne jen rozdíl odstínu, lesku, metalízy nebo osvětlení). V ostatních případech vrať false.
+- Další neuvedené údaje nevracej.`;
 
 router.post("/vehicles/import-tp", largeJson, async (req, res): Promise<void> => {
   const parsed = ImportVehicleFromTpBody.safeParse(req.body);
@@ -121,6 +127,12 @@ router.post("/vehicles/import-tp", largeJson, async (req, res): Promise<void> =>
     const ownerIco = cleanIco(extracted.ownerIco);
     const ownerAddress = cleanStr(extracted.ownerAddress);
 
+    const color = cleanStr(extracted.color);
+    const colorObserved = cleanStr(extracted.colorObserved);
+    // Only claim a mismatch when both sources produced a color and the model
+    // judged them clearly different — otherwise it's noise (no TP, no body photo).
+    const colorMismatch = color != null && colorObserved != null && extracted.colorMismatch === true;
+
     res.json({
       licensePlate: normalizeSpzOrNull(extracted.licensePlate),
       vin: typeof extracted.vin === "string" && extracted.vin.length === 17 ? extracted.vin : null,
@@ -133,6 +145,9 @@ router.post("/vehicles/import-tp", largeJson, async (req, res): Promise<void> =>
       ownerIco,
       ownerAddress,
       ownerType: ownerIco ? "company" : "private",
+      color,
+      colorObserved,
+      colorMismatch,
     });
   } catch (err) {
     req.log.error({ err }, "TP import failed");

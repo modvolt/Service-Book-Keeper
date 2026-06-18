@@ -2158,6 +2158,15 @@ components:
         ownerType:
           type: ["string", "null"]
           description: Derived owner type — "company" when an IČ was detected, otherwise "private"
+        color:
+          type: ["string", "null"]
+          description: Vehicle color read from the TP document ("Barva"), if readable
+        colorObserved:
+          type: ["string", "null"]
+          description: Body color observed from a vehicle/plate photo, if any
+        colorMismatch:
+          type: boolean
+          description: True when the TP color and the photo color clearly disagree (both present)
 
     MaterialCatalogItem:
       type: object

@@ -213,6 +213,41 @@ describe("POST /scan/handoff — odometer carry for known vehicles", () => {
   });
 });
 
+describe("POST /scan/handoff — color carry + mismatch re-guard", () => {
+  async function handoffColor(
+    body: Record<string, unknown>,
+  ): Promise<{ color: unknown; colorObserved: unknown; colorMismatch: unknown }> {
+    const pc = addCapturingClient();
+    await request(makeApp())
+      .post("/scan/handoff")
+      .send({ licensePlate: "9zz 9999", ...body });
+    const prefill = (pc.lastHandoff()?.prefill ?? {}) as Record<string, unknown>;
+    return {
+      color: prefill.color ?? null,
+      colorObserved: prefill.colorObserved ?? null,
+      colorMismatch: prefill.colorMismatch ?? null,
+    };
+  }
+
+  it("carries both colors and relays the mismatch when the flag and both colors are present", async () => {
+    expect(
+      await handoffColor({ color: "Černá", colorObserved: "Modrá", colorMismatch: true }),
+    ).toEqual({ color: "Černá", colorObserved: "Modrá", colorMismatch: true });
+  });
+
+  it("does not relay a mismatch when the flag is true but the photo color is missing", async () => {
+    expect(
+      await handoffColor({ color: "Černá", colorMismatch: true }),
+    ).toEqual({ color: "Černá", colorObserved: null, colorMismatch: false });
+  });
+
+  it("does not relay a mismatch when both colors are present but the flag is not true", async () => {
+    expect(
+      await handoffColor({ color: "Černá", colorObserved: "Modrá" }),
+    ).toEqual({ color: "Černá", colorObserved: "Modrá", colorMismatch: false });
+  });
+});
+
 describe("POST /scan/handoff — broadcast semantics", () => {
   it("excludes the originating client and reports the delivered count", async () => {
     const source = addCapturingClient();

@@ -19,6 +19,9 @@ type HandoffEvent =
         ownerIco: string | null;
         ownerAddress: string | null;
         ownerType: string | null;
+        color: string | null;
+        colorObserved: string | null;
+        colorMismatch: boolean;
       };
     }
   | {
@@ -78,6 +81,9 @@ export function useScanHandoff(): void {
             ownerIco: data.prefill?.ownerIco ?? null,
             ownerAddress: data.prefill?.ownerAddress ?? null,
             ownerType: data.prefill?.ownerType ?? null,
+            color: data.prefill?.color ?? null,
+            colorObserved: data.prefill?.colorObserved ?? null,
+            colorMismatch: data.prefill?.colorMismatch ?? false,
           });
           toast({
             title: "Načteno z telefonu",

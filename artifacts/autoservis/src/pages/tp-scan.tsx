@@ -4,7 +4,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { useGetVehicleByPlate } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ScanLine, Car, Plus, ClipboardList, RotateCcw, MonitorSmartphone, CheckCircle2, Loader2, Gauge, Smartphone, Copy, Check } from "lucide-react";
+import { ScanLine, Car, Plus, ClipboardList, RotateCcw, MonitorSmartphone, CheckCircle2, Loader2, Gauge, Smartphone, Copy, Check, AlertTriangle } from "lucide-react";
 import { TpScanDialog, type TpExtractedData } from "@/components/tp-scan-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { setVehiclePrefill, setWorkOrderPrefill } from "@/lib/scan-prefill";
@@ -77,6 +77,9 @@ export default function TpScanPage() {
         ownerIco: d.ownerIco,
         ownerAddress: d.ownerAddress,
         ownerType: d.ownerType,
+        color: d.color,
+        colorObserved: d.colorObserved,
+        colorMismatch: d.colorMismatch,
       });
       if (result.delivered > 0) {
         setHandoff({ status: "sent", kind: result.kind });
@@ -109,6 +112,9 @@ export default function TpScanPage() {
       ownerIco: data.ownerIco,
       ownerAddress: data.ownerAddress,
       ownerType: data.ownerType,
+      color: data.color,
+      colorObserved: data.colorObserved,
+      colorMismatch: data.colorMismatch,
     });
     navigate("/vehicles/new");
   }
@@ -229,11 +235,24 @@ export default function TpScanPage() {
               <div><dt className="text-muted-foreground">Model / typ</dt><dd>{data.model ?? "—"}</dd></div>
               <div><dt className="text-muted-foreground">Rok registrace</dt><dd>{data.registrationYear ?? "—"}</dd></div>
               <div><dt className="text-muted-foreground">Objem motoru</dt><dd>{data.engineDisplacement ? `${data.engineDisplacement} cm³` : "—"}</dd></div>
+              <div><dt className="text-muted-foreground">Barva</dt><dd>{data.color ?? data.colorObserved ?? "—"}</dd></div>
               <div className="col-span-2"><dt className="text-muted-foreground flex items-center gap-1"><Gauge className="h-3.5 w-3.5" />Stav tachometru</dt><dd>{data.odometerKm != null ? `${data.odometerKm.toLocaleString("cs-CZ")} km` : "—"}</dd></div>
               <div className="col-span-2"><dt className="text-muted-foreground">Vlastník / firma</dt><dd>{data.ownerName ?? "—"}</dd></div>
               <div><dt className="text-muted-foreground">IČ</dt><dd className="font-mono">{data.ownerIco ?? "—"}</dd></div>
               <div><dt className="text-muted-foreground">Adresa</dt><dd>{data.ownerAddress ?? "—"}</dd></div>
             </dl>
+
+            {data.colorMismatch && data.color && data.colorObserved && (
+              <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-md p-4">
+                <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0" />
+                <div>
+                  <p className="font-semibold text-amber-800">Barva nesouhlasí</p>
+                  <p className="text-sm text-amber-700">
+                    V technickém průkazu je barva <span className="font-medium">{data.color}</span>, ale na fotografii vypadá vůz <span className="font-medium">{data.colorObserved}</span>. Zkontrolujte prosím.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div className="border-t pt-4 space-y-2">
               <p className="text-xs text-muted-foreground">Pokračovat zde na tomto zařízení:</p>
