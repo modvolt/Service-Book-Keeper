@@ -1,0 +1,173 @@
+Deployment failed: Command execution failed (exit code 255): docker exec grjlsvw0gl5mfclvl99fjjv9 bash -c 'DOCKER_BUILDKIT=1 COOLIFY_BRANCH='\''main'\'' COOLIFY_RESOURCE_UUID=h7iql9s7swpx8eyxrxdtvmqq  docker compose --env-file /artifacts/build-time.env --project-name h7iql9s7swpx8eyxrxdtvmqq --project-directory /artifacts/grjlsvw0gl5mfclvl99fjjv9 -f /artifacts/grjlsvw0gl5mfclvl99fjjv9/docker-compose.yaml build --pull --build-arg COOLIFY_FQDN --build-arg POSTGRES_USER --build-arg APP_PASSWORD --build-arg POSTGRES_DB --build-arg APP_URL --build-arg SESSION_SECRET --build-arg ALLOWED_ORIGINS --build-arg LOG_LEVEL --build-arg STORAGE_DRIVER --build-arg S3_ENDPOINT --build-arg POSTGRES_PASSWORD --build-arg S3_ACCESS_KEY_ID --build-arg S3_SECRET_ACCESS_KEY --build-arg S3_FORCE_PATH_STYLE --build-arg S3_REGION --build-arg OPENAI_MODEL --build-arg S3_PRIVATE_PREFIX --build-arg S3_PUBLIC_PREFIX --build-arg AI_INTEGRATIONS_OPENAI_BASE_URL --build-arg S3_BUCKET --build-arg SMTP_HOST --build-arg SMTP_USER --build-arg SMTP_PASS --build-arg SMTP_PORT --build-arg SMTP_SECURE --build-arg MAIL_FROM --build-arg AI_INTEGRATIONS_OPENAI_API_KEY --build-arg COOLIFY_BUILD_SECRETS_HASH=97f5dc1bff09a24648f1f57a035556c6eab42757f42711f5ecc7b1deba8967b2'
+2026-Jun-18 20:13:25.243036
+Error: #1 [internal] load local bake definitions
+2026-Jun-18 20:13:25.243036
+#1 reading from stdin 1.90kB done
+2026-Jun-18 20:13:25.243036
+#1 DONE 0.0s
+2026-Jun-18 20:13:25.243036
+2026-Jun-18 20:13:25.243036
+#2 [internal] load build definition from Dockerfile
+2026-Jun-18 20:13:25.243036
+#2 transferring dockerfile: 2.85kB done
+2026-Jun-18 20:13:25.243036
+#2 DONE 0.0s
+2026-Jun-18 20:13:25.243036
+2026-Jun-18 20:13:25.243036
+#3 resolve image config for docker-image://docker.io/docker/dockerfile:1
+2026-Jun-18 20:13:25.243036
+#3 DONE 0.8s
+2026-Jun-18 20:13:25.243036
+2026-Jun-18 20:13:25.243036
+#4 docker-image://docker.io/docker/dockerfile:1@sha256:87999aa3d42bdc6bea60565083ee17e86d1f3339802f543c0d03998580f9cb89
+2026-Jun-18 20:13:25.243036
+#4 resolve docker.io/docker/dockerfile:1@sha256:87999aa3d42bdc6bea60565083ee17e86d1f3339802f543c0d03998580f9cb89 0.0s done
+2026-Jun-18 20:13:25.243036
+#4 CACHED
+2026-Jun-18 20:13:25.243036
+2026-Jun-18 20:13:25.243036
+#5 [internal] load metadata for docker.io/library/node:24-bookworm-slim
+2026-Jun-18 20:13:25.243036
+#5 DONE 0.7s
+2026-Jun-18 20:13:25.243036
+2026-Jun-18 20:13:25.243036
+#6 [internal] load .dockerignore
+2026-Jun-18 20:13:25.243036
+#6 transferring context: 497B done
+2026-Jun-18 20:13:25.243036
+#6 DONE 0.0s
+2026-Jun-18 20:13:25.243036
+2026-Jun-18 20:13:25.243036
+#7 [builder 1/7] FROM docker.io/library/node:24-bookworm-slim@sha256:c2d5ade763cacfb03fe9cb8e8af5d1be5041ff331921fa26a9b231ca3a4f780a
+2026-Jun-18 20:13:25.243036
+#7 resolve docker.io/library/node:24-bookworm-slim@sha256:c2d5ade763cacfb03fe9cb8e8af5d1be5041ff331921fa26a9b231ca3a4f780a 0.0s done
+2026-Jun-18 20:13:25.243036
+#7 DONE 0.0s
+2026-Jun-18 20:13:25.243036
+2026-Jun-18 20:13:25.243036
+#8 [internal] load build context
+2026-Jun-18 20:13:25.243036
+#8 transferring context: 3.45MB 0.1s done
+2026-Jun-18 20:13:25.243036
+#8 DONE 0.2s
+2026-Jun-18 20:13:25.243036
+2026-Jun-18 20:13:25.243036
+#9 [builder 2/7] RUN corepack enable
+2026-Jun-18 20:13:25.243036
+#9 CACHED
+2026-Jun-18 20:13:25.243036
+2026-Jun-18 20:13:25.243036
+#10 [builder 3/7] WORKDIR /app
+2026-Jun-18 20:13:25.243036
+#10 CACHED
+2026-Jun-18 20:13:25.243036
+2026-Jun-18 20:13:25.243036
+#11 [builder 4/7] COPY . .
+2026-Jun-18 20:13:25.243036
+#11 DONE 0.1s
+2026-Jun-18 20:13:25.243036
+2026-Jun-18 20:13:25.243036
+#12 [builder 5/7] RUN pnpm install --frozen-lockfile
+2026-Jun-18 20:13:25.243036
+#12 0.630 ! Corepack is about to download https://registry.npmjs.org/pnpm/-/pnpm-10.26.1.tgz
+2026-Jun-18 20:13:25.243036
+#12 3.170 Scope:<REDACTED>@11.8.0   │
+2026-Jun-18 20:13:25.243036
+#12 4.102    │                                              │
+2026-Jun-18 20:13:25.243036
+#12 4.102    ╰──────────────────────────────────────────────╯
+2026-Jun-18 20:13:25.243036
+#12 4.102
+2026-Jun-18 20:13:25.243036
+#12 4.516 Progress: resolved 986, reused 0, downloaded 14, added 0
+2026-Jun-18 20:13:25.243036
+#12 5.517 Progress: resolved 986, reused 0, downloaded 82, added 34
+2026-Jun-18 20:13:25.243036
+#12 6.517 Progress: resolved 986, reused 0, downloaded 153, added 63
+2026-Jun-18 20:13:25.243036
+#12 7.517 Progress: resolved 986, reused 0, downloaded 253, added 106
+2026-Jun-18 20:13:25.243036
+#12 8.519 Progress: resolved 986, reused 0, downloaded 315, added 129
+2026-Jun-18 20:13:25.243036
+#12 9.522 Progress: resolved 986, reused 0, downloaded 364, added 149
+2026-Jun-18 20:13:25.243036
+#12 10.52 Progress: resolved 986, reused 0, downloaded 433, added 196
+2026-Jun-18 20:13:25.243036
+#12 11.52 Progress: resolved 986, reused 0, downloaded 498, added 224
+2026-Jun-18 20:13:25.243036
+#12 12.52 Progress: resolved 986, reused 0, downloaded 516, added 230
+2026-Jun-18 20:13:25.243036
+#12 13.53 Progress: resolved 986, reused 0, downloaded 523, added 232
+2026-Jun-18 20:13:25.243036
+#12 14.53 Progress: resolved 986, reused 0, downloaded 527, added 233
+2026-Jun-18 20:13:25.243036
+#12 15.53 Progress: resolved 986, reused 0, downloaded 531, added 234
+2026-Jun-18 20:13:25.243036
+#12 16.53 Progress: resolved 986, reused 0, downloaded 562, added 244
+2026-Jun-18 20:13:25.243036
+#12 17.54 Progress: resolved 986, reused 0, downloaded 624, added 270
+2026-Jun-18 20:13:25.243036
+#12 18.54 Progress: resolved 986, reused 0, downloaded 745, added 325
+2026-Jun-18 20:13:25.243036
+#12 19.54 Progress: resolved 986, reused 0, downloaded 843, added 358
+2026-Jun-18 20:13:25.243036
+#12 20.54 Progress: resolved 986, reused 0, downloaded 885, added 375
+2026-Jun-18 20:13:25.243036
+#12 21.54 Progress: resolved 986, reused 0, downloaded 925, added 392
+2026-Jun-18 20:13:25.243036
+#12 22.54 Progress: resolved 986, reused 0, downloaded 986, added 516
+2026-Jun-18 20:13:25.243036
+#12 23.54 Progress: resolved 986, reused 0, downloaded 986, added 553
+2026-Jun-18 20:13:25.243036
+#12 24.53 Progress: resolved 986, reused 0, downloaded 986, added 986, done
+2026-Jun-18 20:13:25.243036
+#12 25.40 .../esbuild@0.27.3/node_modules/esbuild postinstall$ node install.js
+2026-Jun-18 20:13:25.243036
+#12 25.57 .../esbuild@0.27.3/node_modules/esbuild postinstall: Done
+2026-Jun-18 20:13:25.243036
+#12 26.16
+2026-Jun-18 20:13:25.243036
+#12 26.16 devDependencies:
+2026-Jun-18 20:13:25.243036
+#12 26.16 + prettier 3.8.3
+2026-Jun-18 20:13:25.243036
+#12 26.16 + typescript 5.9.3
+2026-Jun-18 20:13:25.243036
+#12 26.16
+2026-Jun-18 20:13:25.243036
+#12 26.32 . preinstall$ sh -c 'rm -f package-lock.json yarn.lock; case "$npm_config_user_agent" in pnpm/*) ;; *) echo "Use pnpm instead" >&2; exit 1 ;; esac'
+2026-Jun-18 20:13:25.243036
+#12 26.36 . preinstall: Done
+2026-Jun-18 20:13:25.243036
+#12 26.60 Done in 24.1s using pnpm v10.26.1
+2026-Jun-18 20:13:25.243036
+#12 DONE 26.9s
+2026-Jun-18 20:13:25.243036
+2026-Jun-18 20:13:25.243036
+#13 [builder 6/7] RUN NODE_ENV=production BASE_PATH=/ PORT=3000     pnpm --filter @workspace/autoservis run build
+2026-Jun-18 20:13:25.243036
+#13 2.889
+2026-Jun-18 20:13:25.243036
+#13 2.889 > @workspace/autoservis@0.0.0 build /app/artifacts/autoservis
+2026-Jun-18 20:13:25.243036
+#13 2.889 > vite build --config vite.config.ts
+2026-Jun-18 20:13:25.243036
+#13 2.889
+2026-Jun-18 20:13:25.243036
+#13 3.657 vite v7.3.3 building client environment for production...
+2026-Jun-18 20:13:25.243036
+#13 3.811 transforming...
+2026-Jun-18 20:13:25.243036
+#13 4.990 src/components/ui/tooltip.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+2026-Jun-18 20:13:25.243036
+#13 7.583 src/components/ui/label.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+2026-Jun-18 20:13:25.243036
+#13 7.743 src/components/ui/select.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+2026-Jun-18 20:13:25.243036
+#13 7.750 src/components/ui/sheet.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+2026-Jun-18 20:13:25.243036
+#13 9.645 src/components/ui/progress.tsx (2:0): Error when using sourcemap for reporting an error: Can't resolve original location of error.
+2026-Jun-18 20:13:25.501267
+========================================
+2026-Jun-18 20:13:26.310501
+Gracefully shutting down build container: grjlsvw0gl5mfclvl99fjjv9

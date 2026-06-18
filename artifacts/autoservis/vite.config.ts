@@ -84,6 +84,13 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    // Production builds run in a memory-constrained container (4GB). Limit how
+    // many files Rollup transforms in parallel to cap the transform-phase
+    // memory spike (the point the OOM killer struck during deploy). Slightly
+    // slower build, far lower peak RSS.
+    rollupOptions: {
+      maxParallelFileOps: 3,
+    },
   },
   server: {
     port,

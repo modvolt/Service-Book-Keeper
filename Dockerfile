@@ -18,11 +18,18 @@ RUN pnpm install --frozen-lockfile
 # only read while loading vite.config and is irrelevant to the static output.
 # REPL_ID is unset here, so the Replit-only dev plugins are never imported —
 # the production bundle is 100% Replit-free.
-RUN NODE_ENV=production BASE_PATH=/ PORT=3000 \
+# NODE_OPTIONS caps V8's old-space so it garbage-collects deterministically and
+# keeps RSS bounded under the container's 4GB limit instead of being OOM-killed.
+# 2560 (not 3072/4096) deliberately leaves >1GB headroom for everything outside
+# the V8 old-space heap: young/code/large-object spaces, Node native allocs, the
+# pnpm wrapper, Rollup plugins, esbuild's separate native child (NODE_OPTIONS
+# doesn't apply to it), BuildKit, and any concurrent old-app+db pressure during a
+# zero-downtime deploy. Local build peaks ~1.3GB summed RSS, so 2560 is safe.
+RUN NODE_OPTIONS=--max-old-space-size=2560 NODE_ENV=production BASE_PATH=/ PORT=3000 \
     pnpm --filter @workspace/autoservis run build
 
 # Build the API server bundle (esbuild -> artifacts/api-server/dist/index.mjs).
-RUN pnpm --filter @workspace/api-server run build
+RUN NODE_OPTIONS=--max-old-space-size=2560 pnpm --filter @workspace/api-server run build
 
 # ---------- Runtime ----------
 FROM node:24-bookworm-slim AS runtime
