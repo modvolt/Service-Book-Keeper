@@ -71,12 +71,14 @@ export default function NewVehicle() {
   // Set when the scan read one color from the TP but saw a different one on the
   // photo — surfaced as a warning next to the Barva field for the user to check.
   const [colorWarning, setColorWarning] = useState<{ tp: string; photo: string } | null>(null);
+  const [aresWarning, setAresWarning] = useState<"notfound" | "error" | null>(null);
 
   async function autoVerifyFromAres(ico: string | null | undefined, ownerType: string | null | undefined) {
     if (ownerType !== "company") return;
     const clean = normalizeIco(ico ?? "");
     if (!/^\d{8}$/.test(clean)) return;
     setAresVerifying(true);
+    setAresWarning(null);
     try {
       const result = await fetchAres(clean);
       if (result.ok) {
@@ -87,7 +89,10 @@ export default function NewVehicle() {
           ownerDic: result.data.dic || f.ownerDic,
         }));
         setOwnerSource("ares");
+        setAresWarning(null);
         toast({ title: "Údaje ověřeny v ARES", description: result.data.name });
+      } else {
+        setAresWarning(result.reason);
       }
     } finally {
       setAresVerifying(false);
@@ -302,10 +307,16 @@ export default function NewVehicle() {
                     Načteno ze skenu
                   </span>
                 )}
+                {!aresVerifying && aresWarning && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+                    <AlertTriangle className="h-3 w-3" />
+                    {aresWarning === "notfound" ? "IČO nenalezeno v ARES – zkontrolujte údaje" : "IČO se nepodařilo ověřit v ARES"}
+                  </span>
+                )}
               </div>
               <RadioGroup
                 value={form.ownerType}
-                onValueChange={(v) => setForm(f => ({ ...f, ownerType: v as "private" | "company" }))}
+                onValueChange={(v) => { setForm(f => ({ ...f, ownerType: v as "private" | "company" })); setAresWarning(null); }}
                 className="flex gap-6"
               >
                 <div className="flex items-center space-x-2">
@@ -323,7 +334,7 @@ export default function NewVehicle() {
                   <Input
                     placeholder={isCompany ? "AutoFirma s.r.o." : "Jan Novák"}
                     value={form.ownerName}
-                    onChange={e => { setForm(f => ({ ...f, ownerName: e.target.value })); setOwnerSource(null); }}
+                    onChange={e => { setForm(f => ({ ...f, ownerName: e.target.value })); setOwnerSource(null); setAresWarning(null); }}
                   />
                 </div>
                 <div className="space-y-1">
@@ -331,7 +342,7 @@ export default function NewVehicle() {
                   <Input
                     placeholder="Lubočinka 251, 251 68"
                     value={form.ownerAddress}
-                    onChange={e => { setForm(f => ({ ...f, ownerAddress: e.target.value })); setOwnerSource(null); }}
+                    onChange={e => { setForm(f => ({ ...f, ownerAddress: e.target.value })); setOwnerSource(null); setAresWarning(null); }}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
@@ -358,18 +369,18 @@ export default function NewVehicle() {
                       <div className="space-y-1">
                         <Label>IČO</Label>
                         <div className="flex gap-2">
-                          <Input placeholder="12345678" value={form.ownerIco} onChange={e => setForm(f => ({ ...f, ownerIco: e.target.value }))} />
+                          <Input placeholder="12345678" value={form.ownerIco} onChange={e => { setForm(f => ({ ...f, ownerIco: e.target.value })); setAresWarning(null); }} />
                           <AresButton ico={form.ownerIco} onLoaded={(d) => { setForm(f => ({
                             ...f,
                             ownerName: d.name || f.ownerName,
                             ownerAddress: d.address || f.ownerAddress,
                             ownerDic: d.dic || f.ownerDic,
-                          })); setOwnerSource("ares"); }} />
+                          })); setOwnerSource("ares"); setAresWarning(null); }} />
                         </div>
                       </div>
                       <div className="space-y-1">
                         <Label>DIČ</Label>
-                        <Input placeholder="CZ12345678" value={form.ownerDic} onChange={e => { setForm(f => ({ ...f, ownerDic: e.target.value })); setOwnerSource(null); }} />
+                        <Input placeholder="CZ12345678" value={form.ownerDic} onChange={e => { setForm(f => ({ ...f, ownerDic: e.target.value })); setOwnerSource(null); setAresWarning(null); }} />
                       </div>
                     </div>
                   </div>
