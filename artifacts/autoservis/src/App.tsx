@@ -27,11 +27,12 @@ import GdprPage from "@/pages/gdpr";
 import FleetPage from "@/pages/fleet";
 import SkenMaterialuPage from "@/pages/sken-materialu/index";
 import QrStitkyPage from "@/pages/sken-materialu/qr-stitky";
+import ScannerProfilPage from "@/pages/scanner-profil";
 import { useScanHandoff } from "@/hooks/use-scan-handoff";
 
 const queryClient = new QueryClient();
 
-const SCANNER_ALLOWED_PREFIXES = ["/sken-materialu", "/nacteni-vozu", "/nacteni-tp"];
+const SCANNER_ALLOWED_PREFIXES = ["/sken-materialu", "/nacteni-vozu", "/nacteni-tp", "/scanner-profil"];
 
 function Router() {
   const [location] = useLocation();
@@ -71,6 +72,7 @@ function Router() {
         <Route path="/gdpr" component={GdprPage} />
         <Route path="/sken-materialu" component={SkenMaterialuPage} />
         <Route path="/sken-materialu/qr-stitky" component={QrStitkyPage} />
+        <Route path="/scanner-profil" component={ScannerProfilPage} />
         <Route component={NotFound} />
       </Switch>
       </ErrorBoundary>

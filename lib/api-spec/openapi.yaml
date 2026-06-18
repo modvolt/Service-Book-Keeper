@@ -151,6 +151,33 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /auth/change-scanner-password:
+    post:
+      operationId: changeScannerPassword
+      tags: [auth]
+      summary: Change the scanner account's own password (scanner only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangeScannerPasswordInput"
+      responses:
+        "204":
+          description: Password changed
+        "400":
+          description: Invalid input or wrong current password
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Scanner only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /auth/forgot-password:
     post:
       operationId: forgotPassword
@@ -1418,6 +1445,17 @@ components:
       type: object
       required: [newPassword]
       properties:
+        newPassword:
+          type: string
+          minLength: 8
+
+    ChangeScannerPasswordInput:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+          minLength: 1
         newPassword:
           type: string
           minLength: 8

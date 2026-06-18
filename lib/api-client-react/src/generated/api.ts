@@ -29,6 +29,7 @@ import type {
   Backup,
   BackupRunResult,
   ChangePasswordInput,
+  ChangeScannerPasswordInput,
   CheckLoanerOverlapParams,
   CustomerReminderLogEntry,
   DashboardSummary,
@@ -603,6 +604,77 @@ export const useDeleteScannerPassword = <TError = ErrorType<Error>,
         TContext
       > => {
       return useMutation(getDeleteScannerPasswordMutationOptions(options));
+    }
+
+export const getChangeScannerPasswordUrl = () => {
+
+
+
+
+  return `/api/auth/change-scanner-password`
+}
+
+/**
+ * @summary Change the scanner account's own password (scanner only)
+ */
+export const changeScannerPassword = async (changeScannerPasswordInput: ChangeScannerPasswordInput, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getChangeScannerPasswordUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      changeScannerPasswordInput,)
+  }
+);}
+
+
+
+
+export const getChangeScannerPasswordMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeScannerPassword>>, TError,{data: BodyType<ChangeScannerPasswordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof changeScannerPassword>>, TError,{data: BodyType<ChangeScannerPasswordInput>}, TContext> => {
+
+const mutationKey = ['changeScannerPassword'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof changeScannerPassword>>, {data: BodyType<ChangeScannerPasswordInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  changeScannerPassword(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ChangeScannerPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof changeScannerPassword>>>
+    export type ChangeScannerPasswordMutationBody = BodyType<ChangeScannerPasswordInput>
+    export type ChangeScannerPasswordMutationError = ErrorType<Error>
+
+    /**
+ * @summary Change the scanner account's own password (scanner only)
+ */
+export const useChangeScannerPassword = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof changeScannerPassword>>, TError,{data: BodyType<ChangeScannerPasswordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof changeScannerPassword>>,
+        TError,
+        {data: BodyType<ChangeScannerPasswordInput>},
+        TContext
+      > => {
+      return useMutation(getChangeScannerPasswordMutationOptions(options));
     }
 
 export const getForgotPasswordUrl = () => {

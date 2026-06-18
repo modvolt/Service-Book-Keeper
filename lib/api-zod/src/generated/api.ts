@@ -73,6 +73,20 @@ export const SetScannerPasswordBody = zod.object({
 
 
 /**
+ * @summary Change the scanner account's own password (scanner only)
+ */
+
+export const changeScannerPasswordBodyNewPasswordMin = 8;
+
+
+
+export const ChangeScannerPasswordBody = zod.object({
+  "currentPassword": zod.string().min(1),
+  "newPassword": zod.string().min(changeScannerPasswordBodyNewPasswordMin)
+})
+
+
+/**
  * @summary Request a password reset link by e-mail
  */
 

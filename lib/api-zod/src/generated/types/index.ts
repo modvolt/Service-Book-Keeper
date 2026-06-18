@@ -19,6 +19,7 @@ export * from './authStatusRole';
 export * from './backup';
 export * from './backupRunResult';
 export * from './changePasswordInput';
+export * from './changeScannerPasswordInput';
 export * from './checkLoanerOverlapParams';
 export * from './customerReminderLogEntry';
 export * from './dashboardSummary';

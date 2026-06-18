@@ -68,6 +68,13 @@ export interface SetScannerPasswordInput {
   newPassword: string;
 }
 
+export interface ChangeScannerPasswordInput {
+  /** @minLength 1 */
+  currentPassword: string;
+  /** @minLength 8 */
+  newPassword: string;
+}
+
 export interface ForgotPasswordInput {
   /** @minLength 1 */
   email: string;

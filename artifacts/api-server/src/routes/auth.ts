@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { db, appAuthTable, settingsTable } from "@workspace/db";
-import { LoginBody, ChangePasswordBody, ForgotPasswordBody, ResetPasswordBody, SetScannerPasswordBody } from "@workspace/api-zod";
+import { LoginBody, ChangePasswordBody, ForgotPasswordBody, ResetPasswordBody, SetScannerPasswordBody, ChangeScannerPasswordBody } from "@workspace/api-zod";
 import { audit } from "../lib/audit";
 import { sendMail, isMailConfigured } from "../lib/mailer";
 import { logger } from "../lib/logger";
@@ -212,6 +212,52 @@ router.post("/auth/change-password", async (req, res): Promise<void> => {
     .onConflictDoUpdate({ target: appAuthTable.id, set: { passwordHash, updatedAt: new Date() } });
 
   await audit("password_changed");
+  res.status(204).end();
+});
+
+/**
+ * Change the scanner account's own password. Scanner role only.
+ * Requires the current password to be provided (self-service, not a forced reset).
+ */
+router.post("/auth/change-scanner-password", async (req, res): Promise<void> => {
+  if (!req.session?.authenticated) {
+    res.status(401).json({ error: "Nepřihlášen" });
+    return;
+  }
+  const role = req.session.role ?? "admin";
+  if (role !== "scanner") {
+    res.status(403).json({ error: "Tato akce je dostupná pouze pro účet skeneru." });
+    return;
+  }
+
+  const parsed = ChangeScannerPasswordBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const hash = await getOrSeedScannerHash();
+  if (!hash) {
+    res.status(503).json({ error: "Účet skeneru není nastaven." });
+    return;
+  }
+
+  const valid = await bcrypt.compare(parsed.data.currentPassword, hash);
+  if (!valid) {
+    res.status(400).json({ error: "Současné heslo je nesprávné." });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(parsed.data.newPassword, BCRYPT_ROUNDS);
+  await db
+    .insert(appAuthTable)
+    .values({ id: SCANNER_ROW_ID, passwordHash, role: "scanner", updatedAt: new Date() })
+    .onConflictDoUpdate({
+      target: appAuthTable.id,
+      set: { passwordHash, updatedAt: new Date() },
+    });
+
+  await audit("scanner_password_changed");
   res.status(204).end();
 });
 

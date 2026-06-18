@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar, Settings as SettingsIcon, ScanLine, AlertTriangle, BarChart3, LogOut, Shield, KeyRound, RefreshCw, PackageSearch } from "lucide-react";
+import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar, Settings as SettingsIcon, ScanLine, AlertTriangle, BarChart3, LogOut, Shield, KeyRound, RefreshCw, PackageSearch, UserCog } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGetSettings, useLogout, getGetAuthStatusQueryKey, useGetAuthStatus } from "@workspace/api-client-react";
@@ -157,6 +157,22 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const NavLinksBottom = () => (
     <div className="flex flex-col space-y-1">
       {!isScanner && BOTTOM_NAV_ITEMS.map(renderItem)}
+      {isScanner && (
+        <Link href="/scanner-profil">
+          <div
+            className={cn(
+              "flex items-center px-3 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer",
+              location === "/scanner-profil"
+                ? "bg-primary text-primary-foreground"
+                : "text-foreground/80 hover:bg-slate-100 dark:hover:bg-slate-800/50"
+            )}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <UserCog className={cn("h-4 w-4 mr-3", location === "/scanner-profil" ? "" : "text-slate-600 dark:text-slate-400")} />
+            Můj profil
+          </div>
+        </Link>
+      )}
       <button
         type="button"
         disabled={logout.isPending}

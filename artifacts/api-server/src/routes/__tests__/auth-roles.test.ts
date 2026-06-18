@@ -218,3 +218,88 @@ describe("change-password role restriction", () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe("POST /auth/change-scanner-password", () => {
+  it("rejects unauthenticated requests with 401", async () => {
+    const res = await request(makeApp())
+      .post("/auth/change-scanner-password")
+      .send({ currentPassword: SCANNER_PASSWORD, newPassword: "new-password-ok" });
+
+    expect(res.status).toBe(401);
+  });
+
+  it("rejects admin role with 403", async () => {
+    seedAdmin();
+    const agent = request.agent(makeApp());
+    await agent.post("/auth/login").send({ password: ADMIN_PASSWORD });
+
+    const res = await agent
+      .post("/auth/change-scanner-password")
+      .send({ currentPassword: ADMIN_PASSWORD, newPassword: "new-password-ok" });
+
+    expect(res.status).toBe(403);
+  });
+
+  it("rejects a wrong current password with 400", async () => {
+    seedAdmin();
+    seedScanner();
+    process.env.SCANNER_PASSWORD = SCANNER_PASSWORD;
+    const agent = request.agent(makeApp());
+    await agent.post("/auth/login").send({ password: SCANNER_PASSWORD });
+
+    const res = await agent
+      .post("/auth/change-scanner-password")
+      .send({ currentPassword: "wrong-password", newPassword: "new-password-ok" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/nesprávné/i);
+  });
+
+  it("rejects a new password shorter than 8 characters with 400", async () => {
+    seedAdmin();
+    seedScanner();
+    process.env.SCANNER_PASSWORD = SCANNER_PASSWORD;
+    const agent = request.agent(makeApp());
+    await agent.post("/auth/login").send({ password: SCANNER_PASSWORD });
+
+    const res = await agent
+      .post("/auth/change-scanner-password")
+      .send({ currentPassword: SCANNER_PASSWORD, newPassword: "short" });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("allows scanner to change their own password with correct current password", async () => {
+    seedAdmin();
+    seedScanner();
+    process.env.SCANNER_PASSWORD = SCANNER_PASSWORD;
+    const agent = request.agent(makeApp());
+    await agent.post("/auth/login").send({ password: SCANNER_PASSWORD });
+
+    const res = await agent
+      .post("/auth/change-scanner-password")
+      .send({ currentPassword: SCANNER_PASSWORD, newPassword: "brand-new-pw-1" });
+
+    expect(res.status).toBe(204);
+  });
+
+  it("new password takes effect immediately — old one no longer works", async () => {
+    seedAdmin();
+    seedScanner();
+    process.env.SCANNER_PASSWORD = SCANNER_PASSWORD;
+    const app = makeApp();
+
+    const agent = request.agent(app);
+    await agent.post("/auth/login").send({ password: SCANNER_PASSWORD });
+    await agent
+      .post("/auth/change-scanner-password")
+      .send({ currentPassword: SCANNER_PASSWORD, newPassword: "brand-new-pw-2" });
+
+    // A fresh login attempt with the old password should now fail.
+    const loginRes = await request(app)
+      .post("/auth/login")
+      .send({ password: SCANNER_PASSWORD });
+
+    expect(loginRes.status).toBe(401);
+  });
+});
