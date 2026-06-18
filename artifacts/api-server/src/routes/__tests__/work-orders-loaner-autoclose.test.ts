@@ -151,3 +151,30 @@ describe("PATCH /work-orders/:id — paid auto-closes loaners", () => {
     expect(loaner(1)).toMatchObject({ status: "active" });
   });
 });
+
+describe("GET /work-orders — SPZ search is space-insensitive", () => {
+  function seedOrders(): void {
+    seed(workOrdersTable, [
+      { id: 1, vehicleId: null, licensePlate: "1AB 2345", status: "open", paid: false, completedAt: null, createdAt: new Date() },
+      { id: 2, vehicleId: null, licensePlate: "9ZZ 9999", status: "in_progress", paid: false, completedAt: null, createdAt: new Date() },
+    ]);
+  }
+
+  it("finds a canonically-spaced plate when searched with a compact query (no space)", async () => {
+    seedOrders();
+
+    const res = await request(makeApp()).get("/work-orders").query({ search: "1AB2345" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.map((o: { id: number }) => o.id)).toEqual([1]);
+  });
+
+  it("still finds a plate when searched with the canonical spaced form", async () => {
+    seedOrders();
+
+    const res = await request(makeApp()).get("/work-orders").query({ search: "1AB 2345" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.map((o: { id: number }) => o.id)).toEqual([1]);
+  });
+});

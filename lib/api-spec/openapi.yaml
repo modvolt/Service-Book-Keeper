@@ -2275,6 +2275,13 @@ components:
           type: ["string", "null"]
         unitPrice:
           type: ["integer", "null"]
+        spz:
+          type: string
+          description: >-
+            License plate the material is being added under. Required for scanner
+            sessions: the server verifies it matches the target work order's plate
+            before writing, so a scanner can only append to an order for a vehicle
+            it actually scanned. Ignored for admin sessions.
 
     WorkOrderMaterialUpdateInput:
       type: object

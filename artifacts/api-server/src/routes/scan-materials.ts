@@ -39,7 +39,8 @@ Pravidla:
 - Pokud nevidíš žádné identifikovatelné díly, vrať { "items": [] }.
 - Nevymýšlej položky, které na fotografiích nejsou.`;
 
-// TODO: swap requireAuth for requireScannerOrAdmin once Task A (Scanner role middleware) is merged.
+// Registered on scannerRouter (routes/index.ts), so this runs under
+// requireScannerOrAdmin — both the admin and the scanner role can reach it.
 router.post("/work-orders/scan-materials", largeJson, async (req, res): Promise<void> => {
   const parsed = ScanMaterialsBody.safeParse(req.body);
   if (!parsed.success) {

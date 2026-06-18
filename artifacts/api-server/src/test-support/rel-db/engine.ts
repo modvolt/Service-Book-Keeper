@@ -72,6 +72,16 @@ function isColumn(x: unknown): x is ColumnRef {
   return typeof x === "object" && x !== null && (x as { __col?: boolean }).__col === true;
 }
 
+function isTable(x: unknown): x is TableInstance {
+  return (
+    typeof x === "object" &&
+    x !== null &&
+    (x as { __col?: boolean }).__col !== true &&
+    typeof (x as { __ownerId?: unknown }).__ownerId === "number" &&
+    typeof (x as { __tableKey?: unknown }).__tableKey === "string"
+  );
+}
+
 function isSql(x: unknown): x is SqlMarker {
   return typeof x === "object" && x !== null && (x as { __sql?: boolean }).__sql === true;
 }
@@ -317,7 +327,11 @@ class SelectBuilder {
     return namespaces.map((ns) => {
       const out: Row = {};
       for (const [key, col] of Object.entries(shape)) {
-        out[key] = isColumn(col) ? resolve(col, ns) : null;
+        out[key] = isColumn(col)
+          ? resolve(col, ns)
+          : isTable(col)
+          ? (ns.get((col as TableInstance).__ownerId) ?? null)
+          : null;
       }
       return out;
     });
@@ -480,6 +494,10 @@ export const vehiclesTable = makeTable("vehicles", [
 export const workOrdersTable = makeTable("work_orders", [
   "id", "vehicleId", "licensePlate", "status", "paid", "completedAt",
   "serviceDate", "createdAt", "description",
+]);
+
+export const workOrderMaterialsTable = makeTable("work_order_materials", [
+  "id", "workOrderId", "name", "quantity", "unit", "unitPrice", "createdAt",
 ]);
 
 export const photosTable = makeTable("photos", ["id", "workOrderId", "url"]);

@@ -407,7 +407,8 @@ export const AddWorkOrderMaterialBody = zod.object({
   "name": zod.string().min(1),
   "quantity": zod.string().optional(),
   "unit": zod.string().nullish(),
-  "unitPrice": zod.number().nullish()
+  "unitPrice": zod.number().nullish(),
+  "spz": zod.string().optional().describe('License plate the material is being added under. Required for scanner sessions: the server verifies it matches the target work order\'s plate before writing, so a scanner can only append to an order for a vehicle it actually scanned. Ignored for admin sessions.')
 })
 
 

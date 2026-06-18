@@ -804,6 +804,8 @@ export interface WorkOrderMaterialInput {
   unit?: string | null;
   /** @nullable */
   unitPrice?: number | null;
+  /** License plate the material is being added under. Required for scanner sessions: the server verifies it matches the target work order's plate before writing, so a scanner can only append to an order for a vehicle it actually scanned. Ignored for admin sessions. */
+  spz?: string;
 }
 
 export interface WorkOrderMaterialUpdateInput {

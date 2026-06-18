@@ -206,16 +206,25 @@ export default function SkenMaterialuPage() {
 
   const spzClean = confirmedSpz.replace(/\s+/g, "").toUpperCase();
 
-  // Fetch work orders when SPZ is confirmed — search by plate, status "open" only
-  const { data: workOrders, isFetching: ordersFetching } = useListWorkOrders(
-    { search: spzClean, status: "open" as const },
+  // Fetch work orders when SPZ is confirmed — search by plate. Any non-completed
+  // status counts as open for scan purposes (matches the scan-materials endpoint),
+  // so we don't filter by a single status server-side.
+  const {
+    data: workOrders,
+    isFetching: ordersFetching,
+    isError: ordersError,
+    refetch: refetchOrders,
+  } = useListWorkOrders(
+    { search: spzClean },
     { query: { enabled: spzClean.length >= 3 } as any },
   );
 
   const openWorkOrders = useMemo(() => {
     if (!workOrders || !spzClean) return [];
     return workOrders.filter(
-      (o) => (o.licensePlate ?? "").replace(/\s+/g, "").toUpperCase() === spzClean,
+      (o) =>
+        o.status !== "completed" &&
+        (o.licensePlate ?? "").replace(/\s+/g, "").toUpperCase() === spzClean,
     );
   }, [workOrders, spzClean]);
 
@@ -227,9 +236,10 @@ export default function SkenMaterialuPage() {
     }
     return null;
   }, [openWorkOrders, selectedWorkOrderId]);
-  const workOrderResolved = spzClean.length >= 3 && !ordersFetching;
+  const workOrderResolved = spzClean.length >= 3 && !ordersFetching && !ordersError;
   const noOpenOrder = workOrderResolved && openWorkOrders.length === 0;
   const multipleOpenOrders = workOrderResolved && openWorkOrders.length > 1;
+  const lookupFailed = spzClean.length >= 3 && !ordersFetching && ordersError;
 
   // Step 2 — Material photos
   const [matFiles, setMatFiles] = useState<File[]>([]);
@@ -396,7 +406,7 @@ export default function SkenMaterialuPage() {
       await new Promise<void>((resolve) => {
         addMaterial.mutate({
           id: scanResult.workOrderId,
-          data: { name: s.name, quantity: s.quantity || "1", unit: s.unit, unitPrice: s.unitPrice },
+          data: { name: s.name, quantity: s.quantity || "1", unit: s.unit, unitPrice: s.unitPrice, spz: confirmedSpz },
         }, {
           onSuccess: () => { count++; resolve(); },
           onError: () => resolve(),
@@ -583,6 +593,24 @@ export default function SkenMaterialuPage() {
                         Pokračovat na materiály
                       </Button>
                     )}
+                  </div>
+                )}
+
+                {/* Lookup failed (network/server error) — distinct from "no open order" */}
+                {lookupFailed && (
+                  <div className="space-y-3">
+                    <div className="flex items-start gap-2 text-sm text-rose-700 dark:text-rose-400">
+                      <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                      <span>Zakázku se nepodařilo načíst. Zkontrolujte připojení a zkuste to znovu.</span>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => refetchOrders()}
+                    >
+                      <RotateCcw className="h-4 w-4 mr-2" />Zkusit znovu
+                    </Button>
                   </div>
                 )}
 

@@ -1,4 +1,4 @@
-import { Router, type IRouter, json } from "express";
+import { Router, type IRouter, json, type Request, type Response } from "express";
 import { eq, ilike, asc, sql } from "drizzle-orm";
 import { db, materialsCatalogTable, workOrderMaterialsTable, workOrdersTable } from "@workspace/db";
 import { getOpenAI, getOpenAIModel } from "@workspace/integrations-openai-ai-server";
@@ -207,7 +207,10 @@ router.get("/materials/:id/qr", async (req, res): Promise<void> => {
   res.json({ id: row.id, name: row.name, unit: row.unit ?? null, payload });
 });
 
-router.get("/work-orders/:id/materials", async (req, res): Promise<void> => {
+// Exported so the scanner-accessible router can register these exact handlers
+// under requireScannerOrAdmin (the material-scan workflow lists and appends
+// materials on an existing work order). The materials catalog CRUD stays admin-only.
+export const listWorkOrderMaterialsHandler = async (req: Request, res: Response): Promise<void> => {
   const id = parseInt(req.params.id as string, 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
   const [order] = await db.select({ id: workOrdersTable.id }).from(workOrdersTable).where(eq(workOrdersTable.id, id));
@@ -216,9 +219,10 @@ router.get("/work-orders/:id/materials", async (req, res): Promise<void> => {
     .where(eq(workOrderMaterialsTable.workOrderId, id))
     .orderBy(asc(workOrderMaterialsTable.createdAt));
   res.json(rows);
-});
+};
+router.get("/work-orders/:id/materials", listWorkOrderMaterialsHandler);
 
-router.post("/work-orders/:id/materials", async (req, res): Promise<void> => {
+export const addWorkOrderMaterialHandler = async (req: Request, res: Response): Promise<void> => {
   const id = parseInt(req.params.id as string, 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
 
@@ -257,7 +261,55 @@ router.post("/work-orders/:id/materials", async (req, res): Promise<void> => {
   }
 
   res.status(201).json(row);
-});
+};
+router.post("/work-orders/:id/materials", addWorkOrderMaterialHandler);
+
+/**
+ * Scanner-scoped variant of {@link addWorkOrderMaterialHandler}. The material
+ * scan may only append to an OPEN (non-completed) work order, and — unlike the
+ * admin handler — it never creates catalog entries (catalog CRUD is admin-only).
+ * This narrows the scanner's reach on this shared route to exactly what the scan
+ * workflow needs, so a scanner cannot pad closed orders or pollute the catalog.
+ */
+export const addMaterialToOpenWorkOrderForScannerHandler = async (req: Request, res: Response): Promise<void> => {
+  const id = parseInt(req.params.id as string, 10);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
+
+  const parsed = AddWorkOrderMaterialBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const [order] = await db.select().from(workOrdersTable).where(eq(workOrdersTable.id, id));
+  if (!order) { res.status(404).json({ error: "Zakázka nenalezena" }); return; }
+
+  // Authorize the write against the plate the scanner actually scanned: the SPZ
+  // must match this order's plate. Without this a scanner could POST materials to
+  // any open order by guessing its numeric id (IDOR). Compacted, case-insensitive
+  // comparison mirrors the scoped lookup. Checked before the open-status check so
+  // we never leak the state of an order the scanner has no claim to.
+  const providedSpz = (parsed.data.spz ?? "").replace(/\s+/g, "").toUpperCase();
+  const orderSpz = (order.licensePlate ?? "").replace(/\s+/g, "").toUpperCase();
+  if (!providedSpz || providedSpz !== orderSpz) {
+    res.status(403).json({ error: "Přístup odepřen" });
+    return;
+  }
+
+  if (order.status === "completed") { res.status(409).json({ error: "Zakázka je již uzavřená." }); return; }
+
+  // Normalize quantity: accept Czech comma decimals, fall back to "1" for invalid input
+  const rawQty = parsed.data.quantity?.toString().trim().replace(",", ".") ?? "1";
+  const qtyNum = parseFloat(rawQty);
+  const normalizedQty = Number.isFinite(qtyNum) && qtyNum > 0 ? String(qtyNum) : "1";
+
+  const [row] = await db.insert(workOrderMaterialsTable).values({
+    workOrderId: id,
+    name: parsed.data.name.trim(),
+    quantity: normalizedQty,
+    unit: parsed.data.unit ?? null,
+    unitPrice: parsed.data.unitPrice ?? null,
+  }).returning();
+
+  res.status(201).json(row);
+};
 
 router.patch("/work-order-materials/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string, 10);

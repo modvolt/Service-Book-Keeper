@@ -1,5 +1,5 @@
-import { Router, type IRouter } from "express";
-import { eq, ilike, and, sql } from "drizzle-orm";
+import { Router, type IRouter, type Request, type Response } from "express";
+import { eq, ne, ilike, and, sql } from "drizzle-orm";
 import multer from "multer";
 import { db, workOrdersTable, vehiclesTable, photosTable, loanersTable } from "@workspace/db";
 import { getObjectStorageService } from "../lib/storage";
@@ -37,7 +37,7 @@ async function propagateWorkOrderToVehicle(orderId: number): Promise<void> {
   await recomputeVehicleServiceStatus(order.vehicleId);
 }
 
-router.get("/work-orders", async (req, res): Promise<void> => {
+export const listWorkOrdersHandler = async (req: Request, res: Response): Promise<void> => {
   const query = ListWorkOrdersQueryParams.safeParse(req.query);
   if (!query.success) {
     res.status(400).json({ error: query.error.message });
@@ -61,13 +61,20 @@ router.get("/work-orders", async (req, res): Promise<void> => {
 
   if (query.data.search) {
     const s = query.data.search.toLowerCase();
-    rows = rows.filter(r =>
-      r.order.licensePlate.toLowerCase().includes(s) ||
-      r.order.description?.toLowerCase().includes(s) ||
-      r.make?.toLowerCase().includes(s) ||
-      r.model?.toLowerCase().includes(s) ||
-      r.ownerName?.toLowerCase().includes(s)
-    );
+    // SPZ is stored canonically as "XXX XXXX" (with a space); match space-insensitively
+    // so a compact query like "1AB2345" still finds the stored "1AB 2345" and vice versa.
+    const sCompact = s.replace(/\s+/g, "");
+    rows = rows.filter(r => {
+      const plate = r.order.licensePlate.toLowerCase();
+      return (
+        plate.includes(s) ||
+        (sCompact.length > 0 && plate.replace(/\s+/g, "").includes(sCompact)) ||
+        r.order.description?.toLowerCase().includes(s) ||
+        r.make?.toLowerCase().includes(s) ||
+        r.model?.toLowerCase().includes(s) ||
+        r.ownerName?.toLowerCase().includes(s)
+      );
+    });
   }
 
   const withPhotos = await Promise.all(rows.map(async (r) => {
@@ -76,7 +83,57 @@ router.get("/work-orders", async (req, res): Promise<void> => {
   }));
 
   res.json(withPhotos);
-});
+};
+router.get("/work-orders", listWorkOrdersHandler);
+
+/**
+ * Scoped work-order lookup for the scanner role's material-scan workflow.
+ *
+ * Registered on scannerRouter (routes/index.ts) under requireScannerOrAdmin. A
+ * scanner only needs to find the OPEN work order for the single SPZ they just
+ * scanned, so this handler — unlike the admin listWorkOrdersHandler — refuses to
+ * act as an unfiltered list:
+ *  - it requires a plate-like query (>= 3 compacted chars); without one it
+ *    returns [] instead of enumerating every order;
+ *  - it matches on the license plate only (space-insensitive), never on
+ *    description/make/model/owner;
+ *  - it returns only non-completed (open) orders;
+ *  - it omits the vehicle join, so no owner/make/model PII is exposed (those
+ *    keys are present but null to keep the response shape identical to the admin
+ *    list, which the shared useListWorkOrders hook consumes).
+ */
+export const lookupOpenWorkOrdersForScannerHandler = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const query = ListWorkOrdersQueryParams.safeParse(req.query);
+  if (!query.success) {
+    res.status(400).json({ error: query.error.message });
+    return;
+  }
+
+  const sCompact = (query.data.search ?? "").replace(/\s+/g, "").toLowerCase();
+  if (sCompact.length < 3) {
+    res.json([]);
+    return;
+  }
+
+  const rows = await db
+    .select()
+    .from(workOrdersTable)
+    .where(ne(workOrdersTable.status, "completed"))
+    .orderBy(
+      sql`coalesce(${workOrdersTable.serviceDate}, ${workOrdersTable.createdAt}::date) desc, ${workOrdersTable.createdAt} desc`,
+    );
+
+  // Exact compacted-plate equality (NOT a substring match): a scanner must not
+  // be able to probe partial plates to enumerate other vehicles' open orders.
+  const matches = rows
+    .filter((o) => o.licensePlate.replace(/\s+/g, "").toLowerCase() === sCompact)
+    .map((o) => ({ ...o, make: null, model: null, ownerName: null, photos: [] }));
+
+  res.json(matches);
+};
 
 router.post("/work-orders", async (req, res): Promise<void> => {
   const parsed = CreateWorkOrderBody.safeParse(req.body);

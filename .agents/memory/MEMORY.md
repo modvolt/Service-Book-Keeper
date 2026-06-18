@@ -11,6 +11,7 @@
 - [Scan km-prefill gating](scan-km-prefill-gating.md) — a scanned odometer prefills a known vehicle's work order only when strictly > stored currentKm; enforced in server + client, keep in lockstep.
 - [helmet CSP blocks inline scripts](helmet-csp-inline-script.md) — server-rendered HTML pages can't use inline <script> (script-src 'self'); serve JS as a same-origin file instead.
 - [Docker deploy smoke testing](docker-deploy-smoke-testing.md) — nested Docker in the workspace breaks bridge nets + exec healthchecks; use host net, literal env, X-Forwarded-Proto for secure cookies. Build needs pnpm pin.
+- [Scanner router shadowing](scanner-router-shadowing.md) — scanner router mounts before admin + admins pass its gate, so dual-role paths need ONE role-branching handler; scanner writes bound to scanned SPZ, not a token.
 - [Invalid date render crash](invalid-date-render-crash.md) — a present-but-invalid date (e.g. 5-digit-year scan typo in a Postgres date col) makes date-fns format throw and crash a whole list; guard with isValid, null-check isn't enough.
 - [Coolify host-port collision](coolify-port-binding.md) — Compose app that builds but dies at start with "port is already allocated" = host-port clash; use expose, not ports, under Coolify.
 - [Health gate vs object storage](readiness-health-gate.md) — /api/healthz readiness must gate on DB only; a failing/misconfigured S3 must never 503 the whole site (HeadBucket can 403 even when GET/PUT work).

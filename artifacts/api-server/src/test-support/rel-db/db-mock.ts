@@ -6,6 +6,7 @@ export {
   loanersTable,
   vehiclesTable,
   workOrdersTable,
+  workOrderMaterialsTable,
   photosTable,
   serviceRecordsTable,
   appointmentsTable,
