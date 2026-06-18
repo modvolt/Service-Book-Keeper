@@ -2,9 +2,6 @@ import { Router, type IRouter, json } from "express";
 import {
   getOpenAI,
   getOpenAIModel,
-  getPlatformOpenAI,
-  getPromptId,
-  getPromptVersion,
 } from "@workspace/integrations-openai-ai-server";
 import { ImportVehicleFromTpBody } from "@workspace/api-zod";
 import { normalizeSpzOrNull } from "../lib/spz";
@@ -70,56 +67,33 @@ router.post("/vehicles/import-tp", largeJson, async (req, res): Promise<void> =>
   }
 
   try {
-    const promptId = getPromptId();
     const userText = "Extrahuj údaje o vozidle z těchto fotografií:";
 
-    let text: string;
-    if (promptId) {
-      // Stored-prompt path: call the OpenAI platform directly (own API key) and
-      // reference the prompt by ID. The prompt's instructions and output format
-      // are managed on the platform, so no inline system prompt is sent.
-      const version = getPromptVersion();
-      const response = await getPlatformOpenAI().responses.create({
-        prompt: { id: promptId, ...(version ? { version } : {}) },
-        input: [
-          {
-            role: "user",
-            content: [
-              { type: "input_text", text: userText },
-              ...parsed.data.images.map((b64) => ({
-                type: "input_image" as const,
-                image_url: `data:image/jpeg;base64,${b64}`,
-                detail: "auto" as const,
-              })),
-            ],
-          },
-        ],
-      });
-      text = response.output_text?.trim() || "{}";
-    } else {
-      // Fallback path: Replit AI integration with the inline system prompt.
-      const imageContents = parsed.data.images.map((b64) => ({
-        type: "image_url" as const,
-        image_url: { url: `data:image/jpeg;base64,${b64}` },
-      }));
-
-      const response = await getOpenAI().chat.completions.create({
-        model: getOpenAIModel(),
-        max_completion_tokens: 4096,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: userText },
-              ...imageContents,
-            ],
-          },
-        ],
-      });
-      text = response.choices[0]?.message?.content ?? "{}";
-    }
+    // Single inline path via the Responses API (Replit AI integration). The
+    // prompt lives in code (SYSTEM_PROMPT) rather than a platform-managed stored
+    // prompt — OpenAI is retiring stored prompts, so referencing one by ID is no
+    // longer reliable. JSON mode + an explicit "return only JSON" instruction
+    // keep the output parseable; stripJsonFences guards a stray code fence.
+    const response = await getOpenAI().responses.create({
+      model: getOpenAIModel(),
+      max_output_tokens: 4096,
+      text: { format: { type: "json_object" } },
+      input: [
+        { role: "system", content: SYSTEM_PROMPT },
+        {
+          role: "user",
+          content: [
+            { type: "input_text", text: userText },
+            ...parsed.data.images.map((b64) => ({
+              type: "input_image" as const,
+              image_url: `data:image/jpeg;base64,${b64}`,
+              detail: "auto" as const,
+            })),
+          ],
+        },
+      ],
+    });
+    const text = response.output_text?.trim() || "{}";
 
     let extracted: Record<string, unknown>;
     try {
