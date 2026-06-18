@@ -14,7 +14,9 @@ export type AuditAction =
   | "gdpr_consent"
   | "vehicle_deleted"
   | "appointment_deleted"
-  | "work_order_deleted";
+  | "work_order_deleted"
+  | "scanner_password_changed"
+  | "scanner_password_deleted";
 
 /**
  * Persist an audit record. Never store secrets, tokens, passwords or session IDs.

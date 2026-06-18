@@ -24,7 +24,8 @@ export const HealthCheckResponse = zod.object({
  */
 export const GetAuthStatusResponse = zod.object({
   "authenticated": zod.boolean(),
-  "role": zod.enum(['admin', 'scanner']).nullish().describe('Role of the authenticated user. Null when not authenticated.')
+  "role": zod.enum(['admin', 'scanner']).nullish().describe('Role of the authenticated user. Null when not authenticated.'),
+  "scannerEnabled": zod.boolean().optional().describe('Whether a scanner account password is currently configured (admin info only).')
 })
 
 
@@ -40,7 +41,8 @@ export const LoginBody = zod.object({
 
 export const LoginResponse = zod.object({
   "authenticated": zod.boolean(),
-  "role": zod.enum(['admin', 'scanner']).nullish().describe('Role of the authenticated user. Null when not authenticated.')
+  "role": zod.enum(['admin', 'scanner']).nullish().describe('Role of the authenticated user. Null when not authenticated.'),
+  "scannerEnabled": zod.boolean().optional().describe('Whether a scanner account password is currently configured (admin info only).')
 })
 
 
@@ -55,6 +57,18 @@ export const changePasswordBodyNewPasswordMin = 8;
 export const ChangePasswordBody = zod.object({
   "currentPassword": zod.string().min(1),
   "newPassword": zod.string().min(changePasswordBodyNewPasswordMin)
+})
+
+
+/**
+ * @summary Set or change the scanner account password (admin only)
+ */
+export const setScannerPasswordBodyNewPasswordMin = 8;
+
+
+
+export const SetScannerPasswordBody = zod.object({
+  "newPassword": zod.string().min(setScannerPasswordBodyNewPasswordMin)
 })
 
 

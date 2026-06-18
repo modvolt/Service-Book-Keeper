@@ -109,6 +109,48 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /auth/set-scanner-password:
+    post:
+      operationId: setScannerPassword
+      tags: [auth]
+      summary: Set or change the scanner account password (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetScannerPasswordInput"
+      responses:
+        "204":
+          description: Scanner password set
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /auth/scanner-password:
+    delete:
+      operationId: deleteScannerPassword
+      tags: [auth]
+      summary: Disable the scanner account (admin only)
+      responses:
+        "204":
+          description: Scanner account disabled
+        "403":
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /auth/forgot-password:
     post:
       operationId: forgotPassword
@@ -1320,6 +1362,9 @@ components:
           enum: [admin, scanner]
           nullable: true
           description: Role of the authenticated user. Null when not authenticated.
+        scannerEnabled:
+          type: boolean
+          description: Whether a scanner account password is currently configured (admin info only).
 
     LoginInput:
       type: object
@@ -1336,6 +1381,14 @@ components:
         currentPassword:
           type: string
           minLength: 1
+        newPassword:
+          type: string
+          minLength: 8
+
+    SetScannerPasswordInput:
+      type: object
+      required: [newPassword]
+      properties:
         newPassword:
           type: string
           minLength: 8

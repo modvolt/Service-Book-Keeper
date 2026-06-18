@@ -47,6 +47,8 @@ export interface AuthStatus {
   authenticated: boolean;
   /** Role of the authenticated user. Null when not authenticated. */
   role?: AuthStatusRole;
+  /** Whether a scanner account password is currently configured (admin info only). */
+  scannerEnabled?: boolean;
 }
 
 export interface LoginInput {
@@ -57,6 +59,11 @@ export interface LoginInput {
 export interface ChangePasswordInput {
   /** @minLength 1 */
   currentPassword: string;
+  /** @minLength 8 */
+  newPassword: string;
+}
+
+export interface SetScannerPasswordInput {
   /** @minLength 8 */
   newPassword: string;
 }

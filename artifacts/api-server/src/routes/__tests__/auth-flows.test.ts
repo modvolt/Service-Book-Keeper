@@ -104,7 +104,7 @@ describe("POST /auth/login", () => {
 
     // The rotated session must report as authenticated on a follow-up request.
     const me = await agent.get("/auth/me");
-    expect(me.body).toEqual({ authenticated: true, role: "admin" });
+    expect(me.body).toEqual({ authenticated: true, role: "admin", scannerEnabled: false });
 
     expect(auditActions()).toContain("login");
   });
@@ -207,7 +207,7 @@ describe("POST /auth/logout", () => {
     expect(change.status).toBe(401);
 
     const me = await agent.get("/auth/me");
-    expect(me.body).toEqual({ authenticated: false, role: null });
+    expect(me.body).toEqual({ authenticated: false, role: null, scannerEnabled: false });
   });
 
   it("does not record a logout audit when there was no authenticated session", async () => {

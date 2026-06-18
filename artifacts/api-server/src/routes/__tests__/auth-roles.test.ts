@@ -113,7 +113,7 @@ describe("Scanner login", () => {
 describe("GET /auth/me role field", () => {
   it("returns role=null when not authenticated", async () => {
     const res = await request(makeApp()).get("/auth/me");
-    expect(res.body).toEqual({ authenticated: false, role: null });
+    expect(res.body).toEqual({ authenticated: false, role: null, scannerEnabled: false });
   });
 
   it("returns role=admin for an admin session", async () => {
@@ -122,7 +122,7 @@ describe("GET /auth/me role field", () => {
     await agent.post("/auth/login").send({ password: ADMIN_PASSWORD });
 
     const me = await agent.get("/auth/me");
-    expect(me.body).toEqual({ authenticated: true, role: "admin" });
+    expect(me.body).toEqual({ authenticated: true, role: "admin", scannerEnabled: false });
   });
 
   it("returns role=scanner for a scanner session", async () => {
@@ -133,7 +133,7 @@ describe("GET /auth/me role field", () => {
     await agent.post("/auth/login").send({ password: SCANNER_PASSWORD });
 
     const me = await agent.get("/auth/me");
-    expect(me.body).toEqual({ authenticated: true, role: "scanner" });
+    expect(me.body).toEqual({ authenticated: true, role: "scanner", scannerEnabled: true });
   });
 });
 

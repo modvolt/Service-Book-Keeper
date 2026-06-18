@@ -11,4 +11,6 @@ export interface AuthStatus {
   authenticated: boolean;
   /** Role of the authenticated user. Null when not authenticated. */
   role?: AuthStatusRole;
+  /** Whether a scanner account password is currently configured (admin info only). */
+  scannerEnabled?: boolean;
 }

@@ -69,6 +69,7 @@ import type {
   ServiceRecord,
   ServiceRecordInput,
   SetConsentInput,
+  SetScannerPasswordInput,
   Settings,
   SettingsInput,
   TestReminderResult,
@@ -460,6 +461,147 @@ export const useChangePassword = <TError = ErrorType<Error>,
         TContext
       > => {
       return useMutation(getChangePasswordMutationOptions(options));
+    }
+
+export const getSetScannerPasswordUrl = () => {
+
+
+
+
+  return `/api/auth/set-scanner-password`
+}
+
+/**
+ * @summary Set or change the scanner account password (admin only)
+ */
+export const setScannerPassword = async (setScannerPasswordInput: SetScannerPasswordInput, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getSetScannerPasswordUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      setScannerPasswordInput,)
+  }
+);}
+
+
+
+
+export const getSetScannerPasswordMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setScannerPassword>>, TError,{data: BodyType<SetScannerPasswordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setScannerPassword>>, TError,{data: BodyType<SetScannerPasswordInput>}, TContext> => {
+
+const mutationKey = ['setScannerPassword'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setScannerPassword>>, {data: BodyType<SetScannerPasswordInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  setScannerPassword(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetScannerPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof setScannerPassword>>>
+    export type SetScannerPasswordMutationBody = BodyType<SetScannerPasswordInput>
+    export type SetScannerPasswordMutationError = ErrorType<Error>
+
+    /**
+ * @summary Set or change the scanner account password (admin only)
+ */
+export const useSetScannerPassword = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setScannerPassword>>, TError,{data: BodyType<SetScannerPasswordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setScannerPassword>>,
+        TError,
+        {data: BodyType<SetScannerPasswordInput>},
+        TContext
+      > => {
+      return useMutation(getSetScannerPasswordMutationOptions(options));
+    }
+
+export const getDeleteScannerPasswordUrl = () => {
+
+
+
+
+  return `/api/auth/scanner-password`
+}
+
+/**
+ * @summary Disable the scanner account (admin only)
+ */
+export const deleteScannerPassword = async ( options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteScannerPasswordUrl(),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteScannerPasswordMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteScannerPassword>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteScannerPassword>>, TError,void, TContext> => {
+
+const mutationKey = ['deleteScannerPassword'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteScannerPassword>>, void> = () => {
+
+
+          return  deleteScannerPassword(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteScannerPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof deleteScannerPassword>>>
+
+    export type DeleteScannerPasswordMutationError = ErrorType<Error>
+
+    /**
+ * @summary Disable the scanner account (admin only)
+ */
+export const useDeleteScannerPassword = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteScannerPassword>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteScannerPassword>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getDeleteScannerPasswordMutationOptions(options));
     }
 
 export const getForgotPasswordUrl = () => {

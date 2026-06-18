@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
 import { db, appAuthTable, settingsTable } from "@workspace/db";
-import { LoginBody, ChangePasswordBody, ForgotPasswordBody, ResetPasswordBody } from "@workspace/api-zod";
+import { LoginBody, ChangePasswordBody, ForgotPasswordBody, ResetPasswordBody, SetScannerPasswordBody } from "@workspace/api-zod";
 import { audit } from "../lib/audit";
 import { sendMail, isMailConfigured } from "../lib/mailer";
 import { logger } from "../lib/logger";
@@ -12,6 +12,11 @@ const router: IRouter = Router();
 const ROW_ID = 1;         // admin account row
 const SCANNER_ROW_ID = 2; // scanner account row
 const BCRYPT_ROUNDS = 12;
+// Sentinel value stored when the admin explicitly disables the scanner account.
+// Bcrypt.compare against this sentinel always returns false, and login treats it
+// as "no scanner account". Using a sentinel instead of a row delete prevents
+// SCANNER_PASSWORD from re-seeding the account on the next login attempt.
+const SCANNER_DISABLED = "__disabled__";
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 function hashToken(token: string): string {
@@ -74,8 +79,17 @@ async function getOrSeedAuthRow(
 /** Get-or-seed the admin password hash (row id 1, APP_PASSWORD env). */
 const getOrSeedHash = () => getOrSeedAuthRow(ROW_ID, "APP_PASSWORD", "admin");
 
-/** Get-or-seed the scanner password hash (row id 2, SCANNER_PASSWORD env). */
-const getOrSeedScannerHash = () => getOrSeedAuthRow(SCANNER_ROW_ID, "SCANNER_PASSWORD", "scanner");
+/**
+ * Get-or-seed the scanner password hash (row id 2, SCANNER_PASSWORD env).
+ * Returns null if the scanner account is absent or was explicitly disabled by
+ * the admin (sentinel value). Using a sentinel instead of row deletion prevents
+ * the SCANNER_PASSWORD env var from silently re-enabling the account after an
+ * admin has turned it off.
+ */
+async function getOrSeedScannerHash(): Promise<string | null> {
+  const hash = await getOrSeedAuthRow(SCANNER_ROW_ID, "SCANNER_PASSWORD", "scanner");
+  return hash === SCANNER_DISABLED ? null : hash;
+}
 
 function regenerateSession(req: { session: { regenerate: (cb: (err: unknown) => void) => void } }): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -89,11 +103,17 @@ function saveSession(req: { session: { save: (cb: (err: unknown) => void) => voi
   });
 }
 
-router.get("/auth/me", (req, res): void => {
+router.get("/auth/me", async (req, res): Promise<void> => {
   const authenticated = Boolean(req.session?.authenticated);
+  // Inform the client whether a live (non-sentinel) scanner account exists so
+  // the admin settings UI can show current state without an extra round-trip.
+  const scannerRows = await db.select().from(appAuthTable).where(eq(appAuthTable.id, SCANNER_ROW_ID));
+  const scannerRow = scannerRows.find((r) => r.id === SCANNER_ROW_ID);
+  const scannerEnabled = !!scannerRow && scannerRow.passwordHash !== SCANNER_DISABLED;
   res.json({
     authenticated,
     role: authenticated ? (req.session.role ?? "admin") : null,
+    scannerEnabled,
   });
 });
 
@@ -192,6 +212,69 @@ router.post("/auth/change-password", async (req, res): Promise<void> => {
     .onConflictDoUpdate({ target: appAuthTable.id, set: { passwordHash, updatedAt: new Date() } });
 
   await audit("password_changed");
+  res.status(204).end();
+});
+
+/**
+ * Set or change the scanner account password. Admin only.
+ * Creates the scanner row (id 2) if it doesn't exist yet.
+ */
+router.post("/auth/set-scanner-password", async (req, res): Promise<void> => {
+  if (!req.session?.authenticated) {
+    res.status(401).json({ error: "Nepřihlášen" });
+    return;
+  }
+  const role = req.session.role ?? "admin";
+  if (role !== "admin") {
+    res.status(403).json({ error: "Tato akce je dostupná pouze pro administrátora." });
+    return;
+  }
+
+  const parsed = SetScannerPasswordBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.message });
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(parsed.data.newPassword, BCRYPT_ROUNDS);
+  await db
+    .insert(appAuthTable)
+    .values({ id: SCANNER_ROW_ID, passwordHash, role: "scanner", updatedAt: new Date() })
+    .onConflictDoUpdate({
+      target: appAuthTable.id,
+      set: { passwordHash, updatedAt: new Date() },
+    });
+
+  await audit("scanner_password_changed");
+  res.status(204).end();
+});
+
+/**
+ * Disable the scanner account. Admin only.
+ * Writes the SCANNER_DISABLED sentinel instead of deleting the row so that the
+ * SCANNER_PASSWORD env var cannot silently re-seed the account on the next
+ * login attempt. Login treats the sentinel as "no scanner account".
+ */
+router.delete("/auth/scanner-password", async (req, res): Promise<void> => {
+  if (!req.session?.authenticated) {
+    res.status(401).json({ error: "Nepřihlášen" });
+    return;
+  }
+  const role = req.session.role ?? "admin";
+  if (role !== "admin") {
+    res.status(403).json({ error: "Tato akce je dostupná pouze pro administrátora." });
+    return;
+  }
+
+  await db
+    .insert(appAuthTable)
+    .values({ id: SCANNER_ROW_ID, passwordHash: SCANNER_DISABLED, role: "scanner", updatedAt: new Date() })
+    .onConflictDoUpdate({
+      target: appAuthTable.id,
+      set: { passwordHash: SCANNER_DISABLED, updatedAt: new Date() },
+    });
+
+  await audit("scanner_password_deleted");
   res.status(204).end();
 });
 

@@ -71,6 +71,7 @@ export * from './scanMaterialsResultSuggestionsItem';
 export * from './serviceRecord';
 export * from './serviceRecordInput';
 export * from './setConsentInput';
+export * from './setScannerPasswordInput';
 export * from './settings';
 export * from './settingsInput';
 export * from './testReminderResult';

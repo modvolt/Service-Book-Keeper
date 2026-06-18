@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import {
   useGetSettings, useUpdateSettings, useSendTestReminder, getGetSettingsQueryKey,
   useGetBackups, useRunBackup, getGetBackupsQueryKey,
+  useSetScannerPassword, useDeleteScannerPassword,
+  useGetAuthStatus, getGetAuthStatusQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Upload, Image as ImageIcon, Mail, Palette, Building2, Trash2, Sun, Moon, Check, Monitor, PenLine, Database, Download, Loader2, FileText, CloudUpload } from "lucide-react";
+import { Upload, Image as ImageIcon, Mail, Palette, Building2, Trash2, Sun, Moon, Check, Monitor, PenLine, Database, Download, Loader2, FileText, CloudUpload, ShieldCheck } from "lucide-react";
 import { AresButton } from "@/components/ares-button";
 import { openDataBackupPdf } from "@/lib/data-backup-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -52,6 +54,13 @@ export default function SettingsPage() {
   const sendTestReminder = useSendTestReminder();
   const { data: backups } = useGetBackups();
   const runBackup = useRunBackup();
+  const { data: authStatus } = useGetAuthStatus({
+    query: { queryKey: getGetAuthStatusQueryKey(), staleTime: 30_000 } as any,
+  });
+  const setScannerPassword = useSetScannerPassword();
+  const deleteScannerPassword = useDeleteScannerPassword();
+  const [scannerPw, setScannerPw] = useState("");
+  const [scannerPwConfirm, setScannerPwConfirm] = useState("");
   const [downloadingBackupId, setDownloadingBackupId] = useState<number | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const signatureInputRef = useRef<HTMLInputElement>(null);
@@ -276,6 +285,45 @@ export default function SettingsPage() {
       toast({ title: "Chyba", description: String(e?.message ?? e), variant: "destructive" });
     } finally {
       setImporting(false);
+    }
+  }
+
+  async function handleSetScannerPassword() {
+    if (scannerPw.length < 8) {
+      toast({ title: "Chyba", description: "Heslo musí mít alespoň 8 znaků.", variant: "destructive" });
+      return;
+    }
+    if (scannerPw !== scannerPwConfirm) {
+      toast({ title: "Chyba", description: "Hesla se neshodují.", variant: "destructive" });
+      return;
+    }
+    try {
+      await setScannerPassword.mutateAsync({ data: { newPassword: scannerPw } });
+      setScannerPw("");
+      setScannerPwConfirm("");
+      await queryClient.invalidateQueries({ queryKey: getGetAuthStatusQueryKey() });
+      toast({ title: "Heslo skeneru nastaveno" });
+    } catch (e: any) {
+      const description =
+        e?.data && typeof e.data === "object" && "error" in e.data
+          ? String((e.data as { error: unknown }).error)
+          : "Nastavení hesla skeneru selhalo.";
+      toast({ title: "Chyba", description, variant: "destructive" });
+    }
+  }
+
+  async function handleDisableScanner() {
+    if (!confirm("Opravdu chcete deaktivovat účet skeneru? Přihlášení skeneru přestane fungovat.")) return;
+    try {
+      await deleteScannerPassword.mutateAsync();
+      await queryClient.invalidateQueries({ queryKey: getGetAuthStatusQueryKey() });
+      toast({ title: "Účet skeneru deaktivován" });
+    } catch (e: any) {
+      const description =
+        e?.data && typeof e.data === "object" && "error" in e.data
+          ? String((e.data as { error: unknown }).error)
+          : "Deaktivace skeneru selhala.";
+      toast({ title: "Chyba", description, variant: "destructive" });
     }
   }
 
@@ -623,6 +671,87 @@ export default function SettingsPage() {
               </div>
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5" /> Účet skeneru</CardTitle>
+          <CardDescription>
+            Samostatné přihlášení pro pracovníka na skenovací stanici. Skener vidí pouze Načtení vozu — nemá přístup k zakázkám, vozidlům ani nastavení.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-3">
+            <span className={cn(
+              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
+              authStatus?.scannerEnabled
+                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+                : "bg-muted text-muted-foreground",
+            )}>
+              {authStatus?.scannerEnabled ? "Aktivní" : "Neaktivní"}
+            </span>
+            <span className="text-sm text-muted-foreground">
+              {authStatus?.scannerEnabled
+                ? "Skener se může přihlásit vlastním heslem."
+                : "Skener nemá nastavené heslo — přihlásí se stejně jako administrátor."}
+            </span>
+          </div>
+
+          <div className="rounded-md border p-4 space-y-3">
+            <div className="font-medium text-sm">
+              {authStatus?.scannerEnabled ? "Změnit heslo skeneru" : "Nastavit heslo skeneru"}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="scanner-pw">Nové heslo (min. 8 znaků)</Label>
+                <Input
+                  id="scanner-pw"
+                  type="password"
+                  value={scannerPw}
+                  autoComplete="new-password"
+                  onChange={(e) => setScannerPw(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="scanner-pw-confirm">Zopakovat heslo</Label>
+                <Input
+                  id="scanner-pw-confirm"
+                  type="password"
+                  value={scannerPwConfirm}
+                  autoComplete="new-password"
+                  onChange={(e) => setScannerPwConfirm(e.target.value)}
+                />
+              </div>
+            </div>
+            <Button
+              onClick={handleSetScannerPassword}
+              disabled={setScannerPassword.isPending || !scannerPw}
+            >
+              {setScannerPassword.isPending
+                ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Ukládám…</>
+                : authStatus?.scannerEnabled ? "Změnit heslo" : "Nastavit heslo"}
+            </Button>
+          </div>
+
+          {authStatus?.scannerEnabled && (
+            <div className="rounded-md border border-destructive/30 p-4 space-y-2">
+              <div className="font-medium text-sm">Deaktivovat účet skeneru</div>
+              <p className="text-sm text-muted-foreground">
+                Odstraní heslo skeneru. Pracovník na skenovací stanici se nebude moci přihlásit, dokud heslo znovu nenastavíte.
+              </p>
+              <Button
+                variant="outline"
+                className="text-destructive border-destructive/50 hover:bg-destructive/10"
+                onClick={handleDisableScanner}
+                disabled={deleteScannerPassword.isPending}
+              >
+                {deleteScannerPassword.isPending
+                  ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Deaktivuji…</>
+                  : <><Trash2 className="h-4 w-4 mr-2" /> Deaktivovat skener</>}
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
