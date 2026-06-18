@@ -172,6 +172,9 @@ importers:
       '@workspace/api-zod':
         specifier: workspace:*
         version: link:../../lib/api-zod
+      '@workspace/audit-actions':
+        specifier: workspace:*
+        version: link:../../lib/audit-actions
       '@workspace/db':
         specifier: workspace:*
         version: link:../../lib/db
@@ -387,6 +390,9 @@ importers:
       '@workspace/api-client-react':
         specifier: workspace:*
         version: link:../../lib/api-client-react
+      '@workspace/audit-actions':
+        specifier: workspace:*
+        version: link:../../lib/audit-actions
       class-variance-authority:
         specifier: 'catalog:'
         version: 0.7.1
@@ -669,6 +675,8 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 3.25.76
+
+  lib/audit-actions: {}
 
   lib/db:
     dependencies:

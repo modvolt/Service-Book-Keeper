@@ -4,6 +4,9 @@
   "files": [],
   "references": [
     {
+      "path": "./lib/audit-actions"
+    },
+    {
       "path": "./lib/db"
     },
     {

@@ -1,22 +1,8 @@
 import { db, auditLogTable } from "@workspace/db";
+import type { AuditAction } from "@workspace/audit-actions";
 import { logger } from "./logger";
 
-export type AuditAction =
-  | "login"
-  | "login_failed"
-  | "logout"
-  | "password_changed"
-  | "password_reset_requested"
-  | "password_reset"
-  | "gdpr_export"
-  | "gdpr_anonymize"
-  | "gdpr_delete"
-  | "gdpr_consent"
-  | "vehicle_deleted"
-  | "appointment_deleted"
-  | "work_order_deleted"
-  | "scanner_password_changed"
-  | "scanner_password_deleted";
+export type { AuditAction };
 
 /**
  * Persist an audit record. Never store secrets, tokens, passwords or session IDs.
