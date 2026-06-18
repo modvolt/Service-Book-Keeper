@@ -1,1 +1,7 @@
-export { getOpenAI, getOpenAIModel } from "./client";
+export {
+  getOpenAI,
+  getOpenAIModel,
+  getPlatformOpenAI,
+  getPromptId,
+  getPromptVersion,
+} from "./client";

@@ -1,5 +1,11 @@
 import { Router, type IRouter, json } from "express";
-import { getOpenAI, getOpenAIModel } from "@workspace/integrations-openai-ai-server";
+import {
+  getOpenAI,
+  getOpenAIModel,
+  getPlatformOpenAI,
+  getPromptId,
+  getPromptVersion,
+} from "@workspace/integrations-openai-ai-server";
 import { ImportVehicleFromTpBody } from "@workspace/api-zod";
 import { normalizeSpzOrNull } from "../lib/spz";
 
@@ -9,6 +15,15 @@ const router: IRouter = Router();
 // small global default. Mounted here (after the auth gate) to avoid pre-auth
 // resource amplification.
 const largeJson = json({ limit: "15mb" });
+
+// Stored prompts can be configured to return plain JSON, but a model may still
+// wrap it in a ```json fenced block. Strip an optional surrounding code fence so
+// JSON.parse succeeds either way.
+function stripJsonFences(text: string): string {
+  const trimmed = text.trim();
+  const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(trimmed);
+  return fenced ? fenced[1].trim() : trimmed;
+}
 
 const SYSTEM_PROMPT = `Jsi asistent pro autoservis. Z přiložených fotografií extrahuj údaje o vozidle. Fotografie mohou být různého typu a mohou se kombinovat:
 - malý technický průkaz (osvědčení o registraci vozidla část I, Česká republika),
@@ -49,31 +64,60 @@ router.post("/vehicles/import-tp", largeJson, async (req, res): Promise<void> =>
   }
 
   try {
-    const imageContents = parsed.data.images.map((b64) => ({
-      type: "image_url" as const,
-      image_url: { url: `data:image/jpeg;base64,${b64}` },
-    }));
+    const promptId = getPromptId();
+    const userText = "Extrahuj údaje o vozidle z těchto fotografií:";
 
-    const response = await getOpenAI().chat.completions.create({
-      model: getOpenAIModel(),
-      max_completion_tokens: 4096,
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        {
-          role: "user",
-          content: [
-            { type: "text", text: "Extrahuj údaje o vozidle z těchto fotografií:" },
-            ...imageContents,
-          ],
-        },
-      ],
-    });
+    let text: string;
+    if (promptId) {
+      // Stored-prompt path: call the OpenAI platform directly (own API key) and
+      // reference the prompt by ID. The prompt's instructions and output format
+      // are managed on the platform, so no inline system prompt is sent.
+      const version = getPromptVersion();
+      const response = await getPlatformOpenAI().responses.create({
+        prompt: { id: promptId, ...(version ? { version } : {}) },
+        input: [
+          {
+            role: "user",
+            content: [
+              { type: "input_text", text: userText },
+              ...parsed.data.images.map((b64) => ({
+                type: "input_image" as const,
+                image_url: `data:image/jpeg;base64,${b64}`,
+                detail: "auto" as const,
+              })),
+            ],
+          },
+        ],
+      });
+      text = response.output_text?.trim() || "{}";
+    } else {
+      // Fallback path: Replit AI integration with the inline system prompt.
+      const imageContents = parsed.data.images.map((b64) => ({
+        type: "image_url" as const,
+        image_url: { url: `data:image/jpeg;base64,${b64}` },
+      }));
 
-    const text = response.choices[0]?.message?.content ?? "{}";
+      const response = await getOpenAI().chat.completions.create({
+        model: getOpenAIModel(),
+        max_completion_tokens: 4096,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: userText },
+              ...imageContents,
+            ],
+          },
+        ],
+      });
+      text = response.choices[0]?.message?.content ?? "{}";
+    }
+
     let extracted: Record<string, unknown>;
     try {
-      extracted = JSON.parse(text);
+      extracted = JSON.parse(stripJsonFences(text));
     } catch {
       req.log.error({ text }, "Failed to parse TP extraction JSON");
       res.status(502).json({ error: "Nepodařilo se zpracovat odpověď AI." });
