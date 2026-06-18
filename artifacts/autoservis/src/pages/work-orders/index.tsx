@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useListWorkOrders, getListWorkOrdersQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { LicensePlate } from "@/components/license-plate";
@@ -7,14 +7,16 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Wrench, Image as ImageIcon } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { format, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
 import { WorkOrderStatusBadge, WORK_ORDER_STATUSES, type WorkOrderStatus } from "@/lib/work-order-status";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "Všechny" },
+  { value: "active", label: "Nedokončené" },
   ...WORK_ORDER_STATUSES.map((s) => ({ value: s.value, label: s.label })),
+  { value: "completed-month", label: "Dokončeno tento měsíc" },
 ];
 
 function ServiceIcons({ order }: { order: { oilChange?: boolean; transmissionOil?: boolean; brakes?: boolean; timing?: boolean; stk?: boolean; otherWork?: string | null; otherServices?: string | null } }) {
@@ -38,14 +40,42 @@ function ServiceIcons({ order }: { order: { oilChange?: boolean; transmissionOil
 }
 
 export default function WorkOrdersList() {
+  const searchString = useSearch();
+  const viewFilter = new URLSearchParams(searchString).get("filter");
   const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("all");
-
-  const { data: workOrders, isLoading } = useListWorkOrders(
-    status !== "all" ? { status: status as WorkOrderStatus } : {}
+  const [status, setStatus] = useState<string>(() =>
+    viewFilter === "active" || viewFilter === "completed-month" ? viewFilter : "all"
   );
 
+  // Keep the filter in sync with the URL param so navigating to a different
+  // ?filter= (e.g. from the dashboard cards or the plain "Zakázky" menu link)
+  // updates the list even when this route stays mounted.
+  useEffect(() => {
+    setStatus(
+      viewFilter === "active" || viewFilter === "completed-month" ? viewFilter : "all",
+    );
+  }, [viewFilter]);
+
+  const serverStatus =
+    status === "completed-month"
+      ? "completed"
+      : status !== "all" && status !== "active"
+        ? (status as WorkOrderStatus)
+        : undefined;
+
+  const { data: workOrders, isLoading } = useListWorkOrders(
+    serverStatus ? { status: serverStatus } : {}
+  );
+
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
   const filtered = workOrders?.filter(wo => {
+    if (status === "active" && wo.status === "completed") return false;
+    if (status === "completed-month") {
+      if (wo.status !== "completed" || !wo.completedAt) return false;
+      if (new Date(wo.completedAt) < startOfMonth) return false;
+    }
     if (!search) return true;
     const s = search.toLowerCase();
     return wo.licensePlate.toLowerCase().includes(s) ||

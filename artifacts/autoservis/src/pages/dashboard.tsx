@@ -140,28 +140,32 @@ export default function Dashboard() {
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Otevřené zakázky</CardTitle>
-            <ClipboardList className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summary.openWorkOrders}</div>
-            <p className="text-xs text-muted-foreground">
-              {summary.inProgressWorkOrders || 0} právě probíhá
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Dokončeno tento měsíc</CardTitle>
-            <Wrench className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summary.completedThisMonth}</div>
-          </CardContent>
-        </Card>
+        <Link href="/work-orders?filter=active">
+          <Card className="cursor-pointer hover:bg-accent/50 transition-colors h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Otevřené zakázky</CardTitle>
+              <ClipboardList className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{summary.openWorkOrders}</div>
+              <p className="text-xs text-muted-foreground">
+                {summary.inProgressWorkOrders || 0} právě probíhá
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
+
+        <Link href="/work-orders?filter=completed-month">
+          <Card className="cursor-pointer hover:bg-accent/50 transition-colors h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Dokončeno tento měsíc</CardTitle>
+              <Wrench className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{summary.completedThisMonth}</div>
+            </CardContent>
+          </Card>
+        </Link>
 
         <Link href="/vehicles?filter=stk">
           <Card className="cursor-pointer hover:bg-accent/50 transition-colors h-full">
@@ -178,15 +182,17 @@ export default function Dashboard() {
           </Card>
         </Link>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Celkem vozidel</CardTitle>
-            <Car className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{summary.totalVehicles}</div>
-          </CardContent>
-        </Card>
+        <Link href="/vehicles">
+          <Card className="cursor-pointer hover:bg-accent/50 transition-colors h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Celkem vozidel</CardTitle>
+              <Car className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{summary.totalVehicles}</div>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
