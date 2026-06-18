@@ -60,6 +60,8 @@ const ACTION_LABELS: Record<string, string> = {
   vehicle_deleted: "Smazání vozidla",
   appointment_deleted: "Smazání termínu",
   work_order_deleted: "Smazání zakázky",
+  scanner_password_changed: "Heslo skeneru nastaveno",
+  scanner_password_deleted: "Účet skeneru deaktivován",
 };
 
 function formatDateTime(value: string): string {
