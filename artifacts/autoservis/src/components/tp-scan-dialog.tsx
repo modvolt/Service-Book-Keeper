@@ -32,6 +32,54 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+// Longest-edge cap (px) for uploaded scans. Large enough to keep small text
+// (VIN, SPZ, TP fields) legible for the AI, small enough to keep the base64
+// payload well under the server body limit even with several photos.
+const MAX_IMAGE_DIM = 2000;
+const JPEG_QUALITY = 0.82;
+
+// Downscale + re-encode a photo to JPEG before upload. Modern phone photos are
+// several MB each; with up to 8 images the raw base64 payload easily exceeds the
+// server limit and is rejected (413). Compressing client-side keeps the request
+// small while preserving enough detail for OCR. Falls back to the raw file if
+// the browser can't decode/encode it (e.g. unsupported format).
+function compressImageToBase64(file: File): Promise<string> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const { width, height } = img;
+        const scale = Math.min(1, MAX_IMAGE_DIM / Math.max(width, height));
+        const w = Math.max(1, Math.round(width * scale));
+        const h = Math.max(1, Math.round(height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          URL.revokeObjectURL(url);
+          fileToBase64(file).then(resolve);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", JPEG_QUALITY);
+        URL.revokeObjectURL(url);
+        const comma = dataUrl.indexOf(",");
+        resolve(comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl);
+      } catch {
+        URL.revokeObjectURL(url);
+        fileToBase64(file).then(resolve);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      fileToBase64(file).then(resolve);
+    };
+    img.src = url;
+  });
+}
+
 export function TpScanDialog({
   open, onOpenChange, onExtracted,
 }: {
@@ -105,7 +153,7 @@ export function TpScanDialog({
   async function handleRun() {
     if (files.length === 0) return;
     try {
-      const images = await Promise.all(files.map(fileToBase64));
+      const images = await Promise.all(files.map(compressImageToBase64));
       importFromTp.mutate({ data: { images } }, {
         onSuccess: (res) => {
           onExtracted(res as TpExtractedData);

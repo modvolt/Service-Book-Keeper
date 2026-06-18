@@ -1,6 +1,6 @@
 import path from "node:path";
 import fs from "node:fs";
-import express, { type Express, type Request, type Response, type NextFunction } from "express";
+import express, { type Express, type Request, type Response, type NextFunction, type RequestHandler } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
@@ -71,11 +71,21 @@ app.use(
   }),
 );
 
-// Small global body limit to avoid pre-auth resource amplification. The only
-// endpoint that needs large payloads (TP-import, base64 photos) installs its
-// own larger parser locally, after the auth gate.
-app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+// Small global body limit to avoid pre-auth resource amplification. A few
+// authenticated endpoints accept large payloads (base64 photos, bulk CSV
+// import) and install their own larger parser locally, after the auth gate. The
+// global parser below MUST skip those paths — otherwise it consumes their body
+// first and rejects the upload with 413 before the route parser ever runs.
+const LARGE_BODY_PATHS = ["/api/vehicles/import-tp", "/api/materials/import"];
+function skipLargeBodyPaths(parser: RequestHandler): RequestHandler {
+  return (req, res, next) => {
+    const path = req.path.length > 1 ? req.path.replace(/\/+$/, "") : req.path;
+    if (LARGE_BODY_PATHS.includes(path)) return next();
+    return parser(req, res, next);
+  };
+}
+app.use(skipLargeBodyPaths(express.json({ limit: "1mb" })));
+app.use(skipLargeBodyPaths(express.urlencoded({ extended: true, limit: "1mb" })));
 
 app.use(sessionMiddleware);
 

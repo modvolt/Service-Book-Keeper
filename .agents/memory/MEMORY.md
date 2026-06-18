@@ -15,3 +15,4 @@
 - [Coolify host-port collision](coolify-port-binding.md) — Compose app that builds but dies at start with "port is already allocated" = host-port clash; use expose, not ports, under Coolify.
 - [Health gate vs object storage](readiness-health-gate.md) — /api/healthz readiness must gate on DB only; a failing/misconfigured S3 must never 503 the whole site (HeadBucket can 403 even when GET/PUT work).
 - [Post-merge codegen stale](post-merge-codegen-stale.md) — task-agent merges run drizzle push but NOT Orval codegen; rerun codegen if the merge touched openapi.yaml or frontend types go missing.
+- [Global vs route body parser](global-vs-route-body-parser.md) — a global express.json runs first and 413s big bodies before route-local large parsers; skip large-payload paths globally + compress uploads client-side.
