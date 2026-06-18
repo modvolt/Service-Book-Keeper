@@ -11,13 +11,13 @@ import { useTheme } from "@/hooks/use-theme";
 import { applyCurrentPalette, usePalette } from "@/hooks/use-palette";
 import { clearCachesAndReload } from "@/lib/app-reload";
 
-function RefreshButton({ className }: { className?: string }) {
+function RefreshButton({ className, iconOnly }: { className?: string; iconOnly?: boolean }) {
   const [refreshing, setRefreshing] = useState(false);
   return (
     <Button
       type="button"
       variant="outline"
-      size="sm"
+      size={iconOnly ? "icon" : "sm"}
       disabled={refreshing}
       onClick={() => {
         setRefreshing(true);
@@ -28,7 +28,9 @@ function RefreshButton({ className }: { className?: string }) {
       aria-label="Obnovit"
     >
       <RefreshCw className={cn("h-4 w-4", refreshing && "animate-spin")} />
-      <span className="ml-2 hidden sm:inline">{refreshing ? "Obnovuji…" : "Obnovit"}</span>
+      {!iconOnly && (
+        <span className="ml-2 hidden sm:inline">{refreshing ? "Obnovuji…" : "Obnovit"}</span>
+      )}
     </Button>
   );
 }
@@ -163,7 +165,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-muted/30" style={themeStyle}>
-      <RefreshButton className="hidden md:inline-flex fixed top-3 right-3 z-50 bg-card shadow-md" />
+      <RefreshButton iconOnly className="hidden md:inline-flex fixed top-3 right-3 z-50 bg-card shadow-md rounded-full" />
       <header className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-card">
         <Brand />
         <div className="flex items-center gap-2">
