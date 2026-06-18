@@ -6,6 +6,7 @@ import {
   useAddWorkOrderMaterial,
   useImportVehicleFromTp,
   useListWorkOrders,
+  useListMaterials,
   getListWorkOrderMaterialsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -73,14 +74,13 @@ function fallbackBase64(file: File): Promise<string> {
 }
 
 /**
- * Decode QR codes in a list of image files using @zxing/browser.
- * Returns:
- *   ids       — unique catalog material IDs found via "autoservis:material:<id>" payloads
- *   qrIndices — indices of files that contained a valid QR code (used to exclude them from AI)
+ * Decode QR codes for a list of image files using @zxing/browser.
+ * Returns a parallel array aligned with `files`: each entry is the catalog
+ * material id found in that file's "autoservis:material:<id>" QR payload, or
+ * null when the file has no recognizable material QR code.
  */
-async function detectQrMaterialIds(files: File[]): Promise<{ ids: number[]; qrIndices: Set<number> }> {
-  const ids: number[] = [];
-  const qrIndices = new Set<number>();
+async function detectQrIdsPerFile(files: File[]): Promise<(number | null)[]> {
+  const result: (number | null)[] = new Array(files.length).fill(null);
   try {
     const { BrowserMultiFormatReader } = await import("@zxing/browser");
     const reader = new BrowserMultiFormatReader();
@@ -101,16 +101,13 @@ async function detectQrMaterialIds(files: File[]): Promise<{ ids: number[]; qrIn
         if (!ctx) continue;
         ctx.drawImage(img, 0, 0);
         try {
-          const result = reader.decodeFromCanvas(canvas);
-          const text = result.getText();
+          const decoded = reader.decodeFromCanvas(canvas);
+          const text = decoded.getText();
           // Format: autoservis:material:<id> or autoservis:material:<id>:<name>
           const match = text.match(/^autoservis:material:(\d+)/);
           if (match) {
             const id = parseInt(match[1]!, 10);
-            if (!isNaN(id)) {
-              if (!ids.includes(id)) ids.push(id);
-              qrIndices.add(i);
-            }
+            if (!isNaN(id)) result[i] = id;
           }
         } catch {
           // No QR code found in this image — expected for most material photos
@@ -122,6 +119,25 @@ async function detectQrMaterialIds(files: File[]): Promise<{ ids: number[]; qrIn
   } catch {
     // @zxing/browser failed to load or run — skip QR detection silently
   }
+  return result;
+}
+
+/**
+ * Decode QR codes in a list of image files using @zxing/browser.
+ * Returns:
+ *   ids       — unique catalog material IDs found via "autoservis:material:<id>" payloads
+ *   qrIndices — indices of files that contained a valid QR code (used to exclude them from AI)
+ */
+async function detectQrMaterialIds(files: File[]): Promise<{ ids: number[]; qrIndices: Set<number> }> {
+  const perFile = await detectQrIdsPerFile(files);
+  const ids: number[] = [];
+  const qrIndices = new Set<number>();
+  perFile.forEach((id, i) => {
+    if (id != null) {
+      qrIndices.add(i);
+      if (!ids.includes(id)) ids.push(id);
+    }
+  });
   return { ids, qrIndices };
 }
 
@@ -244,7 +260,17 @@ export default function SkenMaterialuPage() {
   // Step 2 — Material photos
   const [matFiles, setMatFiles] = useState<File[]>([]);
   const [matPreviews, setMatPreviews] = useState<string[]>([]);
+  // Catalog material id detected per file (null = no material QR), aligned with matFiles
+  const [matQrIds, setMatQrIds] = useState<(number | null)[]>([]);
+  // Inline quantity entries for scanned QR materials flagged askQuantityOnScan
+  // (keyed by catalog id, deduplicated). Carried into the review step as prefilled quantities.
+  const [qrInlineItems, setQrInlineItems] = useState<{ catalogId: number; name: string; quantity: string }[]>([]);
   const scanMaterials = useScanMaterials();
+
+  // Materials catalog, loaded client-side to resolve scanned QR ids → name + askQuantityOnScan
+  const { data: materials } = useListMaterials();
+  const materialsRef = useRef<typeof materials>(undefined);
+  useEffect(() => { materialsRef.current = materials; }, [materials]);
 
   // Step 3 — Review
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
@@ -289,14 +315,37 @@ export default function SkenMaterialuPage() {
     setConfirmedSpz(clean);
   }
 
-  function handleMatFiles(list: FileList | null) {
+  async function handleMatFiles(list: FileList | null) {
     if (!list) return;
     const imgs = Array.from(list).filter((f) => f.type.startsWith("image/"));
     if (imgs.length === 0) return;
-    const next = [...matFiles, ...imgs].slice(0, MAX_MAT_IMAGES);
+    // Only the files that actually fit within the cap are added (and detected)
+    const room = MAX_MAT_IMAGES - matFiles.length;
+    if (room <= 0) return;
+    const added = imgs.slice(0, room);
+    const next = [...matFiles, ...added];
     setMatFiles(next);
     const urls = next.map((f) => URL.createObjectURL(f));
     setMatPreviews(urls);
+
+    // Detect QR codes on the newly added files so flagged materials can prompt
+    // for quantity immediately — without interrupting further photo capture.
+    const detected = await detectQrIdsPerFile(added);
+    setMatQrIds((prev) => [...prev, ...detected]);
+
+    const cat = materialsRef.current;
+    setQrInlineItems((prev) => {
+      const out = [...prev];
+      for (const id of detected) {
+        if (id == null) continue;
+        if (out.some((it) => it.catalogId === id)) continue; // dedup same material
+        const item = cat?.find((m) => m.id === id);
+        if (item && item.askQuantityOnScan) {
+          out.push({ catalogId: id, name: item.name, quantity: "1" });
+        }
+      }
+      return out;
+    });
   }
 
   function removeMatFile(idx: number) {
@@ -304,6 +353,27 @@ export default function SkenMaterialuPage() {
     setMatFiles(next);
     const urls = next.map((f) => URL.createObjectURL(f));
     setMatPreviews(urls);
+    const nextQrIds = matQrIds.filter((_, i) => i !== idx);
+    setMatQrIds(nextQrIds);
+    // Drop inline entries whose material is no longer present in any kept photo
+    const remaining = new Set(nextQrIds.filter((x): x is number => x != null));
+    setQrInlineItems((prev) => prev.filter((it) => remaining.has(it.catalogId)));
+  }
+
+  function setQrInlineQty(catalogId: number, value: string) {
+    setQrInlineItems((prev) => prev.map((it) => (it.catalogId === catalogId ? { ...it, quantity: value } : it)));
+  }
+
+  function adjustQrInlineQty(catalogId: number, delta: number) {
+    setQrInlineItems((prev) =>
+      prev.map((it) => {
+        if (it.catalogId !== catalogId) return it;
+        const cur = parseFloat((it.quantity || "0").replace(",", ".")) || 0;
+        const nextVal = Math.max(0, cur + delta);
+        const qty = Number.isInteger(nextVal) ? String(nextVal) : nextVal.toFixed(2).replace(/\.?0+$/, "");
+        return { ...it, quantity: qty };
+      }),
+    );
   }
 
   async function handleScanMaterials() {
@@ -328,6 +398,8 @@ export default function SkenMaterialuPage() {
         },
         {
           onSuccess: (res) => {
+            // Inline-entered quantities (from Krok 2) override the QR suggestion default
+            const inlineQtyByCatalogId = new Map(qrInlineItems.map((it) => [it.catalogId, it.quantity]));
             setScanResult({
               workOrderId: res.workOrderId,
               suggestions: (
@@ -340,11 +412,16 @@ export default function SkenMaterialuPage() {
                   askQuantityOnScan?: boolean;
                   source: "ai" | "qr";
                 }>
-              ).map((s) => ({
-                ...s,
-                askQuantityOnScan: s.askQuantityOnScan ?? false,
-                selected: true,
-              })),
+              ).map((s) => {
+                const inlineQty =
+                  s.source === "qr" && s.catalogId != null ? inlineQtyByCatalogId.get(s.catalogId) : undefined;
+                return {
+                  ...s,
+                  quantity: inlineQty ?? s.quantity,
+                  askQuantityOnScan: s.askQuantityOnScan ?? false,
+                  selected: true,
+                };
+              }),
             });
             setStep(3);
           },
@@ -426,6 +503,8 @@ export default function SkenMaterialuPage() {
     setSelectedWorkOrderId(null);
     setMatFiles([]);
     setMatPreviews([]);
+    setMatQrIds([]);
+    setQrInlineItems([]);
     setScanResult(null);
     setDone(false);
     setSavedCount(0);
@@ -735,6 +814,49 @@ export default function SkenMaterialuPage() {
                     >
                       <X className="h-3.5 w-3.5" />
                     </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {qrInlineItems.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
+                  <QrCode className="h-3.5 w-3.5" />
+                  Naskenované QR materiály — zadejte množství
+                </div>
+                {qrInlineItems.map((it) => (
+                  <div
+                    key={it.catalogId}
+                    className="flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/5 p-2"
+                  >
+                    <span className="flex-1 min-w-0 truncate text-sm font-medium">{it.name}</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => adjustQrInlineQty(it.catalogId, -1)}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <Input
+                        value={it.quantity}
+                        onChange={(e) => setQrInlineQty(it.catalogId, e.target.value)}
+                        className="h-7 w-14 text-center px-1 text-sm"
+                        inputMode="decimal"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon"
+                        className="h-7 w-7 shrink-0"
+                        onClick={() => adjustQrInlineQty(it.catalogId, 1)}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
