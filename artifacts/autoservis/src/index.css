@@ -287,3 +287,10 @@
     inset: -1px;
   }
 }
+/* Scanner role (low-vision mechanic on a phone): always-on larger type and
+   touch targets across the whole scanner view. zoom reflows the layout (unlike
+   transform: scale) so spacing scales too. Excludes the fixed bottom bar, which
+   is rendered as a sibling outside this wrapper. */
+.scanner-zoom {
+  zoom: 1.15;
+}

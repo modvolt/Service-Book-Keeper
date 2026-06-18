@@ -53,6 +53,9 @@ const BOTTOM_NAV_ITEMS = [
   { href: "/nastaveni", label: "Nastavení", icon: SettingsIcon, color: "text-slate-600 dark:text-slate-400", bg: "hover:bg-slate-100 dark:hover:bg-slate-800/50" },
 ];
 
+// The scanner's two scanning actions, shown as a fixed bottom bar on the phone.
+const SCANNER_TABS = NAV_ITEMS.filter((item) => !item.scannerHidden);
+
 function hexToHslTriplet(hex: string): string | null {
   const m = /^#?([a-f\d]{6})$/i.exec(hex.trim());
   if (!m) return null;
@@ -150,9 +153,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
     ? NAV_ITEMS.filter((item) => !item.scannerHidden)
     : NAV_ITEMS;
 
-  const NavLinksTop = () => (
-    <div className="flex flex-col space-y-1">{visibleNavItems.map(renderItem)}</div>
-  );
+  const NavLinksTop = ({ inSheet }: { inSheet?: boolean }) => {
+    // For the scanner on a phone, the two scanning actions live in the fixed
+    // bottom bar instead of the drawer; the desktop sidebar still lists them.
+    if (isScanner && inSheet) return null;
+    return <div className="flex flex-col space-y-1">{visibleNavItems.map(renderItem)}</div>;
+  };
 
   const NavLinksBottom = () => (
     <div className="flex flex-col space-y-1">
@@ -206,7 +212,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <Brand large />
             </div>
             <ScrollArea className="flex-1 px-4 py-4">
-              <NavLinksTop />
+              <NavLinksTop inSheet />
             </ScrollArea>
             <div className="px-4 py-3 border-t">
               <NavLinksBottom />
@@ -231,11 +237,36 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <main className="flex-1 overflow-auto">
-        <div className="max-w-[1800px] mx-auto p-4 md:p-8 lg:p-10">
+      <main className={cn("flex-1 overflow-auto", isScanner && "pb-28 md:pb-0")}>
+        <div className={cn("max-w-[1800px] mx-auto p-4 md:p-8 lg:p-10", isScanner && "scanner-zoom")}>
           {children}
         </div>
       </main>
+
+      {isScanner && (
+        <nav
+          className="md:hidden fixed bottom-0 inset-x-0 z-40 flex border-t bg-card shadow-[0_-2px_10px_rgba(0,0,0,0.07)]"
+          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        >
+          {SCANNER_TABS.map((tab) => {
+            const active = location === tab.href || location.startsWith(tab.href + "/");
+            return (
+              <Link key={tab.href} href={tab.href}>
+                <div
+                  className={cn(
+                    "relative flex-1 flex flex-col items-center justify-center gap-1 py-3 cursor-pointer transition-colors",
+                    active ? "text-primary" : "text-foreground/60 hover:bg-muted/40"
+                  )}
+                >
+                  {active && <span className="absolute top-0 inset-x-5 h-0.5 rounded-full bg-primary" />}
+                  <tab.icon className={cn("h-7 w-7", active ? "" : tab.color)} />
+                  <span className="text-base font-semibold">{tab.label}</span>
+                </div>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
     </div>
   );
 }
