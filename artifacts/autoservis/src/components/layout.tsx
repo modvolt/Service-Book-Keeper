@@ -165,7 +165,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-muted/30" style={themeStyle}>
-      <RefreshButton iconOnly className="hidden md:inline-flex fixed top-3 right-3 z-50 bg-card shadow-md rounded-full" />
+      <RefreshButton iconOnly className="hidden md:inline-flex fixed top-3 right-3 z-50 bg-card shadow-md rounded-md" />
       <header className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-card">
         <Brand />
         <div className="flex items-center gap-2">
