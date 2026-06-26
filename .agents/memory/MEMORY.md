@@ -17,4 +17,5 @@
 - [Health gate vs object storage](readiness-health-gate.md) — /api/healthz readiness must gate on DB only; a failing/misconfigured S3 must never 503 the whole site (HeadBucket can 403 even when GET/PUT work).
 - [Post-merge codegen stale](post-merge-codegen-stale.md) — task-agent merges run drizzle push but NOT Orval codegen; rerun codegen if the merge touched openapi.yaml or frontend types go missing.
 - [Global vs route body parser](global-vs-route-body-parser.md) — a global express.json runs first and 413s big bodies before route-local large parsers; skip large-payload paths globally + compress uploads client-side.
+- [Prod password / data via republish](prod-password-reset.md) — admin password is seed-once DB data; prod DB is separate + read-only to the agent, so change it in dev then republish with "Overwrite data".
 - [Vite build OOM in capped container](vite-build-oom-container.md) — prod vite build silently killed in a 4GB Docker/Coolify cgroup though it builds locally; cap NODE_OPTIONS --max-old-space-size below the limit.
