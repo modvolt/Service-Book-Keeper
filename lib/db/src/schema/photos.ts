@@ -8,6 +8,11 @@ export const photosTable = pgTable("photos", {
   workOrderId: integer("work_order_id").notNull().references(() => workOrdersTable.id, { onDelete: "cascade" }),
   url: text("url").notNull(),
   filename: text("filename").notNull(),
+  // Soft-delete (see vehicles schema): non-null deletedAt = trashed/hidden.
+  // Storage blob removal happens only on permanent delete (storage task owns it).
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  deletedBy: text("deleted_by"),
+  deleteReason: text("delete_reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

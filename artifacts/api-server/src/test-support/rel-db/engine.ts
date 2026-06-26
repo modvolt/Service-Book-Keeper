@@ -479,37 +479,44 @@ export const db: MemDb = {
 // Table definitions (only the columns the tested routes touch)
 // ---------------------------------------------------------------------------
 
+// Columns shared by every soft-deletable business table.
+const SOFT_DELETE_COLS = ["deletedAt", "deletedBy", "deleteReason"] as const;
+
 export const loanersTable = makeTable("loaners", [
   "id", "fleetVehicleId", "workOrderId", "customerVehicleId", "customerName",
   "customerPhone", "startDate", "endDate", "manualEndDate", "status", "note",
-  "createdAt",
+  "createdAt", ...SOFT_DELETE_COLS,
 ]);
 
 export const vehiclesTable = makeTable("vehicles", [
   "id", "licensePlate", "make", "model", "isFleet", "ownerType", "ownerName",
   "ownerAddress", "ownerPhone", "ownerEmail", "ownerIco", "ownerDic",
-  "consentGivenAt", "consentNote", "currentKm",
+  "consentGivenAt", "consentNote", "currentKm", ...SOFT_DELETE_COLS,
 ]);
 
 export const workOrdersTable = makeTable("work_orders", [
   "id", "vehicleId", "licensePlate", "status", "paid", "completedAt",
-  "serviceDate", "createdAt", "description",
+  "serviceDate", "createdAt", "description", ...SOFT_DELETE_COLS,
 ]);
 
 export const workOrderMaterialsTable = makeTable("work_order_materials", [
   "id", "workOrderId", "name", "quantity", "unit", "unitPrice", "createdAt",
 ]);
 
-export const photosTable = makeTable("photos", ["id", "workOrderId", "url"]);
+export const photosTable = makeTable("photos", ["id", "workOrderId", "url", "filename", ...SOFT_DELETE_COLS]);
 
-export const serviceRecordsTable = makeTable("service_records", ["id", "vehicleId"]);
+export const serviceRecordsTable = makeTable("service_records", ["id", "vehicleId", "description", ...SOFT_DELETE_COLS]);
 
 export const appointmentsTable = makeTable("appointments", [
-  "id", "vehicleId", "customerName", "customerPhone",
+  "id", "vehicleId", "customerName", "customerPhone", ...SOFT_DELETE_COLS,
+]);
+
+export const materialsCatalogTable = makeTable("materials_catalog", [
+  "id", "name", "productNumber", "unit", "defaultPrice", "supplier", ...SOFT_DELETE_COLS,
 ]);
 
 export const auditLogTable = makeTable("audit_log", [
-  "id", "action", "entity", "entityId", "detail", "createdAt",
+  "id", "action", "entity", "entityId", "detail", "actor", "snapshot", "createdAt",
 ]);
 
 export const customerReminderLogTable = makeTable("customer_reminder_log", [

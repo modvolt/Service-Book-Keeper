@@ -2,6 +2,8 @@ import { Router, type IRouter } from "express";
 import { eq, and, gte, lte, asc, desc, ne, isNull, or, ilike } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db, loanersTable, vehiclesTable } from "@workspace/db";
+import { auditEntity } from "../lib/audit";
+import { getActor } from "../lib/actor";
 import {
   ListLoanersQueryParams,
   CreateLoanerBody,
@@ -48,7 +50,7 @@ router.get("/loaners", async (req, res): Promise<void> => {
   const q = ListLoanersQueryParams.safeParse(req.query);
   if (!q.success) { res.status(400).json({ error: q.error.message }); return; }
 
-  const conds = [];
+  const conds = [isNull(loanersTable.deletedAt)];
   if (q.data.fleetVehicleId != null) conds.push(eq(loanersTable.fleetVehicleId, q.data.fleetVehicleId));
   if (q.data.workOrderId != null) conds.push(eq(loanersTable.workOrderId, q.data.workOrderId));
   if (q.data.status) conds.push(eq(loanersTable.status, q.data.status));
@@ -56,10 +58,13 @@ router.get("/loaners", async (req, res): Promise<void> => {
   // and ends on/after `from` (an open-ended loan has no end so it always
   // extends to the future).
   if (q.data.to) conds.push(lte(loanersTable.startDate, q.data.to));
-  if (q.data.from) conds.push(or(isNull(loanersTable.endDate), gte(loanersTable.endDate, q.data.from)));
+  if (q.data.from) {
+    const openOrEndsAfter = or(isNull(loanersTable.endDate), gte(loanersTable.endDate, q.data.from));
+    if (openOrEndsAfter) conds.push(openOrEndsAfter);
+  }
 
   let rows = await baseQuery()
-    .where(conds.length ? and(...conds) : undefined)
+    .where(and(...conds))
     .orderBy(desc(loanersTable.startDate), desc(loanersTable.id));
 
   if (q.data.search) {
@@ -86,6 +91,7 @@ router.get("/loaners/check-overlap", async (req, res): Promise<void> => {
 
   const end = q.data.endDate ?? null;
   const conds = [
+    isNull(loanersTable.deletedAt),
     eq(loanersTable.fleetVehicleId, q.data.fleetVehicleId),
     eq(loanersTable.status, "active"),
     // existing.startDate <= requested end (open requested end = no upper bound)
@@ -121,6 +127,7 @@ router.get("/loaners/customer-suggestions", async (req, res): Promise<void> => {
     .from(vehiclesTable)
     .where(
       and(
+        isNull(vehiclesTable.deletedAt),
         eq(vehiclesTable.isFleet, false),
         or(
           ilike(vehiclesTable.ownerName, like),
@@ -136,7 +143,7 @@ router.get("/loaners/customer-suggestions", async (req, res): Promise<void> => {
 });
 
 async function loadEnriched(id: number) {
-  const [row] = await baseQuery().where(eq(loanersTable.id, id));
+  const [row] = await baseQuery().where(and(eq(loanersTable.id, id), isNull(loanersTable.deletedAt)));
   return row ?? null;
 }
 
@@ -162,6 +169,7 @@ router.post("/loaners", async (req, res): Promise<void> => {
   if (parsed.data.status) insertData.status = parsed.data.status;
 
   const [row] = await db.insert(loanersTable).values(insertData).returning();
+  await auditEntity.created("loaner", row.id, getActor(req), row);
   const enriched = await loadEnriched(row.id);
   res.status(201).json(enriched);
 });
@@ -194,9 +202,15 @@ router.patch("/loaners/:id", async (req, res): Promise<void> => {
   }
   if (parsed.data.status) data.status = parsed.data.status;
 
+  const [existing] = await db.select().from(loanersTable)
+    .where(and(eq(loanersTable.id, params.data.id), isNull(loanersTable.deletedAt)));
+  if (!existing) { res.status(404).json({ error: "Zápůjčka nenalezena" }); return; }
+
   const [row] = await db.update(loanersTable).set(data)
     .where(eq(loanersTable.id, params.data.id)).returning();
   if (!row) { res.status(404).json({ error: "Zápůjčka nenalezena" }); return; }
+
+  await auditEntity.updated("loaner", row.id, getActor(req), existing);
 
   const enriched = await loadEnriched(row.id);
   res.json(enriched);
@@ -210,7 +224,15 @@ router.delete("/loaners/:id", async (req, res): Promise<void> => {
   const params = DeleteLoanerParams.safeParse({ id });
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
 
-  await db.delete(loanersTable).where(eq(loanersTable.id, params.data.id));
+  const reason = typeof req.body?.reason === "string" ? req.body.reason : null;
+  const actor = getActor(req);
+  const [row] = await db
+    .update(loanersTable)
+    .set({ deletedAt: new Date(), deletedBy: actor, deleteReason: reason })
+    .where(and(eq(loanersTable.id, params.data.id), isNull(loanersTable.deletedAt)))
+    .returning();
+  if (!row) { res.status(404).json({ error: "Zápůjčka nenalezena" }); return; }
+  await auditEntity.deleted("loaner", row.id, actor, row);
   res.status(204).end();
 });
 

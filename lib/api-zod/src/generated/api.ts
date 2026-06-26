@@ -1890,8 +1890,77 @@ export const GetAuditLogResponseItem = zod.object({
   "entity": zod.string().nullish(),
   "entityId": zod.string().nullish(),
   "detail": zod.string().nullish(),
+  "actor": zod.string().nullish(),
+  "snapshot": zod.string().nullish(),
   "createdAt": zod.string()
 })
 export const GetAuditLogResponse = zod.array(GetAuditLogResponseItem)
+
+
+/**
+ * @summary List audit-log entries with optional filters
+ */
+export const ListAuditLogQueryParams = zod.object({
+  "entity": zod.coerce.string().optional(),
+  "entityId": zod.coerce.string().optional(),
+  "action": zod.coerce.string().optional(),
+  "from": zod.coerce.string().optional().describe('ISO date\/time lower bound (inclusive)'),
+  "to": zod.coerce.string().optional().describe('ISO date\/time upper bound (inclusive)'),
+  "limit": zod.coerce.number().optional()
+})
+
+export const ListAuditLogResponseItem = zod.object({
+  "id": zod.number(),
+  "action": zod.string(),
+  "entity": zod.string().nullish(),
+  "entityId": zod.string().nullish(),
+  "detail": zod.string().nullish(),
+  "actor": zod.string().nullish(),
+  "snapshot": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const ListAuditLogResponse = zod.array(ListAuditLogResponseItem)
+
+
+/**
+ * @summary List soft-deleted (trashed) items across entities
+ */
+export const ListTrashResponseItem = zod.object({
+  "entity": zod.string(),
+  "id": zod.number(),
+  "label": zod.string(),
+  "deletedAt": zod.string(),
+  "deletedBy": zod.string().nullish(),
+  "deleteReason": zod.string().nullish()
+})
+export const ListTrashResponse = zod.array(ListTrashResponseItem)
+
+
+/**
+ * @summary Restore a soft-deleted item
+ */
+export const RestoreTrashItemParams = zod.object({
+  "entity": zod.coerce.string(),
+  "id": zod.coerce.number()
+})
+
+export const RestoreTrashItemResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string().optional()
+})
+
+
+/**
+ * @summary Permanently delete a soft-deleted item
+ */
+export const PurgeTrashItemParams = zod.object({
+  "entity": zod.coerce.string(),
+  "id": zod.coerce.number()
+})
+
+export const PurgeTrashItemResponse = zod.object({
+  "success": zod.boolean(),
+  "message": zod.string().optional()
+})
 
 

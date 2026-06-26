@@ -1,7 +1,9 @@
 import { Router, type IRouter, json, type Request, type Response } from "express";
-import { eq, ilike, asc, sql } from "drizzle-orm";
+import { eq, ilike, asc, sql, and, isNull } from "drizzle-orm";
 import { db, materialsCatalogTable, workOrderMaterialsTable, workOrdersTable } from "@workspace/db";
 import { getOpenAI, getOpenAIModel } from "@workspace/integrations-openai-ai-server";
+import { auditEntity } from "../lib/audit";
+import { getActor } from "../lib/actor";
 import {
   CreateMaterialBody,
   UpdateMaterialBody,
@@ -20,9 +22,11 @@ router.get("/materials", async (req, res): Promise<void> => {
 
   const rows = query.data.search
     ? await db.select().from(materialsCatalogTable)
-        .where(ilike(materialsCatalogTable.name, `%${query.data.search}%`))
+        .where(and(ilike(materialsCatalogTable.name, `%${query.data.search}%`), isNull(materialsCatalogTable.deletedAt)))
         .orderBy(asc(materialsCatalogTable.name))
-    : await db.select().from(materialsCatalogTable).orderBy(asc(materialsCatalogTable.name));
+    : await db.select().from(materialsCatalogTable)
+        .where(isNull(materialsCatalogTable.deletedAt))
+        .orderBy(asc(materialsCatalogTable.name));
 
   res.json(rows);
 });
@@ -40,6 +44,7 @@ router.post("/materials", async (req, res): Promise<void> => {
       supplier: parsed.data.supplier?.trim() || null,
       askQuantityOnScan: parsed.data.askQuantityOnScan ?? false,
     }).returning();
+    await auditEntity.created("material", item.id, getActor(req), item, item.name);
     res.status(201).json(item);
   } catch (err) {
     const code = (err as { code?: string })?.code;
@@ -170,11 +175,15 @@ router.patch("/materials/:id", async (req, res): Promise<void> => {
   }
 
   try {
+    const [existing] = await db.select().from(materialsCatalogTable)
+      .where(and(eq(materialsCatalogTable.id, id), isNull(materialsCatalogTable.deletedAt)));
+    if (!existing) { res.status(404).json({ error: "Materiál nenalezen" }); return; }
     const [row] = await db.update(materialsCatalogTable)
       .set(updates)
       .where(eq(materialsCatalogTable.id, id))
       .returning();
     if (!row) { res.status(404).json({ error: "Materiál nenalezen" }); return; }
+    await auditEntity.updated("material", row.id, getActor(req), existing, row.name);
     res.json(row);
   } catch (err) {
     const code = (err as { code?: string })?.code;
@@ -190,8 +199,15 @@ router.patch("/materials/:id", async (req, res): Promise<void> => {
 router.delete("/materials/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id as string, 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
-  const [row] = await db.delete(materialsCatalogTable).where(eq(materialsCatalogTable.id, id)).returning();
+  const reason = typeof req.body?.reason === "string" ? req.body.reason : null;
+  const actor = getActor(req);
+  const [row] = await db
+    .update(materialsCatalogTable)
+    .set({ deletedAt: new Date(), deletedBy: actor, deleteReason: reason })
+    .where(and(eq(materialsCatalogTable.id, id), isNull(materialsCatalogTable.deletedAt)))
+    .returning();
   if (!row) { res.status(404).json({ error: "Materiál nenalezen" }); return; }
+  await auditEntity.deleted("material", row.id, actor, row, row.name);
   res.sendStatus(204);
 });
 
@@ -201,7 +217,7 @@ router.get("/materials/:id/qr", async (req, res): Promise<void> => {
   const [row] = await db
     .select({ id: materialsCatalogTable.id, name: materialsCatalogTable.name, unit: materialsCatalogTable.unit })
     .from(materialsCatalogTable)
-    .where(eq(materialsCatalogTable.id, id));
+    .where(and(eq(materialsCatalogTable.id, id), isNull(materialsCatalogTable.deletedAt)));
   if (!row) { res.status(404).json({ error: "Materiál nenalezen" }); return; }
   const payload = `autoservis:material:${row.id}:${row.name}`;
   res.json({ id: row.id, name: row.name, unit: row.unit ?? null, payload });
@@ -213,7 +229,7 @@ router.get("/materials/:id/qr", async (req, res): Promise<void> => {
 export const listWorkOrderMaterialsHandler = async (req: Request, res: Response): Promise<void> => {
   const id = parseInt(req.params.id as string, 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
-  const [order] = await db.select({ id: workOrdersTable.id }).from(workOrdersTable).where(eq(workOrdersTable.id, id));
+  const [order] = await db.select({ id: workOrdersTable.id }).from(workOrdersTable).where(and(eq(workOrdersTable.id, id), isNull(workOrdersTable.deletedAt)));
   if (!order) { res.status(404).json({ error: "Zakázka nenalezena" }); return; }
   const rows = await db.select().from(workOrderMaterialsTable)
     .where(eq(workOrderMaterialsTable.workOrderId, id))
@@ -229,7 +245,7 @@ export const addWorkOrderMaterialHandler = async (req: Request, res: Response): 
   const parsed = AddWorkOrderMaterialBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const [order] = await db.select().from(workOrdersTable).where(eq(workOrdersTable.id, id));
+  const [order] = await db.select().from(workOrdersTable).where(and(eq(workOrdersTable.id, id), isNull(workOrdersTable.deletedAt)));
   if (!order) { res.status(404).json({ error: "Zakázka nenalezena" }); return; }
 
   // Normalize quantity: accept Czech comma decimals, fall back to "1" for invalid input
@@ -278,7 +294,7 @@ export const addMaterialToOpenWorkOrderForScannerHandler = async (req: Request, 
   const parsed = AddWorkOrderMaterialBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const [order] = await db.select().from(workOrdersTable).where(eq(workOrdersTable.id, id));
+  const [order] = await db.select().from(workOrdersTable).where(and(eq(workOrdersTable.id, id), isNull(workOrdersTable.deletedAt)));
   if (!order) { res.status(404).json({ error: "Zakázka nenalezena" }); return; }
 
   // Authorize the write against the plate the scanner actually scanned: the SPZ
@@ -377,7 +393,7 @@ router.post("/work-orders/:id/import-invoice", async (req, res): Promise<void> =
   const parsed = ImportInvoiceForWorkOrderBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const [order] = await db.select().from(workOrdersTable).where(eq(workOrdersTable.id, id));
+  const [order] = await db.select().from(workOrdersTable).where(and(eq(workOrdersTable.id, id), isNull(workOrdersTable.deletedAt)));
   if (!order) { res.status(404).json({ error: "Zakázka nenalezena" }); return; }
 
   const images = parsed.data.images ?? [];

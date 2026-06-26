@@ -17,6 +17,10 @@ export const serviceRecordsTable = pgTable("service_records", {
   stkPassed: boolean("stk_passed").notNull().default(false),
   otherWork: text("other_work"),
   technician: text("technician"),
+  // Soft-delete (see vehicles schema): non-null deletedAt = trashed/hidden.
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  deletedBy: text("deleted_by"),
+  deleteReason: text("delete_reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

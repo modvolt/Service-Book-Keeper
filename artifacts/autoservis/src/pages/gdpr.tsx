@@ -10,7 +10,7 @@ import {
   gdprExportVehicle,
 } from "@workspace/api-client-react";
 import type { GdprVehicleMatch } from "@workspace/api-client-react";
-import type { AuditAction } from "@workspace/audit-actions";
+import { actionLabel, formatDateTime } from "@/lib/audit-labels";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -48,29 +48,6 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, Download, UserX, Trash2, FileCheck, Search } from "lucide-react";
-
-const ACTION_LABELS: Record<AuditAction, string> = {
-  login: "Přihlášení",
-  login_failed: "Neúspěšné přihlášení",
-  logout: "Odhlášení",
-  password_changed: "Změna hesla",
-  password_reset_requested: "Žádost o obnovení hesla",
-  password_reset: "Obnovení hesla",
-  gdpr_export: "Export osobních údajů",
-  gdpr_anonymize: "Anonymizace",
-  gdpr_delete: "Trvalé smazání",
-  gdpr_consent: "Změna souhlasu",
-  vehicle_deleted: "Smazání vozidla",
-  appointment_deleted: "Smazání termínu",
-  work_order_deleted: "Smazání zakázky",
-  scanner_password_changed: "Heslo skeneru nastaveno",
-  scanner_password_deleted: "Účet skeneru deaktivován",
-};
-
-function formatDateTime(value: string): string {
-  const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? value : d.toLocaleString("cs-CZ");
-}
 
 export default function GdprPage() {
   const { toast } = useToast();
@@ -350,7 +327,7 @@ export default function GdprPage() {
                       <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
                         {formatDateTime(entry.createdAt)}
                       </TableCell>
-                      <TableCell>{ACTION_LABELS[entry.action as AuditAction] ?? entry.action}</TableCell>
+                      <TableCell>{actionLabel(entry.action)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">{entry.detail || "—"}</TableCell>
                     </TableRow>
                   ))}

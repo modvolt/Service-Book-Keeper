@@ -28,6 +28,10 @@ export const loanersTable = pgTable("loaners", {
   manualEndDate: boolean("manual_end_date").notNull().default(false),
   status: text("status").notNull().default("active"), // "active" | "returned"
   note: text("note"),
+  // Soft-delete (see vehicles schema): non-null deletedAt = trashed/hidden.
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  deletedBy: text("deleted_by"),
+  deleteReason: text("delete_reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

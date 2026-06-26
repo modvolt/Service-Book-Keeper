@@ -46,6 +46,12 @@ export const vehiclesTable = pgTable("vehicles", {
   timingIntervalKm: integer("timing_interval_km"),
   timingIntervalMonths: integer("timing_interval_months"),
   brakeFluidIntervalMonths: integer("brake_fluid_interval_months"),
+  // Soft-delete: a non-null deletedAt means the row is in the trash ("Koš") and
+  // is hidden from normal lists/searches/counts. deletedBy = actor role; reason
+  // is optional free text.
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  deletedBy: text("deleted_by"),
+  deleteReason: text("delete_reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

@@ -1378,6 +1378,119 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/AuditLogEntry"
+  /audit-log:
+    get:
+      operationId: listAuditLog
+      tags: [audit]
+      summary: List audit-log entries with optional filters
+      parameters:
+        - name: entity
+          in: query
+          schema:
+            type: string
+        - name: entityId
+          in: query
+          schema:
+            type: string
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          description: ISO date/time lower bound (inclusive)
+          schema:
+            type: string
+        - name: to
+          in: query
+          description: ISO date/time upper bound (inclusive)
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Audit entries (most recent first)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditLogEntry"
+  /trash:
+    get:
+      operationId: listTrash
+      tags: [trash]
+      summary: List soft-deleted (trashed) items across entities
+      responses:
+        "200":
+          description: Trashed items (most recently deleted first)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TrashItem"
+  /trash/{entity}/{id}/restore:
+    post:
+      operationId: restoreTrashItem
+      tags: [trash]
+      summary: Restore a soft-deleted item
+      parameters:
+        - name: entity
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Restored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResult"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /trash/{entity}/{id}:
+    delete:
+      operationId: purgeTrashItem
+      tags: [trash]
+      summary: Permanently delete a soft-deleted item
+      parameters:
+        - name: entity
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Permanently deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResult"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
 
 components:
   schemas:
@@ -2836,5 +2949,33 @@ components:
           type: ["string", "null"]
         detail:
           type: ["string", "null"]
+        actor:
+          type: ["string", "null"]
+        snapshot:
+          type: ["string", "null"]
         createdAt:
+          type: string
+    TrashItem:
+      type: object
+      required: [entity, id, label, deletedAt]
+      properties:
+        entity:
+          type: string
+        id:
+          type: integer
+        label:
+          type: string
+        deletedAt:
+          type: string
+        deletedBy:
+          type: ["string", "null"]
+        deleteReason:
+          type: ["string", "null"]
+    SuccessResult:
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+        message:
           type: string

@@ -1,6 +1,8 @@
 import { Router, type IRouter } from "express";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, isNull } from "drizzle-orm";
 import { db, serviceRecordsTable, vehiclesTable } from "@workspace/db";
+import { auditEntity } from "../lib/audit";
+import { getActor } from "../lib/actor";
 import {
   ListServiceRecordsParams,
   CreateServiceRecordParams,
@@ -29,7 +31,7 @@ router.get("/vehicles/:id/service-records", async (req, res): Promise<void> => {
   const records = await db
     .select()
     .from(serviceRecordsTable)
-    .where(eq(serviceRecordsTable.vehicleId, params.data.id))
+    .where(and(eq(serviceRecordsTable.vehicleId, params.data.id), isNull(serviceRecordsTable.deletedAt)))
     .orderBy(desc(serviceRecordsTable.date), desc(serviceRecordsTable.id));
 
   res.json(records);
@@ -55,7 +57,7 @@ router.post("/vehicles/:id/service-records", async (req, res): Promise<void> => 
     return;
   }
 
-  const [vehicle] = await db.select().from(vehiclesTable).where(eq(vehiclesTable.id, params.data.id));
+  const [vehicle] = await db.select().from(vehiclesTable).where(and(eq(vehiclesTable.id, params.data.id), isNull(vehiclesTable.deletedAt)));
   if (!vehicle) {
     res.status(404).json({ error: "Vozidlo nenalezeno" });
     return;
@@ -67,6 +69,8 @@ router.post("/vehicles/:id/service-records", async (req, res): Promise<void> => 
     .returning();
 
   await recomputeVehicleServiceStatus(params.data.id);
+
+  await auditEntity.created("service_record", record.id, getActor(req), record, vehicle.licensePlate);
 
   res.status(201).json(record);
 });
@@ -88,7 +92,7 @@ router.get("/service-records/:id", async (req, res): Promise<void> => {
   const [record] = await db
     .select()
     .from(serviceRecordsTable)
-    .where(eq(serviceRecordsTable.id, params.data.id));
+    .where(and(eq(serviceRecordsTable.id, params.data.id), isNull(serviceRecordsTable.deletedAt)));
 
   if (!record) {
     res.status(404).json({ error: "Záznam nenalezen" });
@@ -112,15 +116,20 @@ router.delete("/service-records/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  const reason = typeof req.body?.reason === "string" ? req.body.reason : null;
+  const actor = getActor(req);
   const [record] = await db
-    .delete(serviceRecordsTable)
-    .where(eq(serviceRecordsTable.id, params.data.id))
+    .update(serviceRecordsTable)
+    .set({ deletedAt: new Date(), deletedBy: actor, deleteReason: reason })
+    .where(and(eq(serviceRecordsTable.id, params.data.id), isNull(serviceRecordsTable.deletedAt)))
     .returning();
 
   if (!record) {
     res.status(404).json({ error: "Záznam nenalezen" });
     return;
   }
+
+  await auditEntity.deleted("service_record", record.id, actor, record);
 
   await recomputeVehicleServiceStatus(record.vehicleId);
 

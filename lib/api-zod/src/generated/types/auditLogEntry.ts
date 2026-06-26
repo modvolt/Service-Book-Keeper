@@ -15,5 +15,9 @@ export interface AuditLogEntry {
   entityId?: string | null;
   /** @nullable */
   detail?: string | null;
+  /** @nullable */
+  actor?: string | null;
+  /** @nullable */
+  snapshot?: string | null;
   createdAt: string;
 }

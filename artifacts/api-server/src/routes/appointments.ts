@@ -1,6 +1,8 @@
 import { Router, type IRouter } from "express";
-import { eq, and, gte, lte, ilike, asc } from "drizzle-orm";
+import { eq, and, gte, lte, ilike, asc, isNull } from "drizzle-orm";
 import { db, appointmentsTable, vehiclesTable } from "@workspace/db";
+import { auditEntity } from "../lib/audit";
+import { getActor } from "../lib/actor";
 import {
   ListAppointmentsQueryParams,
   CreateAppointmentBody,
@@ -16,12 +18,12 @@ router.get("/appointments", async (req, res): Promise<void> => {
   const q = ListAppointmentsQueryParams.safeParse(req.query);
   if (!q.success) { res.status(400).json({ error: q.error.message }); return; }
 
-  const conds = [];
+  const conds = [isNull(appointmentsTable.deletedAt)];
   if (q.data.from) conds.push(gte(appointmentsTable.scheduledDate, q.data.from));
   if (q.data.to) conds.push(lte(appointmentsTable.scheduledDate, q.data.to));
 
   const rows = await db.select().from(appointmentsTable)
-    .where(conds.length ? and(...conds) : undefined)
+    .where(and(...conds))
     .orderBy(asc(appointmentsTable.scheduledDate), asc(appointmentsTable.scheduledTime));
 
   res.json(rows);
@@ -35,7 +37,7 @@ router.post("/appointments", async (req, res): Promise<void> => {
   let plate: string | null = null;
   if (parsed.data.licensePlate) {
     plate = normalizeSpz(parsed.data.licensePlate);
-    const [v] = await db.select().from(vehiclesTable).where(ilike(vehiclesTable.licensePlate, plate));
+    const [v] = await db.select().from(vehiclesTable).where(and(ilike(vehiclesTable.licensePlate, plate), isNull(vehiclesTable.deletedAt)));
     vehicleId = v?.id ?? null;
   }
 
@@ -52,6 +54,7 @@ router.post("/appointments", async (req, res): Promise<void> => {
   if (parsed.data.status) insertData.status = parsed.data.status;
 
   const [row] = await db.insert(appointmentsTable).values(insertData).returning();
+  await auditEntity.created("appointment", row.id, getActor(req), row, row.licensePlate ?? undefined);
   res.status(201).json(row);
 });
 
@@ -78,16 +81,22 @@ router.patch("/appointments/:id", async (req, res): Promise<void> => {
     if (parsed.data.licensePlate) {
       const plate = normalizeSpz(parsed.data.licensePlate);
       data.licensePlate = plate;
-      const [v] = await db.select().from(vehiclesTable).where(ilike(vehiclesTable.licensePlate, plate));
+      const [v] = await db.select().from(vehiclesTable).where(and(ilike(vehiclesTable.licensePlate, plate), isNull(vehiclesTable.deletedAt)));
       data.vehicleId = v?.id ?? null;
     } else {
       data.licensePlate = null;
       data.vehicleId = null;
     }
   }
+  const [existing] = await db.select().from(appointmentsTable)
+    .where(and(eq(appointmentsTable.id, params.data.id), isNull(appointmentsTable.deletedAt)));
+  if (!existing) { res.status(404).json({ error: "Rezervace nenalezena" }); return; }
+
   const [row] = await db.update(appointmentsTable).set(data)
     .where(eq(appointmentsTable.id, params.data.id)).returning();
   if (!row) { res.status(404).json({ error: "Rezervace nenalezena" }); return; }
+
+  await auditEntity.updated("appointment", row.id, getActor(req), existing, row.licensePlate ?? undefined);
   res.json(row);
 });
 
@@ -99,7 +108,15 @@ router.delete("/appointments/:id", async (req, res): Promise<void> => {
   const params = DeleteAppointmentParams.safeParse({ id });
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
 
-  await db.delete(appointmentsTable).where(eq(appointmentsTable.id, params.data.id));
+  const reason = typeof req.body?.reason === "string" ? req.body.reason : null;
+  const actor = getActor(req);
+  const [row] = await db
+    .update(appointmentsTable)
+    .set({ deletedAt: new Date(), deletedBy: actor, deleteReason: reason })
+    .where(and(eq(appointmentsTable.id, params.data.id), isNull(appointmentsTable.deletedAt)))
+    .returning();
+  if (!row) { res.status(404).json({ error: "Rezervace nenalezena" }); return; }
+  await auditEntity.deleted("appointment", row.id, actor, row, row.licensePlate ?? undefined);
   res.status(204).end();
 });
 

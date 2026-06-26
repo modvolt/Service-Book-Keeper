@@ -4,7 +4,7 @@ import {
   settingsTable,
   customerReminderLogTable,
 } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 import { sendMail, isMailConfigured } from "./mailer";
 import { logger } from "./logger";
 
@@ -266,7 +266,7 @@ export async function runReminderDigest(opts: { manual?: boolean } = {}): Promis
     return { sent: false, message: "Není nastavena e-mailová adresa pro upozornění." };
   }
 
-  const vehicles = await db.select().from(vehiclesTable);
+  const vehicles = await db.select().from(vehiclesTable).where(isNull(vehiclesTable.deletedAt));
   const rows: DigestRow[] = [];
   for (const v of vehicles) {
     const alerts = computeVehicleAlerts(v, settings);
@@ -431,7 +431,7 @@ export async function runCustomerReminders(
     };
   }
 
-  const vehicles = await db.select().from(vehiclesTable);
+  const vehicles = await db.select().from(vehiclesTable).where(isNull(vehiclesTable.deletedAt));
 
   // Prefetch the whole ledger once and index it; the table holds one row per
   // already-emailed deadline, so it stays small relative to vehicles.

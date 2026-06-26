@@ -36,6 +36,10 @@ export const workOrdersTable = pgTable("work_orders", {
   laborHours: text("labor_hours"),
   laborPrice: integer("labor_price"),
   notes: text("notes"),
+  // Soft-delete (see vehicles schema): non-null deletedAt = trashed/hidden.
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  deletedBy: text("deleted_by"),
+  deleteReason: text("delete_reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   completedAt: timestamp("completed_at", { withTimezone: true }),
 });

@@ -24,6 +24,8 @@ import TpScanPage from "@/pages/tp-scan";
 import AlertsPage from "@/pages/alerts";
 import StatisticsPage from "@/pages/statistics";
 import GdprPage from "@/pages/gdpr";
+import TrashPage from "@/pages/trash";
+import AuditLogPage from "@/pages/audit-log";
 import FleetPage from "@/pages/fleet";
 import SkenMaterialuPage from "@/pages/sken-materialu/index";
 import QrStitkyPage from "@/pages/sken-materialu/qr-stitky";
@@ -70,6 +72,8 @@ function Router() {
         <Route path="/po-terminu" component={AlertsPage} />
         <Route path="/statistiky" component={StatisticsPage} />
         <Route path="/gdpr" component={GdprPage} />
+        <Route path="/kos" component={TrashPage} />
+        <Route path="/audit-log" component={AuditLogPage} />
         <Route path="/sken-materialu" component={SkenMaterialuPage} />
         <Route path="/sken-materialu/qr-stitky" component={QrStitkyPage} />
         <Route path="/scanner-profil" component={ScannerProfilPage} />

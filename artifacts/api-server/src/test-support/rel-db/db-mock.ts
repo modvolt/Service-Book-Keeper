@@ -10,6 +10,7 @@ export {
   photosTable,
   serviceRecordsTable,
   appointmentsTable,
+  materialsCatalogTable,
   auditLogTable,
   customerReminderLogTable,
 } from "./engine";

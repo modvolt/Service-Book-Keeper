@@ -50,6 +50,13 @@
       "when": 1781795985179,
       "tag": "0006_adorable_nuke",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1782516439990,
+      "tag": "0007_salty_spirit",
+      "breakpoints": true
     }
   ]
 }

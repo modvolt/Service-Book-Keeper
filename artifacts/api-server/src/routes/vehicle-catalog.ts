@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { sql } from "drizzle-orm";
+import { sql, and, isNull } from "drizzle-orm";
 import { db, vehiclesTable } from "@workspace/db";
 import { VEHICLE_CATALOG, VEHICLE_MAKES } from "../data/vehicle-catalog";
 
@@ -15,7 +15,8 @@ async function getMergedMakes(): Promise<string[]> {
 
   const dbRows = await db
     .selectDistinct({ make: vehiclesTable.make })
-    .from(vehiclesTable);
+    .from(vehiclesTable)
+    .where(isNull(vehiclesTable.deletedAt));
 
   const seen = new Map<string, string>(); // lowercase key → display value
   for (const m of VEHICLE_MAKES) seen.set(m.toLowerCase(), m);
@@ -52,7 +53,7 @@ async function getMergedModels(make: string): Promise<string[]> {
   // DB: fetch distinct makes once, filter in JS so diacritics don't matter,
   // then load models for matching make values.
   const matchingMakes = (
-    await db.selectDistinct({ make: vehiclesTable.make }).from(vehiclesTable)
+    await db.selectDistinct({ make: vehiclesTable.make }).from(vehiclesTable).where(isNull(vehiclesTable.deletedAt))
   )
     .map((r) => r.make)
     .filter((m): m is string => !!m && foldKey(m) === folded);
@@ -61,7 +62,7 @@ async function getMergedModels(make: string): Promise<string[]> {
     ? await db
         .selectDistinct({ model: vehiclesTable.model })
         .from(vehiclesTable)
-        .where(sql`${vehiclesTable.make} in ${matchingMakes}`)
+        .where(and(sql`${vehiclesTable.make} in ${matchingMakes}`, isNull(vehiclesTable.deletedAt)))
     : [];
 
   const seen = new Map<string, string>();

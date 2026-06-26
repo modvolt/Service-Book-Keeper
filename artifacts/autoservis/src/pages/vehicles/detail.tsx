@@ -3,6 +3,7 @@ import { useRoute, Link, useLocation } from "wouter";
 import { LicensePlate } from "@/components/license-plate";
 import { useGetVehicle, useUpdateVehicle, useDeleteVehicle, useCreateServiceRecord, useDeleteServiceRecord, useListVehicleMakes, useListVehicleModels, useGetSettings, useRecomputeVehicleStatus, useListVehicleReminderLog, getGetVehicleQueryKey, getListServiceRecordsQueryKey, getListVehiclesQueryKey } from "@workspace/api-client-react";
 import { VehicleHistoryExportDialog } from "@/components/vehicle-history-export-dialog";
+import { ChangeHistory } from "@/components/change-history";
 import { AutocompleteInput } from "@/components/autocomplete-input";
 import { AresButton } from "@/components/ares-button";
 import { useQueryClient } from "@tanstack/react-query";
@@ -665,6 +666,8 @@ export default function VehicleDetail() {
           )}
         </CardContent>
       </Card>
+
+      <ChangeHistory entity="vehicle" entityId={id} />
 
       {/* Edit vehicle dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>

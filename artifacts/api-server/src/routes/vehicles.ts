@@ -1,6 +1,8 @@
 import { Router, type IRouter } from "express";
-import { eq, ilike, or, desc, and } from "drizzle-orm";
+import { eq, ilike, or, desc, and, isNull } from "drizzle-orm";
 import { db, vehiclesTable, serviceRecordsTable, workOrdersTable, customerReminderLogTable } from "@workspace/db";
+import { auditEntity } from "../lib/audit";
+import { getActor } from "../lib/actor";
 import {
   ListVehiclesQueryParams,
   CreateVehicleBody,
@@ -24,7 +26,7 @@ router.get("/vehicles", async (req, res): Promise<void> => {
     return;
   }
 
-  const conds = [];
+  const conds = [isNull(vehiclesTable.deletedAt)];
   if (query.data.search) {
     const s = `%${query.data.search}%`;
     conds.push(
@@ -33,7 +35,7 @@ router.get("/vehicles", async (req, res): Promise<void> => {
         ilike(vehiclesTable.make, s),
         ilike(vehiclesTable.model, s),
         ilike(vehiclesTable.ownerName, s),
-      ),
+      )!,
     );
   }
   if (query.data.fleet != null) {
@@ -43,7 +45,7 @@ router.get("/vehicles", async (req, res): Promise<void> => {
   const vehicles = await db
     .select()
     .from(vehiclesTable)
-    .where(conds.length ? and(...conds) : undefined)
+    .where(and(...conds))
     .orderBy(vehiclesTable.licensePlate);
 
   res.json(vehicles);
@@ -76,6 +78,7 @@ router.post("/vehicles", async (req, res): Promise<void> => {
     isFleet: fleet,
   };
   const [vehicle] = await db.insert(vehiclesTable).values(values).returning();
+  await auditEntity.created("vehicle", vehicle.id, getActor(req), vehicle, vehicle.licensePlate);
   res.status(201).json(vehicle);
 });
 
@@ -89,7 +92,7 @@ router.get("/vehicles/by-plate/:plate", async (req, res): Promise<void> => {
   const [vehicle] = await db
     .select()
     .from(vehiclesTable)
-    .where(ilike(vehiclesTable.licensePlate, params.data.plate));
+    .where(and(ilike(vehiclesTable.licensePlate, params.data.plate), isNull(vehiclesTable.deletedAt)));
 
   if (!vehicle) {
     res.status(404).json({ error: "Vozidlo nenalezeno" });
@@ -116,7 +119,7 @@ router.get("/vehicles/:id", async (req, res): Promise<void> => {
   const [vehicle] = await db
     .select()
     .from(vehiclesTable)
-    .where(eq(vehiclesTable.id, params.data.id));
+    .where(and(eq(vehiclesTable.id, params.data.id), isNull(vehiclesTable.deletedAt)));
 
   if (!vehicle) {
     res.status(404).json({ error: "Vozidlo nenalezeno" });
@@ -126,13 +129,13 @@ router.get("/vehicles/:id", async (req, res): Promise<void> => {
   const serviceRecords = await db
     .select()
     .from(serviceRecordsTable)
-    .where(eq(serviceRecordsTable.vehicleId, params.data.id))
+    .where(and(eq(serviceRecordsTable.vehicleId, params.data.id), isNull(serviceRecordsTable.deletedAt)))
     .orderBy(desc(serviceRecordsTable.date), desc(serviceRecordsTable.id));
 
   const allWorkOrders = await db
     .select()
     .from(workOrdersTable)
-    .where(eq(workOrdersTable.vehicleId, params.data.id))
+    .where(and(eq(workOrdersTable.vehicleId, params.data.id), isNull(workOrdersTable.deletedAt)))
     .orderBy(desc(workOrdersTable.serviceDate), desc(workOrdersTable.createdAt));
 
   const openWorkOrders = allWorkOrders.filter(wo => wo.status !== "completed");
@@ -168,7 +171,7 @@ router.patch("/vehicles/:id", async (req, res): Promise<void> => {
   const [existing] = await db
     .select()
     .from(vehiclesTable)
-    .where(eq(vehiclesTable.id, params.data.id));
+    .where(and(eq(vehiclesTable.id, params.data.id), isNull(vehiclesTable.deletedAt)));
   if (!existing) {
     res.status(404).json({ error: "Vozidlo nenalezeno" });
     return;
@@ -200,6 +203,8 @@ router.patch("/vehicles/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  await auditEntity.updated("vehicle", vehicle.id, getActor(req), existing, vehicle.licensePlate);
+
   res.json(vehicle);
 });
 
@@ -208,7 +213,7 @@ router.post("/vehicles/:id/recompute-status", async (req, res): Promise<void> =>
   const id = parseInt(raw, 10);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
 
-  const [existing] = await db.select().from(vehiclesTable).where(eq(vehiclesTable.id, id));
+  const [existing] = await db.select().from(vehiclesTable).where(and(eq(vehiclesTable.id, id), isNull(vehiclesTable.deletedAt)));
   if (!existing) { res.status(404).json({ error: "Vozidlo nenalezeno" }); return; }
 
   await recomputeVehicleServiceStatus(id);
@@ -227,7 +232,7 @@ router.get("/vehicles/:id/reminder-log", async (req, res): Promise<void> => {
   const [vehicle] = await db
     .select({ id: vehiclesTable.id })
     .from(vehiclesTable)
-    .where(eq(vehiclesTable.id, id));
+    .where(and(eq(vehiclesTable.id, id), isNull(vehiclesTable.deletedAt)));
   if (!vehicle) {
     res.status(404).json({ error: "Vozidlo nenalezeno" });
     return;
@@ -260,15 +265,20 @@ router.delete("/vehicles/:id", async (req, res): Promise<void> => {
     return;
   }
 
+  const reason = typeof req.body?.reason === "string" ? req.body.reason : null;
+  const actor = getActor(req);
   const [vehicle] = await db
-    .delete(vehiclesTable)
-    .where(eq(vehiclesTable.id, params.data.id))
+    .update(vehiclesTable)
+    .set({ deletedAt: new Date(), deletedBy: actor, deleteReason: reason })
+    .where(and(eq(vehiclesTable.id, params.data.id), isNull(vehiclesTable.deletedAt)))
     .returning();
 
   if (!vehicle) {
     res.status(404).json({ error: "Vozidlo nenalezeno" });
     return;
   }
+
+  await auditEntity.deleted("vehicle", vehicle.id, actor, vehicle, vehicle.licensePlate);
 
   res.sendStatus(204);
 });

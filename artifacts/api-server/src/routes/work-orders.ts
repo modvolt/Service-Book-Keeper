@@ -1,9 +1,11 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { eq, ne, ilike, and, sql } from "drizzle-orm";
+import { eq, ne, ilike, and, sql, isNull } from "drizzle-orm";
 import multer from "multer";
 import { db, workOrdersTable, vehiclesTable, photosTable, loanersTable } from "@workspace/db";
 import { getObjectStorageService } from "../lib/storage";
 import { validateImageUpload } from "../lib/fileValidation";
+import { auditEntity } from "../lib/audit";
+import { getActor } from "../lib/actor";
 import {
   ListWorkOrdersQueryParams,
   CreateWorkOrderBody,
@@ -22,9 +24,15 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 
 const storage = getObjectStorageService();
 
 async function getWorkOrderWithPhotos(id: number) {
-  const [order] = await db.select().from(workOrdersTable).where(eq(workOrdersTable.id, id));
+  const [order] = await db
+    .select()
+    .from(workOrdersTable)
+    .where(and(eq(workOrdersTable.id, id), isNull(workOrdersTable.deletedAt)));
   if (!order) return null;
-  const photos = await db.select().from(photosTable).where(eq(photosTable.workOrderId, id));
+  const photos = await db
+    .select()
+    .from(photosTable)
+    .where(and(eq(photosTable.workOrderId, id), isNull(photosTable.deletedAt)));
   return { ...order, photos };
 }
 
@@ -44,7 +52,7 @@ export const listWorkOrdersHandler = async (req: Request, res: Response): Promis
     return;
   }
 
-  const conditions = [];
+  const conditions = [isNull(workOrdersTable.deletedAt)];
   if (query.data.status) conditions.push(eq(workOrdersTable.status, query.data.status));
 
   let rows = await db
@@ -78,7 +86,10 @@ export const listWorkOrdersHandler = async (req: Request, res: Response): Promis
   }
 
   const withPhotos = await Promise.all(rows.map(async (r) => {
-    const photos = await db.select().from(photosTable).where(eq(photosTable.workOrderId, r.order.id));
+    const photos = await db
+      .select()
+      .from(photosTable)
+      .where(and(eq(photosTable.workOrderId, r.order.id), isNull(photosTable.deletedAt)));
     return { ...r.order, make: r.make ?? null, model: r.model ?? null, ownerName: r.ownerName ?? null, photos };
   }));
 
@@ -121,7 +132,7 @@ export const lookupOpenWorkOrdersForScannerHandler = async (
   const rows = await db
     .select()
     .from(workOrdersTable)
-    .where(ne(workOrdersTable.status, "completed"))
+    .where(and(ne(workOrdersTable.status, "completed"), isNull(workOrdersTable.deletedAt)))
     .orderBy(
       sql`coalesce(${workOrdersTable.serviceDate}, ${workOrdersTable.createdAt}::date) desc, ${workOrdersTable.createdAt} desc`,
     );
@@ -173,6 +184,8 @@ router.post("/work-orders", async (req, res): Promise<void> => {
 
   await propagateWorkOrderToVehicle(order.id);
 
+  await auditEntity.created("work_order", order.id, getActor(req), order, order.licensePlate);
+
   res.status(201).json({ ...order, photos: [] });
 });
 
@@ -201,6 +214,12 @@ router.patch("/work-orders/:id", async (req, res): Promise<void> => {
   const parsed = UpdateWorkOrderBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
+  const [existing] = await db
+    .select()
+    .from(workOrdersTable)
+    .where(and(eq(workOrdersTable.id, params.data.id), isNull(workOrdersTable.deletedAt)));
+  if (!existing) { res.status(404).json({ error: "Zakázka nenalezena" }); return; }
+
   const updateData: Partial<typeof workOrdersTable.$inferInsert> = { ...parsed.data };
   if (parsed.data.status === "completed") {
     updateData.completedAt = new Date();
@@ -212,6 +231,8 @@ router.patch("/work-orders/:id", async (req, res): Promise<void> => {
     .where(eq(workOrdersTable.id, params.data.id)).returning();
 
   if (!order) { res.status(404).json({ error: "Zakázka nenalezena" }); return; }
+
+  await auditEntity.updated("work_order", order.id, getActor(req), existing, order.licensePlate);
 
   // When the work order is marked as invoiced (Vyfakturováno / paid), any
   // active loaner running off this work order is auto-returned today — unless
@@ -229,7 +250,7 @@ router.patch("/work-orders/:id", async (req, res): Promise<void> => {
 
   await propagateWorkOrderToVehicle(order.id);
 
-  const photos = await db.select().from(photosTable).where(eq(photosTable.workOrderId, order.id));
+  const photos = await db.select().from(photosTable).where(and(eq(photosTable.workOrderId, order.id), isNull(photosTable.deletedAt)));
   res.json({ ...order, photos });
 });
 
@@ -241,8 +262,15 @@ router.delete("/work-orders/:id", async (req, res): Promise<void> => {
   const params = DeleteWorkOrderParams.safeParse({ id });
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
 
-  const [order] = await db.delete(workOrdersTable).where(eq(workOrdersTable.id, params.data.id)).returning();
+  const reason = typeof req.body?.reason === "string" ? req.body.reason : null;
+  const actor = getActor(req);
+  const [order] = await db
+    .update(workOrdersTable)
+    .set({ deletedAt: new Date(), deletedBy: actor, deleteReason: reason })
+    .where(and(eq(workOrdersTable.id, params.data.id), isNull(workOrdersTable.deletedAt)))
+    .returning();
   if (!order) { res.status(404).json({ error: "Zakázka nenalezena" }); return; }
+  await auditEntity.deleted("work_order", order.id, actor, order, order.licensePlate);
   if (order.vehicleId) await recomputeVehicleServiceStatus(order.vehicleId);
   res.sendStatus(204);
 });
@@ -256,7 +284,10 @@ router.get("/work-orders/:id/photos", async (req, res): Promise<void> => {
   const params = ListWorkOrderPhotosParams.safeParse({ id });
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
 
-  const photos = await db.select().from(photosTable).where(eq(photosTable.workOrderId, params.data.id));
+  const photos = await db
+    .select()
+    .from(photosTable)
+    .where(and(eq(photosTable.workOrderId, params.data.id), isNull(photosTable.deletedAt)));
   res.json(photos);
 });
 
@@ -270,7 +301,7 @@ router.post("/work-orders/:id/photos", upload.single("photo"), async (req, res):
   const validation = validateImageUpload(req.file);
   if (!validation.ok) { res.status(400).json({ error: validation.error }); return; }
 
-  const [order] = await db.select().from(workOrdersTable).where(eq(workOrdersTable.id, id));
+  const [order] = await db.select().from(workOrdersTable).where(and(eq(workOrdersTable.id, id), isNull(workOrdersTable.deletedAt)));
   if (!order) { res.status(404).json({ error: "Zakázka nenalezena" }); return; }
 
   try {
@@ -299,8 +330,15 @@ router.delete("/photos/:id", async (req, res): Promise<void> => {
   const params = DeletePhotoParams.safeParse({ id });
   if (!params.success) { res.status(400).json({ error: params.error.message }); return; }
 
-  const [photo] = await db.delete(photosTable).where(eq(photosTable.id, params.data.id)).returning();
+  const reason = typeof req.body?.reason === "string" ? req.body.reason : null;
+  const actor = getActor(req);
+  const [photo] = await db
+    .update(photosTable)
+    .set({ deletedAt: new Date(), deletedBy: actor, deleteReason: reason })
+    .where(and(eq(photosTable.id, params.data.id), isNull(photosTable.deletedAt)))
+    .returning();
   if (!photo) { res.status(404).json({ error: "Fotka nenalezena" }); return; }
+  await auditEntity.deleted("photo", photo.id, actor, photo, photo.filename);
   res.sendStatus(204);
 });
 

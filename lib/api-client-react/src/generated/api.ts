@@ -47,6 +47,7 @@ import type {
   InvoiceImportInput,
   InvoiceImportResult,
   ListAppointmentsParams,
+  ListAuditLogParams,
   ListLoanerCustomerSuggestionsParams,
   ListLoanersParams,
   ListMaterialsParams,
@@ -74,7 +75,9 @@ import type {
   SetScannerPasswordInput,
   Settings,
   SettingsInput,
+  SuccessResult,
   TestReminderResult,
+  TrashItem,
   Vehicle,
   VehicleDetail,
   VehicleInput,
@@ -5082,4 +5085,309 @@ export function useGetAuditLog<TData = Awaited<ReturnType<typeof getAuditLog>>, 
 
 
 
+
+export const getListAuditLogUrl = (params?: ListAuditLogParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/audit-log?${stringifiedParams}` : `/api/audit-log`
+}
+
+/**
+ * @summary List audit-log entries with optional filters
+ */
+export const listAuditLog = async (params?: ListAuditLogParams, options?: RequestInit): Promise<AuditLogEntry[]> => {
+
+  return customFetch<AuditLogEntry[]>(getListAuditLogUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAuditLogQueryKey = (params?: ListAuditLogParams,) => {
+    return [
+    `/api/audit-log`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListAuditLogQueryOptions = <TData = Awaited<ReturnType<typeof listAuditLog>>, TError = ErrorType<unknown>>(params?: ListAuditLogParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAuditLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAuditLogQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAuditLog>>> = ({ signal }) => listAuditLog(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAuditLog>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAuditLogQueryResult = NonNullable<Awaited<ReturnType<typeof listAuditLog>>>
+export type ListAuditLogQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List audit-log entries with optional filters
+ */
+
+export function useListAuditLog<TData = Awaited<ReturnType<typeof listAuditLog>>, TError = ErrorType<unknown>>(
+ params?: ListAuditLogParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAuditLog>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAuditLogQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListTrashUrl = () => {
+
+
+
+
+  return `/api/trash`
+}
+
+/**
+ * @summary List soft-deleted (trashed) items across entities
+ */
+export const listTrash = async ( options?: RequestInit): Promise<TrashItem[]> => {
+
+  return customFetch<TrashItem[]>(getListTrashUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListTrashQueryKey = () => {
+    return [
+    `/api/trash`
+    ] as const;
+    }
+
+
+export const getListTrashQueryOptions = <TData = Awaited<ReturnType<typeof listTrash>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTrash>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTrashQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTrash>>> = ({ signal }) => listTrash({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTrash>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListTrashQueryResult = NonNullable<Awaited<ReturnType<typeof listTrash>>>
+export type ListTrashQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List soft-deleted (trashed) items across entities
+ */
+
+export function useListTrash<TData = Awaited<ReturnType<typeof listTrash>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTrash>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListTrashQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getRestoreTrashItemUrl = (entity: string,
+    id: number,) => {
+
+
+
+
+  return `/api/trash/${entity}/${id}/restore`
+}
+
+/**
+ * @summary Restore a soft-deleted item
+ */
+export const restoreTrashItem = async (entity: string,
+    id: number, options?: RequestInit): Promise<SuccessResult> => {
+
+  return customFetch<SuccessResult>(getRestoreTrashItemUrl(entity,id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getRestoreTrashItemMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreTrashItem>>, TError,{entity: string;id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreTrashItem>>, TError,{entity: string;id: number}, TContext> => {
+
+const mutationKey = ['restoreTrashItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreTrashItem>>, {entity: string;id: number}> = (props) => {
+          const {entity,id} = props ?? {};
+
+          return  restoreTrashItem(entity,id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RestoreTrashItemMutationResult = NonNullable<Awaited<ReturnType<typeof restoreTrashItem>>>
+
+    export type RestoreTrashItemMutationError = ErrorType<Error>
+
+    /**
+ * @summary Restore a soft-deleted item
+ */
+export const useRestoreTrashItem = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreTrashItem>>, TError,{entity: string;id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof restoreTrashItem>>,
+        TError,
+        {entity: string;id: number},
+        TContext
+      > => {
+      return useMutation(getRestoreTrashItemMutationOptions(options));
+    }
+
+export const getPurgeTrashItemUrl = (entity: string,
+    id: number,) => {
+
+
+
+
+  return `/api/trash/${entity}/${id}`
+}
+
+/**
+ * @summary Permanently delete a soft-deleted item
+ */
+export const purgeTrashItem = async (entity: string,
+    id: number, options?: RequestInit): Promise<SuccessResult> => {
+
+  return customFetch<SuccessResult>(getPurgeTrashItemUrl(entity,id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getPurgeTrashItemMutationOptions = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purgeTrashItem>>, TError,{entity: string;id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof purgeTrashItem>>, TError,{entity: string;id: number}, TContext> => {
+
+const mutationKey = ['purgeTrashItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof purgeTrashItem>>, {entity: string;id: number}> = (props) => {
+          const {entity,id} = props ?? {};
+
+          return  purgeTrashItem(entity,id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PurgeTrashItemMutationResult = NonNullable<Awaited<ReturnType<typeof purgeTrashItem>>>
+
+    export type PurgeTrashItemMutationError = ErrorType<Error>
+
+    /**
+ * @summary Permanently delete a soft-deleted item
+ */
+export const usePurgeTrashItem = <TError = ErrorType<Error>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof purgeTrashItem>>, TError,{entity: string;id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof purgeTrashItem>>,
+        TError,
+        {entity: string;id: number},
+        TContext
+      > => {
+      return useMutation(getPurgeTrashItemMutationOptions(options));
+    }
 

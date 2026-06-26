@@ -10,6 +10,7 @@ import {
 } from "@workspace/api-client-react";
 import { WorkOrderExportDialog } from "@/components/work-order-export-dialog";
 import { LoanerSection } from "@/components/loaner-section";
+import { ChangeHistory } from "@/components/change-history";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1042,6 +1043,8 @@ export default function WorkOrderDetail() {
           )}
         </CardContent>
       </Card>
+
+      <ChangeHistory entity="work_order" entityId={id} />
 
       {/* Invoice import dialog */}
       <Dialog open={invoiceOpen} onOpenChange={(open) => { setInvoiceOpen(open); if (!open) { setInvoiceFiles([]); setSuggestions([]); } }}>

@@ -21,24 +21,39 @@ vi.mock("../../lib/logger", () => ({
   logger: { error: vi.fn(), info: vi.fn(), warn: vi.fn() },
 }));
 
+type HandoffPred =
+  | { __op: "ilike"; col: string; value: string }
+  | { __op: "isNull"; col: string }
+  | { __op: "and"; args: HandoffPred[] };
+
 vi.mock("drizzle-orm", () => ({
-  ilike: (column: unknown, value: string) => ({ __ilike: true as const, column, value }),
+  ilike: (column: { __col: string }, value: string): HandoffPred => ({ __op: "ilike", col: column.__col, value }),
+  isNull: (column: { __col: string }): HandoffPred => ({ __op: "isNull", col: column.__col }),
+  and: (...args: HandoffPred[]): HandoffPred => ({ __op: "and", args }),
 }));
 
 vi.mock("@workspace/db", () => {
-  const vehiclesTable = { licensePlate: { __col: "licensePlate" } };
+  const vehiclesTable = {
+    licensePlate: { __col: "licensePlate" },
+    deletedAt: { __col: "deletedAt" },
+  };
+
+  function matchRow(row: Record<string, unknown>, pred: HandoffPred | undefined): boolean {
+    if (!pred) return true;
+    if (pred.__op === "and") return pred.args.every((p) => matchRow(row, p));
+    // ilike here mirrors a wildcard-free, case-insensitive equality.
+    if (pred.__op === "ilike") return String(row[pred.col] ?? "").toLowerCase() === pred.value.toLowerCase();
+    if (pred.__op === "isNull") return row[pred.col] == null;
+    return true;
+  }
+
   const db = {
     select() {
       return {
         from(_table: unknown) {
           return {
-            where(pred: { value?: string }): Promise<Record<string, unknown>[]> {
-              const wanted = (pred?.value ?? "").toLowerCase();
-              return Promise.resolve(
-                vehicles.filter(
-                  (row) => String(row.licensePlate).toLowerCase() === wanted,
-                ),
-              );
+            where(pred: HandoffPred | undefined): Promise<Record<string, unknown>[]> {
+              return Promise.resolve(vehicles.filter((row) => matchRow(row, pred)));
             },
           };
         },

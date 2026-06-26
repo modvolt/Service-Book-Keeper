@@ -288,15 +288,22 @@ describe("PATCH /loaners/:id", () => {
 });
 
 describe("DELETE /loaners/:id", () => {
-  it("removes the loaner and returns 204", async () => {
+  it("soft-deletes the loaner (sets deletedAt) and returns 204", async () => {
     seedFleet();
     seedLoaner({ id: 1 });
     seedLoaner({ id: 2 });
 
     const res = await request(makeApp()).delete("/loaners/1");
     expect(res.status).toBe(204);
-    const remaining = __store.rows("loaners").map((r) => r.id);
-    expect(remaining).toEqual([2]);
+
+    // The row is retained but flagged as deleted...
+    const rows = __store.rows("loaners");
+    expect(rows.map((r) => r.id).sort()).toEqual([1, 2]);
+    expect(rows.find((r) => r.id === 1)?.deletedAt).toBeTruthy();
+
+    // ...and it no longer appears in the listing.
+    const list = await request(makeApp()).get("/loaners");
+    expect(list.body.map((r: { id: number }) => r.id)).toEqual([2]);
   });
 
   it("rejects a non-numeric id with 400", async () => {

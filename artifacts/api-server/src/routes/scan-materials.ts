@@ -1,5 +1,5 @@
 import { Router, type IRouter, json } from "express";
-import { eq, ilike, ne, and, inArray } from "drizzle-orm";
+import { eq, ilike, ne, and, inArray, isNull } from "drizzle-orm";
 import { db, materialsCatalogTable, workOrdersTable, vehiclesTable } from "@workspace/db";
 import { getOpenAI, getOpenAIModel } from "@workspace/integrations-openai-ai-server";
 import { normalizeSpzOrNull } from "../lib/spz";
@@ -58,7 +58,7 @@ router.post("/work-orders/scan-materials", largeJson, async (req, res): Promise<
   const [vehicle] = await db
     .select({ id: vehiclesTable.id })
     .from(vehiclesTable)
-    .where(ilike(vehiclesTable.licensePlate, normalizedPlate));
+    .where(and(ilike(vehiclesTable.licensePlate, normalizedPlate), isNull(vehiclesTable.deletedAt)));
 
   let openOrder: { id: number } | undefined;
 
@@ -67,7 +67,7 @@ router.post("/work-orders/scan-materials", largeJson, async (req, res): Promise<
     const [candidate] = await db
       .select({ id: workOrdersTable.id, vehicleId: workOrdersTable.vehicleId, licensePlate: workOrdersTable.licensePlate, status: workOrdersTable.status })
       .from(workOrdersTable)
-      .where(eq(workOrdersTable.id, parsed.data.workOrderId));
+      .where(and(eq(workOrdersTable.id, parsed.data.workOrderId), isNull(workOrdersTable.deletedAt)));
 
     if (!candidate || candidate.status === "completed") {
       res.status(404).json({ error: "Vybraná zakázka není otevřená." });
@@ -93,6 +93,7 @@ router.post("/work-orders/scan-materials", largeJson, async (req, res): Promise<
           and(
             eq(workOrdersTable.vehicleId, vehicle.id),
             ne(workOrdersTable.status, "completed"),
+            isNull(workOrdersTable.deletedAt),
           ),
         )
         .limit(1);
@@ -108,6 +109,7 @@ router.post("/work-orders/scan-materials", largeJson, async (req, res): Promise<
           and(
             ilike(workOrdersTable.licensePlate, normalizedPlate),
             ne(workOrdersTable.status, "completed"),
+            isNull(workOrdersTable.deletedAt),
           ),
         )
         .limit(1);
@@ -130,7 +132,8 @@ router.post("/work-orders/scan-materials", largeJson, async (req, res): Promise<
         defaultPrice: materialsCatalogTable.defaultPrice,
         askQuantityOnScan: materialsCatalogTable.askQuantityOnScan,
       })
-      .from(materialsCatalogTable);
+      .from(materialsCatalogTable)
+      .where(isNull(materialsCatalogTable.deletedAt));
 
     // ── QR-detected items ───────────────────────────────────────────────────
     const qrIds = parsed.data.qrMaterialIds ?? [];
@@ -154,7 +157,7 @@ router.post("/work-orders/scan-materials", largeJson, async (req, res): Promise<
           askQuantityOnScan: materialsCatalogTable.askQuantityOnScan,
         })
         .from(materialsCatalogTable)
-        .where(inArray(materialsCatalogTable.id, qrIds));
+        .where(and(inArray(materialsCatalogTable.id, qrIds), isNull(materialsCatalogTable.deletedAt)));
 
       // Preserve the order from the client-supplied ID list, dedup by ID
       const seen = new Set<number>();
@@ -240,7 +243,7 @@ router.post("/work-orders/scan-materials", largeJson, async (req, res): Promise<
               askQuantityOnScan: materialsCatalogTable.askQuantityOnScan,
             })
             .from(materialsCatalogTable)
-            .where(ilike(materialsCatalogTable.name, `%${name}%`))
+            .where(and(ilike(materialsCatalogTable.name, `%${name}%`), isNull(materialsCatalogTable.deletedAt)))
             .limit(1);
 
           const hit = hits[0];

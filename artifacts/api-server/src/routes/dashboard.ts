@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, ne, gte, lte, and, count, sql } from "drizzle-orm";
+import { eq, ne, gte, lte, and, count, sql, isNull } from "drizzle-orm";
 import { db, vehiclesTable, workOrdersTable } from "@workspace/db";
 import { photosTable } from "@workspace/db";
 
@@ -12,15 +12,18 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
 
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [totalVehiclesResult] = await db.select({ count: count() }).from(vehiclesTable);
+  const [totalVehiclesResult] = await db
+    .select({ count: count() })
+    .from(vehiclesTable)
+    .where(isNull(vehiclesTable.deletedAt));
   const [openResult] = await db
     .select({ count: count() })
     .from(workOrdersTable)
-    .where(ne(workOrdersTable.status, "completed"));
+    .where(and(ne(workOrdersTable.status, "completed"), isNull(workOrdersTable.deletedAt)));
   const [inProgressResult] = await db
     .select({ count: count() })
     .from(workOrdersTable)
-    .where(eq(workOrdersTable.status, "in_progress"));
+    .where(and(eq(workOrdersTable.status, "in_progress"), isNull(workOrdersTable.deletedAt)));
   const [completedMonthResult] = await db
     .select({ count: count() })
     .from(workOrdersTable)
@@ -28,6 +31,7 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
       and(
         eq(workOrdersTable.status, "completed"),
         gte(workOrdersTable.completedAt, startOfMonth),
+        isNull(workOrdersTable.deletedAt),
       ),
     );
 
@@ -40,6 +44,7 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
       and(
         gte(vehiclesTable.stkValidUntil, todayStr),
         lte(vehiclesTable.stkValidUntil, thirtyDaysStr),
+        isNull(vehiclesTable.deletedAt),
       ),
     );
 
@@ -52,6 +57,7 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
     })
     .from(workOrdersTable)
     .leftJoin(vehiclesTable, eq(workOrdersTable.vehicleId, vehiclesTable.id))
+    .where(isNull(workOrdersTable.deletedAt))
     .orderBy(sql`${workOrdersTable.createdAt} desc`)
     .limit(8);
 
@@ -61,7 +67,7 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
       const photos = await db
         .select()
         .from(photosTable)
-        .where(eq(photosTable.workOrderId, r.order.id));
+        .where(and(eq(photosTable.workOrderId, r.order.id), isNull(photosTable.deletedAt)));
       return { ...r.order, make: r.make ?? null, model: r.model ?? null, ownerName: r.ownerName ?? null, photos };
     }),
   );

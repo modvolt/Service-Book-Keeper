@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar, Settings as SettingsIcon, ScanLine, AlertTriangle, BarChart3, LogOut, Shield, KeyRound, RefreshCw, PackageSearch, UserCog } from "lucide-react";
+import { Wrench, Car, ClipboardList, Menu, LayoutDashboard, Package, Calendar, Settings as SettingsIcon, ScanLine, AlertTriangle, BarChart3, LogOut, Shield, KeyRound, RefreshCw, PackageSearch, UserCog, Trash2, ScrollText } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGetSettings, useLogout, getGetAuthStatusQueryKey, useGetAuthStatus } from "@workspace/api-client-react";
@@ -49,6 +49,8 @@ const NAV_ITEMS = [
 ];
 
 const BOTTOM_NAV_ITEMS = [
+  { href: "/kos", label: "Koš", icon: Trash2, color: "text-slate-600 dark:text-slate-400", bg: "hover:bg-slate-100 dark:hover:bg-slate-800/50" },
+  { href: "/audit-log", label: "Záznam činností", icon: ScrollText, color: "text-slate-600 dark:text-slate-400", bg: "hover:bg-slate-100 dark:hover:bg-slate-800/50" },
   { href: "/gdpr", label: "GDPR", icon: Shield, color: "text-slate-600 dark:text-slate-400", bg: "hover:bg-slate-100 dark:hover:bg-slate-800/50" },
   { href: "/nastaveni", label: "Nastavení", icon: SettingsIcon, color: "text-slate-600 dark:text-slate-400", bg: "hover:bg-slate-100 dark:hover:bg-slate-800/50" },
 ];

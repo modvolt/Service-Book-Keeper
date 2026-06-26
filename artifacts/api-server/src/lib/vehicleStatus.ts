@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { db, serviceRecordsTable, workOrdersTable, vehiclesTable } from "@workspace/db";
 
 function addMonthsUtc(dateStr: string, months: number): string {
@@ -35,10 +35,10 @@ export async function recomputeVehicleServiceStatus(vehicleId: number): Promise<
   if (!vehicle) return;
 
   const records = await db.select().from(serviceRecordsTable)
-    .where(eq(serviceRecordsTable.vehicleId, vehicleId));
+    .where(and(eq(serviceRecordsTable.vehicleId, vehicleId), isNull(serviceRecordsTable.deletedAt)));
   // All work orders (any status) — needed for the Km candidate.
   const allOrders = await db.select().from(workOrdersTable)
-    .where(eq(workOrdersTable.vehicleId, vehicleId));
+    .where(and(eq(workOrdersTable.vehicleId, vehicleId), isNull(workOrdersTable.deletedAt)));
   // Only completed work orders drive the "last *" service date/state fields.
   const orders = allOrders.filter((o) => o.status === "completed");
 

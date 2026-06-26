@@ -10,6 +10,10 @@ export const materialsCatalogTable = pgTable("materials_catalog", {
   defaultPrice: integer("default_price"),
   supplier: text("supplier"),
   askQuantityOnScan: boolean("ask_quantity_on_scan").notNull().default(false),
+  // Soft-delete (see vehicles schema): non-null deletedAt = trashed/hidden.
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+  deletedBy: text("deleted_by"),
+  deleteReason: text("delete_reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   // Case-insensitive uniqueness so "Filtr" and "filtr" are the same catalog entry

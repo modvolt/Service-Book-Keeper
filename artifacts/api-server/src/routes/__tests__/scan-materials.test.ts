@@ -26,6 +26,7 @@ vi.mock("drizzle-orm", () => ({
   ne: (_col: unknown, value: unknown) => ({ __op: "ne", value }),
   eq: (_col: unknown, value: unknown) => ({ __op: "eq", value }),
   and: (...args: unknown[]) => ({ __op: "and", args }),
+  isNull: (col: { __col: string }) => ({ __op: "isNull", col: col?.__col }),
   asc: (_col: unknown) => ({ __op: "asc" }),
 }));
 
@@ -65,12 +66,15 @@ vi.mock("@workspace/db", () => {
     defaultPrice: { __col: "defaultPrice" },
   };
 
-  type Pred = { __op: string; value?: unknown; args?: Pred[] };
+  type Pred = { __op: string; value?: unknown; args?: Pred[]; col?: string };
 
   function matchRow(row: Record<string, unknown>, pred: Pred | undefined): boolean {
     if (!pred) return true;
     if (pred.__op === "and") {
       return (pred.args as Pred[]).every((p) => matchRow(row, p));
+    }
+    if (pred.__op === "isNull") {
+      return pred.col ? row[pred.col] == null : true;
     }
     if (pred.__op === "ilike") {
       const pattern = (pred.value as string).replace(/%/g, "").toLowerCase();

@@ -15,6 +15,8 @@ import backupRouter from "./backup";
 import gdprRouter from "./gdpr";
 import scanHandoffRouter from "./scan-handoff";
 import loanersRouter from "./loaners";
+import trashRouter from "./trash";
+import auditRouter from "./audit";
 
 /**
  * Routes accessible to both admin and scanner sessions (scan workflow).
@@ -68,6 +70,8 @@ router.use(aresRouter);
 router.use(backupRouter);
 router.use(gdprRouter);
 router.use(loanersRouter);
+router.use(trashRouter);
+router.use(auditRouter);
 router.use("/storage", storageRouter);
 
 export default router;

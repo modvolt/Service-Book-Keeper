@@ -19,3 +19,5 @@
 - [Global vs route body parser](global-vs-route-body-parser.md) — a global express.json runs first and 413s big bodies before route-local large parsers; skip large-payload paths globally + compress uploads client-side.
 - [Prod password / data via republish](prod-password-reset.md) — admin password is seed-once DB data; prod DB is separate + read-only to the agent, so change it in dev then republish with "Overwrite data".
 - [Vite build OOM in capped container](vite-build-oom-container.md) — prod vite build silently killed in a 4GB Docker/Coolify cgroup though it builds locally; cap NODE_OPTIONS --max-old-space-size below the limit.
+- [Soft-delete filtering completeness](soft-delete-filtering-completeness.md) — when adding deletedAt, EVERY read/get/update/FK-resolve/scan query needs isNull(deletedAt), not just list endpoints; side-channels leak deleted rows.
+- [Inline-mock route tests](inline-mock-route-tests.md) — api-server tests that inline-mock drizzle-orm 500 when a route adds a new operator import (isNull/and); add it to the mock + its matchRow.

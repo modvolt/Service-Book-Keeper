@@ -1,5 +1,5 @@
 import { Router, type IRouter, json } from "express";
-import { ilike } from "drizzle-orm";
+import { ilike, and, isNull } from "drizzle-orm";
 import { db, vehiclesTable } from "@workspace/db";
 import { normalizeSpzOrNull } from "../lib/spz";
 import {
@@ -99,7 +99,7 @@ router.post("/scan/handoff", smallJson, async (req, res): Promise<void> => {
   let event: ScanHandoffEvent;
 
   const existing = licensePlate
-    ? (await db.select().from(vehiclesTable).where(ilike(vehiclesTable.licensePlate, licensePlate)))[0]
+    ? (await db.select().from(vehiclesTable).where(and(ilike(vehiclesTable.licensePlate, licensePlate), isNull(vehiclesTable.deletedAt))))[0]
     : undefined;
 
   if (existing) {

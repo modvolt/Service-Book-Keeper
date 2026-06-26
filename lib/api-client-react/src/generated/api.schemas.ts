@@ -1294,7 +1294,27 @@ export interface AuditLogEntry {
   entityId?: string | null;
   /** @nullable */
   detail?: string | null;
+  /** @nullable */
+  actor?: string | null;
+  /** @nullable */
+  snapshot?: string | null;
   createdAt: string;
+}
+
+export interface TrashItem {
+  entity: string;
+  id: number;
+  label: string;
+  deletedAt: string;
+  /** @nullable */
+  deletedBy?: string | null;
+  /** @nullable */
+  deleteReason?: string | null;
+}
+
+export interface SuccessResult {
+  success: boolean;
+  message?: string;
 }
 
 export type ListVehicleModelsParams = {
@@ -1376,6 +1396,21 @@ q: string;
 };
 
 export type GetAuditLogParams = {
+limit?: number;
+};
+
+export type ListAuditLogParams = {
+entity?: string;
+entityId?: string;
+action?: string;
+/**
+ * ISO date/time lower bound (inclusive)
+ */
+from?: string;
+/**
+ * ISO date/time upper bound (inclusive)
+ */
+to?: string;
 limit?: number;
 };
 
