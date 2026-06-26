@@ -21,7 +21,7 @@ export function getOpenAI(): OpenAI {
   return cached;
 }
 
-const DEFAULT_OPENAI_MODEL = "gpt-5.4";
+const DEFAULT_OPENAI_MODEL = "gpt-5.5";
 
 /**
  * The chat model used for all completions. Configurable via the OPENAI_MODEL

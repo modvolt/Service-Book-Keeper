@@ -20,17 +20,46 @@ export interface CapturedError {
 const MAX_ENTRIES = 200;
 const entries: Array<CapturedError> = [];
 
+/**
+ * Scrub anything that looks like a credential out of a string before it is
+ * stored for the diagnostics page. The diagnostics feed is admin-gated, but
+ * stack traces and error messages can still incidentally carry secrets (a
+ * Postgres URL with its password, an Authorization header, an API key), and
+ * those must never be persisted or shown. Best-effort, pattern-based: it does
+ * not need to be exhaustive, just to catch the common shapes.
+ */
+export function redactSecrets(text: string): string {
+  if (!text) return text;
+  return (
+    text
+      // Credentials embedded in a connection URL: scheme://user:password@host
+      .replace(/(\b[a-z][a-z0-9+.-]*:\/\/[^\s:@/]+:)[^\s@/]+(@)/gi, "$1[REDACTED]$2")
+      // OpenAI-style keys (sk-...) and similar long opaque tokens.
+      .replace(/\bsk-[A-Za-z0-9_-]{12,}/g, "[REDACTED]")
+      // Authorization / Bearer headers and bare token values.
+      .replace(/\b(bearer|authorization)\s+[A-Za-z0-9._~+/=-]{8,}/gi, "$1 [REDACTED]")
+      // key=value / key: value pairs for sensitive-looking keys.
+      .replace(
+        /\b(api[_-]?key|secret|password|passwd|pwd|access[_-]?key|secret[_-]?key|token|session[_-]?id|sessionid|sid|cookie)\b(\s*[:=]\s*)(["']?)[^\s"',;}]+\3/gi,
+        "$1$2[REDACTED]",
+      )
+  );
+}
+
 function toMessageAndStack(err: unknown): { message: string; stack: string | null } {
   if (err instanceof Error) {
-    return { message: err.message || err.name || "Unknown error", stack: err.stack ?? null };
+    return {
+      message: redactSecrets(err.message || err.name || "Unknown error"),
+      stack: err.stack ? redactSecrets(err.stack) : null,
+    };
   }
   if (typeof err === "string") {
-    return { message: err, stack: null };
+    return { message: redactSecrets(err), stack: null };
   }
   try {
-    return { message: JSON.stringify(err), stack: null };
+    return { message: redactSecrets(JSON.stringify(err)), stack: null };
   } catch {
-    return { message: String(err), stack: null };
+    return { message: redactSecrets(String(err)), stack: null };
   }
 }
 

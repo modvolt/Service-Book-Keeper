@@ -58,7 +58,7 @@ services:
       # --- AI (OpenAI or any OpenAI-compatible endpoint) ---
       AI_INTEGRATIONS_OPENAI_BASE_URL: ${AI_INTEGRATIONS_OPENAI_BASE_URL:-https://api.openai.com/v1}
       AI_INTEGRATIONS_OPENAI_API_KEY: ${AI_INTEGRATIONS_OPENAI_API_KEY:-}
-      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.4}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.5}
 
       # --- E-mail (optional; reminders/reset stay inert if unset) ---
       SMTP_HOST: ${SMTP_HOST:-}

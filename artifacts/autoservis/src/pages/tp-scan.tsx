@@ -9,6 +9,8 @@ import { TpScanDialog, type TpExtractedData } from "@/components/tp-scan-dialog"
 import { useToast } from "@/hooks/use-toast";
 import { setVehiclePrefill, setWorkOrderPrefill } from "@/lib/scan-prefill";
 import { sendScanHandoff } from "@/lib/scan-channel";
+import { validateScan, PERSONAL_DATA_NOTICE } from "@/lib/tp-validation";
+import { ShieldAlert } from "lucide-react";
 
 // True on touch-first devices (phone/tablet). Used to decide whether to open the
 // camera automatically (phone) or show a QR code to hand off to a phone (PC).
@@ -55,6 +57,8 @@ export default function TpScanPage() {
       toast({ title: "Kopírování se nezdařilo", description: scanUrl(), variant: "destructive" });
     }
   }
+
+  const scanWarnings = data ? validateScan(data) : [];
 
   const plateClean = data?.licensePlate?.replace(/\s+/g, "").toUpperCase() ?? "";
   const { data: foundVehicle, isFetching } = useGetVehicleByPlate(plateClean, {
@@ -242,17 +246,26 @@ export default function TpScanPage() {
               <div><dt className="text-muted-foreground">Adresa</dt><dd>{data.ownerAddress ?? "—"}</dd></div>
             </dl>
 
-            {data.colorMismatch && data.color && data.colorObserved && (
+            {scanWarnings.length > 0 && (
               <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-md p-4">
                 <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0" />
                 <div>
-                  <p className="font-semibold text-amber-800">Barva nesouhlasí</p>
-                  <p className="text-sm text-amber-700">
-                    V technickém průkazu je barva <span className="font-medium">{data.color}</span>, ale na fotografii vypadá vůz <span className="font-medium">{data.colorObserved}</span>. Zkontrolujte prosím.
-                  </p>
+                  <p className="font-semibold text-amber-800">Zkontrolujte načtené údaje</p>
+                  <ul className="text-sm text-amber-700 list-disc pl-4 space-y-1 mt-1">
+                    {scanWarnings.map((w) => (
+                      <li key={w.field}>{w.message}</li>
+                    ))}
+                  </ul>
                 </div>
               </div>
             )}
+
+            {/* Personal-data notice: the TP holds owner PII, so its processing
+                needs a legal basis. On-screen reminder only. */}
+            <div className="flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-md p-4">
+              <ShieldAlert className="h-6 w-6 text-slate-500 shrink-0" />
+              <p className="text-sm text-slate-600">{PERSONAL_DATA_NOTICE}</p>
+            </div>
 
             <div className="border-t pt-4 space-y-2">
               <p className="text-xs text-muted-foreground">Pokračovat zde na tomto zařízení:</p>

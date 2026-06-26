@@ -190,6 +190,9 @@ export function TpScanDialog({
             Vyfoťte malý technický průkaz (osvědčení o registraci, část I). Pokud není po ruce, stačí fotka SPZ a VIN (štítek, ražba nebo VIN za sklem). Přidejte i fotku přístrojové desky (tachometru) pro načtení stavu km. Můžete přidat až 8 obrázků.
             Automaticky se rozpozná SPZ, VIN, výrobce, model, rok registrace, objem motoru a stav tachometru.
           </DialogDescription>
+          <p className="text-xs text-muted-foreground border-t pt-2 mt-1">
+            Údaje z technického průkazu jsou osobní údaje – ukládejte je jen pokud k tomu máte zákonný důvod.
+          </p>
         </DialogHeader>
 
         <div className="space-y-3">

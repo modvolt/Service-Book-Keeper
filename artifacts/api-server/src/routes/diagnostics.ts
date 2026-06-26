@@ -1,12 +1,48 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type RequestHandler } from "express";
 import { getCapturedErrors } from "../lib/error-buffer";
 import { getReadiness } from "../lib/readiness";
 
 const router: IRouter = Router();
 
 /**
+ * Diagnostics exposes recent server errors and the readiness snapshot — useful
+ * for debugging but sensitive (stack traces, dependency state), so it is NOT
+ * public by default. Access is admin-only unless ENABLE_PUBLIC_DIAGNOSTICS is
+ * explicitly turned on (e.g. for a short debugging window on a deploy that has
+ * no working login yet). The session is already attached by sessionMiddleware,
+ * which runs before this router is mounted.
+ */
+function diagnosticsPublic(): boolean {
+  const v = (process.env.ENABLE_PUBLIC_DIAGNOSTICS ?? "").trim().toLowerCase();
+  return v === "1" || v === "true" || v === "yes" || v === "on";
+}
+
+const diagnosticsAccess: RequestHandler = (req, res, next) => {
+  if (diagnosticsPublic()) {
+    next();
+    return;
+  }
+  const session = (req as Request & {
+    session?: { authenticated?: boolean; role?: string };
+  }).session;
+  if (!session?.authenticated) {
+    res.status(401).json({ error: "Nepřihlášen" });
+    return;
+  }
+  // Old sessions without a role field are treated as admin (mirrors requireAdmin).
+  const role = session.role ?? "admin";
+  if (role !== "admin") {
+    res.status(403).json({ error: "Přístup odepřen" });
+    return;
+  }
+  next();
+};
+
+router.use(diagnosticsAccess);
+
+/**
  * JSON feed of recent runtime errors (newest first) plus the current readiness
- * snapshot. Backs the diagnostics page. Public by deliberate user choice.
+ * snapshot. Backs the diagnostics page. Gated by diagnosticsAccess above.
  */
 router.get("/diagnostics/errors", (_req, res) => {
   res.json({

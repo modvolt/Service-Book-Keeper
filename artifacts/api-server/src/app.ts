@@ -91,8 +91,11 @@ app.use(sessionMiddleware);
 
 // --- Public routes (no auth) ---
 app.use("/api", healthRouter);
-// Diagnostics page + error feed. Public by deliberate user choice so it stays
-// reachable at the deployed URL without a login.
+// Diagnostics page + error feed. Admin-only by default; set
+// ENABLE_PUBLIC_DIAGNOSTICS=true to expose it without a login (e.g. a short
+// debugging window on a deploy with no working login yet). Mounted after
+// sessionMiddleware so the access gate can read the session; its own router
+// enforces the gate.
 app.use("/api", diagnosticsRouter);
 
 const loginLimiter = rateLimit({
