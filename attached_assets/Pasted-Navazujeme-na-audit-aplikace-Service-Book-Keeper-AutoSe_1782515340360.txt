@@ -1,0 +1,107 @@
+Navazujeme na audit aplikace Service Book Keeper / AutoServis. Aplikace je development verze pro autoservis, ale má být připravená pro reálné produkční použití na Hetzner + Coolify + S3 bez závislosti na Replitu.
+
+Hlavní cíl:
+Uprav aplikaci tak, aby byla bezpečná, auditovatelná, praktická pro autoservis a odolná proti omylným výmazům. Zachovej existující stack, existující UX styl a český jazyk aplikace. Nedělej destruktivní změny bez migrací a bez ochrany stávajících dat.
+
+1) Bezpečnost diagnostiky
+- Zkontroluj `/api/diagnostics` a všechny diagnostické/error endpointy.
+- V produkci nesmí být diagnostika veřejně dostupná bez přihlášení.
+- Přidej env proměnnou např. `ENABLE_PUBLIC_DIAGNOSTICS=false`.
+- Default v production musí být bezpečný: diagnostika pouze admin, nebo vypnutá.
+- Development může mít veřejnou diagnostiku jen pokud je explicitně povolena.
+- Nikdy nevypisuj secrety, tokeny, session id, S3 klíče, SMTP hesla ani OpenAI klíče.
+
+2) Soft-delete, koš a obnova
+- Běžné mazání vozidel, zakázek, servisních záznamů, materiálu, fotek, zápůjček a schůzek nesmí být fyzické hard-delete.
+- Přidej soft-delete sloupce podle potřeby: `deletedAt`, `deletedBy`, `deleteReason`.
+- Uprav API a UI tak, aby běžné seznamy skryly smazané záznamy.
+- Přidej admin stránku „Koš / Obnova“, kde lze smazané záznamy obnovit.
+- Fyzické smazání povol pouze jako extra admin akci s výrazným potvrzením.
+- GDPR permanent delete musí zůstat opravdu permanentní, ale musí být jasně oddělený od běžného mazání.
+
+3) Audit log pro omylné výmazy a změny
+- Rozšiř audit log tak, aby zaznamenával create/update/delete/restore u hlavních entit:
+  vozidla, zakázky, servisní záznamy, fotky, materiál, zápůjčky, schůzky, nastavení, zálohy, importy, exporty.
+- U delete a update ukládej bezpečný snapshot původních hodnot, aby bylo možné zjistit, co se změnilo.
+- Do auditu neukládej hesla, tokeny, session id, API klíče ani jiné secrety.
+- Přidej UI „Historie změn“ na detail vozidla a detail zakázky.
+- Přidej globální stránku „Audit log“ pro admina s filtrem podle entity, akce a data.
+
+4) Oprava S3 a fotek
+- Při smazání fotky z aplikace smaž i odpovídající objekt v S3.
+- Pokud smazání objektu selže, neclaimuj úspěšné kompletní smazání; zaloguj chybu a ukaž uživateli srozumitelnou hlášku.
+- Přidej kontrolní endpoint/admin akci „Kontrola souborů“, která najde:
+  a) DB záznamy fotek bez existujícího S3 objektu,
+  b) S3 objekty bez DB záznamu, pokud to storage driver dovolí.
+- Přidej možnost bezpečného vyčištění orphan souborů.
+
+5) Zálohy
+- Stávající DB JSON backup nestačí jako kompletní provozní záloha, protože neobsahuje skutečné S3 soubory.
+- Rozšiř backup systém nebo UI tak, aby bylo jasné, co záloha obsahuje.
+- Ideálně přidej kompletní export ZIP: `backup.json` + složka `objects/` se všemi fotkami a veřejnými/private soubory, pokud to storage driver umí.
+- Pokud plný S3 backup zatím neimplementuješ, přidej alespoň výrazné upozornění v UI: „Tato záloha obsahuje databázi, ne binární soubory v S3.“
+- Přidej restore kontrolu, která po importu ukáže chybějící soubory.
+
+6) Fakturace a stav zakázky
+- Odděl pojmy:
+  a) stav práce: nová / probíhá / čeká na díly / má přijet znovu / dokončeno,
+  b) fakturační stav: nefakturováno / připraveno k fakturaci / vyfakturováno,
+  c) platební stav: nezaplaceno / částečně zaplaceno / zaplaceno.
+- Nepoužívej boolean `paid` jako současně „vyfakturováno“ i „zaplaceno“.
+- Uprav UI detailu zakázky i seznamu zakázek tak, aby byly tyto stavy jasné.
+- U zápůjčky vozidla auto-ukončení navaž na správný stav, typicky předání/uzavření zakázky nebo vyfakturování podle business pravidla, ne na obecné `paid=true`.
+
+7) OpenAI env a AI import
+- Sjednoť dokumentaci a `.env.example`.
+- Odstraň mrtvé nebo zavádějící proměnné kolem stored promptů, pokud už se nepoužívají: `OPENAI_PROMPT_ID`, `OPENAI_PROMPT_VERSION`, `OPENAI_API_KEY`, `OPENAI_BASE_URL`, pokud nejsou reálně zapojené.
+- Používej jednu jasnou sadu:
+  `AI_INTEGRATIONS_OPENAI_BASE_URL`
+  `AI_INTEGRATIONS_OPENAI_API_KEY`
+  `OPENAI_MODEL`
+- Nastav default model podle aktuálního požadavku projektu na `gpt-5.5`, ale zachovej možnost změny přes env.
+- U AI importu TP, faktur a materiálu zachovej review-first workflow: nic se nesmí uložit bez potvrzení uživatele.
+- Přidej validační warningy pro VIN, SPZ, IČ, barvu a tachometr.
+- U citlivých údajů z TP zobraz upozornění, že jde o osobní údaje a musí být právní důvod zpracování.
+
+8) GDPR
+- Zachovej existující GDPR modul, ale doplň:
+  - právní důvod zpracování: plnění smlouvy / oprávněný zájem / souhlas,
+  - datum a poznámku,
+  - historii změn souhlasu,
+  - čitelný export pro zákazníka kromě JSON,
+  - retenční politiku pro staré zakázky, fotky a kontakty.
+- GDPR permanent delete musí mazat i S3 objekty a auditovat výsledek bez ukládání nadbytečných osobních dat.
+
+9) Uživatelská praktičnost pro autoservis
+- Zkontroluj hlavní workflow jako reálný mechanik:
+  1. Přijede auto.
+  2. Vyfotím TP/SPZ/VIN/tachometr.
+  3. Vytvořím nebo najdu vozidlo.
+  4. Vytvořím zakázku.
+  5. Přidám úkony, materiál, fotky, poznámky.
+  6. Načtu fakturu/dodací list.
+  7. Zkontroluji položky.
+  8. Označím práci jako hotovou.
+  9. Připravím k fakturaci.
+  10. Označím vyfakturováno a později zaplaceno.
+- Přidej dashboard bloky:
+  - Dnes objednáno
+  - Probíhá
+  - Čeká na díly
+  - Hotovo k fakturaci
+  - Vyfakturováno, nezaplaceno
+  - STK / servis po termínu
+- Přidej „nejnovější úkoly“ a rychlé akce z detailu vozidla i zakázky.
+
+10) Testy a kontrola
+- Po úpravách spusť typecheck, build a relevantní testy.
+- Přidej nebo uprav testy pro:
+  - soft-delete a restore,
+  - audit log,
+  - GDPR delete,
+  - S3 delete objektů,
+  - backup/restore chybějících objektů,
+  - role admin vs scanner,
+  - oddělené stavy práce/fakturace/platby.
+- Ověř, že produkční Docker build zůstává Replit-free a funguje v Coolify bez host port bindingu.
+- Napiš mi po dokončení stručný changelog: co bylo změněno, jaké migrace vznikly, co je potřeba nastavit v env a co mám ručně otestovat v UI.
