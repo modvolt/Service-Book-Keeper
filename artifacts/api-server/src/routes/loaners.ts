@@ -151,8 +151,8 @@ router.post("/loaners", async (req, res): Promise<void> => {
   const parsed = CreateLoanerBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  // Validate the fleet vehicle exists and is actually a fleet vehicle.
-  const [fleet] = await db.select().from(vehiclesTable).where(eq(vehiclesTable.id, parsed.data.fleetVehicleId));
+  // Validate the fleet vehicle exists, is actually a fleet vehicle, and is not trashed.
+  const [fleet] = await db.select().from(vehiclesTable).where(and(eq(vehiclesTable.id, parsed.data.fleetVehicleId), isNull(vehiclesTable.deletedAt)));
   if (!fleet) { res.status(400).json({ error: "Vozidlo z vozového parku nenalezeno" }); return; }
   if (!fleet.isFleet) { res.status(400).json({ error: "Zvolené vozidlo není ve vozovém parku" }); return; }
 

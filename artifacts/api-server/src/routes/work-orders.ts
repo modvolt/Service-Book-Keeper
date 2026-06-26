@@ -153,9 +153,9 @@ router.post("/work-orders", async (req, res): Promise<void> => {
     return;
   }
 
-  // Try to link to existing vehicle by plate
+  // Try to link to existing vehicle by plate (never link to a trashed vehicle)
   const plate = normalizeSpz(parsed.data.licensePlate);
-  const [vehicle] = await db.select().from(vehiclesTable).where(ilike(vehiclesTable.licensePlate, plate));
+  const [vehicle] = await db.select().from(vehiclesTable).where(and(ilike(vehiclesTable.licensePlate, plate), isNull(vehiclesTable.deletedAt)));
 
   const [order] = await db.insert(workOrdersTable).values({
     ...parsed.data,
@@ -314,6 +314,8 @@ router.post("/work-orders/:id/photos", upload.single("photo"), async (req, res):
       url: objectPath,
       filename,
     }).returning();
+
+    await auditEntity.created("photo", photo.id, getActor(req), photo, photo.filename);
 
     res.status(201).json(photo);
   } catch (err) {

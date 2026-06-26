@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { useListAuditLog } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -20,9 +20,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ScrollText } from "lucide-react";
+import { ChevronDown, ChevronRight, ScrollText } from "lucide-react";
 import { AUDIT_ACTIONS } from "@workspace/audit-actions";
-import { ACTION_LABELS, ENTITY_LABELS, actionLabel, entityLabel, formatDateTime } from "@/lib/audit-labels";
+import { ACTION_LABELS, ENTITY_LABELS, actionLabel, entityLabel, formatDateTime, formatSnapshot } from "@/lib/audit-labels";
 
 const ACTOR_LABELS: Record<string, string> = {
   admin: "Správce",
@@ -42,6 +42,7 @@ export default function AuditLogPage() {
   const [action, setAction] = useState<string>(ALL);
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
+  const [openId, setOpenId] = useState<number | null>(null);
 
   // Translate the date-only inputs into an inclusive ISO range.
   const params = useMemo(() => {
@@ -150,20 +151,50 @@ export default function AuditLogPage() {
                     <TableHead>Typ</TableHead>
                     <TableHead>Kdo</TableHead>
                     <TableHead>Detail</TableHead>
+                    <TableHead className="w-28 text-right">Data</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rows.map((entry) => (
-                    <TableRow key={entry.id}>
-                      <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
-                        {formatDateTime(entry.createdAt)}
-                      </TableCell>
-                      <TableCell>{actionLabel(entry.action)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{entityLabel(entry.entity)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{actorLabel(entry.actor)}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{entry.detail || "—"}</TableCell>
-                    </TableRow>
-                  ))}
+                  {rows.map((entry) => {
+                    const snapshot = formatSnapshot(entry.snapshot);
+                    const open = openId === entry.id;
+                    return (
+                      <Fragment key={entry.id}>
+                        <TableRow>
+                          <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                            {formatDateTime(entry.createdAt)}
+                          </TableCell>
+                          <TableCell>{actionLabel(entry.action)}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{entityLabel(entry.entity)}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{actorLabel(entry.actor)}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{entry.detail || "—"}</TableCell>
+                          <TableCell className="text-right">
+                            {snapshot ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2"
+                                onClick={() => setOpenId(open ? null : entry.id)}
+                              >
+                                {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                <span className="ml-1">{open ? "Skrýt" : "Zobrazit"}</span>
+                              </Button>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        {open && snapshot ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="bg-muted/40">
+                              <p className="mb-1 text-xs font-medium text-muted-foreground">Stav před změnou</p>
+                              <pre className="max-h-80 overflow-auto rounded-md bg-background p-3 text-xs">{snapshot}</pre>
+                            </TableCell>
+                          </TableRow>
+                        ) : null}
+                      </Fragment>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

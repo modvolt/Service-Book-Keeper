@@ -50,3 +50,17 @@ export function formatDateTime(value: string): string {
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? value : d.toLocaleString("cs-CZ");
 }
+
+/**
+ * Pretty-print the stored audit snapshot (a JSON string captured before the
+ * change). Returns null when there is nothing to show; falls back to the raw
+ * string if it isn't valid JSON.
+ */
+export function formatSnapshot(snapshot: string | null | undefined): string | null {
+  if (!snapshot) return null;
+  try {
+    return JSON.stringify(JSON.parse(snapshot), null, 2);
+  } catch {
+    return snapshot;
+  }
+}
