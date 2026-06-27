@@ -39,6 +39,23 @@ function makeTable(tableKey: string, columns: readonly string[]): TableInstance 
   return t as TableInstance;
 }
 
+/**
+ * drizzle's getTableColumns stand-in. Returns a map of columnName -> a minimal
+ * column descriptor. `dataType` is inferred from the name convention used by the
+ * real schema: timestamp columns (`*At`) report "date" (so coerceRows turns ISO
+ * strings back into Date), while `date`-mode-string and everything else report
+ * "string" and pass through untouched.
+ */
+export function getTableColumns(table: TableInstance): Record<string, { name: string; dataType: string }> {
+  const out: Record<string, { name: string; dataType: string }> = {};
+  for (const key of Object.keys(table)) {
+    if (key === "__tableKey" || key === "__ownerId") continue;
+    const dataType = /At$/.test(key) ? "date" : "string";
+    out[key] = { name: key, dataType };
+  }
+  return out;
+}
+
 /** Create a distinct alias of a table that shares the same underlying rows. */
 export function alias(table: TableInstance, _name: string): TableInstance {
   const cols = Object.keys(table).filter((k) => k !== "__tableKey" && k !== "__ownerId");
@@ -104,6 +121,11 @@ export const desc = (col: ColumnRef): OrderSpec => ({ t: "order", col, dir: "des
 export function sql(strings: TemplateStringsArray, ...values: unknown[]): SqlMarker {
   return { __sql: true, text: strings.join(" ") + " " + values.join(" ") };
 }
+// drizzle's sql.identifier / sql.raw helpers — only used to build raw fragments
+// (e.g. excluded.* in upserts, setval to realign sequences). The engine ignores
+// the text, so a minimal marker is enough.
+sql.identifier = (name: string): SqlMarker => ({ __sql: true, text: `"${name}"` });
+sql.raw = (text: string): SqlMarker => ({ __sql: true, text });
 
 /** `count()` aggregate stand-in — produces a `count(*)` SQL marker the select engine recognizes. */
 export function count(_col?: unknown): SqlMarker {
@@ -371,8 +393,50 @@ class InsertBuilder {
       }
       return inserted;
     };
-    return {
+    // Upsert by id: rows whose id already exists are overwritten with the
+    // proposed values (mirrors onConflictDoUpdate set excluded.*); the rest are
+    // inserted. The `set` argument's sql markers are ignored — the proposed row
+    // already carries the values they would copy.
+    const upsert = (): Row[] => {
+      const out: Row[] = [];
+      for (const v of list) {
+        const row: Row = { ...v };
+        const arr = __store.rows(table.__tableKey);
+        const existing = row.id != null ? arr.find((r) => r.id === row.id) : undefined;
+        if (existing) {
+          Object.assign(existing, row);
+          out.push(existing);
+        } else {
+          if (row.id == null) row.id = __store.allocId(table.__tableKey);
+          if (row.createdAt == null) row.createdAt = new Date();
+          arr.push(row);
+          out.push(row);
+        }
+      }
+      return out;
+    };
+    const insertResult = {
       returning: (): Promise<Row[]> => Promise.resolve(insert()),
+      onConflictDoUpdate: (_opts?: unknown) => ({
+        returning: (): Promise<Row[]> => Promise.resolve(upsert()),
+        then<TR1 = undefined, TR2 = never>(
+          onF?: ((v: undefined) => TR1 | PromiseLike<TR1>) | null,
+          onR?: ((e: unknown) => TR2 | PromiseLike<TR2>) | null,
+        ): Promise<TR1 | TR2> {
+          upsert();
+          return Promise.resolve(undefined).then(onF, onR);
+        },
+      }),
+      onConflictDoNothing: (_opts?: unknown) => ({
+        returning: (): Promise<Row[]> => Promise.resolve(insert()),
+        then<TR1 = undefined, TR2 = never>(
+          onF?: ((v: undefined) => TR1 | PromiseLike<TR1>) | null,
+          onR?: ((e: unknown) => TR2 | PromiseLike<TR2>) | null,
+        ): Promise<TR1 | TR2> {
+          insert();
+          return Promise.resolve(undefined).then(onF, onR);
+        },
+      }),
       then<TR1 = undefined, TR2 = never>(
         onF?: ((v: undefined) => TR1 | PromiseLike<TR1>) | null,
         onR?: ((e: unknown) => TR2 | PromiseLike<TR2>) | null,
@@ -381,6 +445,7 @@ class InsertBuilder {
         return Promise.resolve(undefined).then(onF, onR);
       },
     };
+    return insertResult;
   }
 }
 
@@ -455,6 +520,7 @@ interface MemDb {
   insert(table: TableInstance): InsertBuilder;
   update(table: TableInstance): UpdateBuilder;
   delete(table: TableInstance): DeleteBuilder;
+  execute(query?: unknown): Promise<unknown>;
   transaction<T>(fn: (tx: MemDb) => Promise<T>): Promise<T>;
 }
 
@@ -474,6 +540,11 @@ export const db: MemDb = {
   },
   delete(table: TableInstance) {
     return new DeleteBuilder(table);
+  },
+  // Raw SQL (e.g. setval to realign serial sequences) has no effect on the
+  // in-memory store; accept and ignore it so import flows complete.
+  async execute(_query?: unknown): Promise<unknown> {
+    return [];
   },
   async transaction<T>(fn: (tx: typeof db) => Promise<T>): Promise<T> {
     return fn(db);
@@ -528,4 +599,16 @@ export const auditLogTable = makeTable("audit_log", [
 
 export const customerReminderLogTable = makeTable("customer_reminder_log", [
   "id", "vehicleId",
+]);
+
+export const settingsTable = makeTable("settings", [
+  "id", "companyName", "companyAddress", "companyPhone", "companyEmail",
+  "companyIco", "companyDic", "logoUrl", "signatureName", "signatureImageUrl",
+  "primaryColor", "emailRemindersEnabled", "reminderStkDays", "reminderServiceDays",
+  "notificationEmail", "lastStkReminderSentAt", "backupsEnabled", "lastBackupAt",
+  "updatedAt",
+]);
+
+export const backupsTable = makeTable("backups", [
+  "id", "filename", "objectPath", "sizeBytes", "status", "createdAt",
 ]);

@@ -25,6 +25,7 @@ export const AUDIT_ACTIONS = [
   "work_order_deleted",
   "scanner_password_changed",
   "scanner_password_deleted",
+  "storage_orphans_cleaned",
   // Generic entity lifecycle actions. The `entity` column carries which entity
   // (vehicle, work_order, service_record, material, photo, loaner, appointment)
   // the action applies to, so we don't enumerate entity×verb combinations.

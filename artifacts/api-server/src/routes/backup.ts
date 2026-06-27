@@ -1,7 +1,9 @@
 import { Router, type IRouter, json } from "express";
+import multer from "multer";
 import { getTableColumns, sql, eq } from "drizzle-orm";
 import type { PgTable } from "drizzle-orm/pg-core";
 import { gunzipSync } from "zlib";
+import JSZip from "jszip";
 import { z } from "zod";
 import {
   db,
@@ -16,9 +18,13 @@ import {
   backupsTable,
 } from "@workspace/db";
 import { getObjectStorageService, ObjectNotFoundError } from "../lib/storage";
-import { createBackupSnapshot, listBackups, runBackup } from "../lib/backups";
+import { createBackupSnapshot, createFullBackupZip, listBackups, runBackup } from "../lib/backups";
+import { mapLimit } from "../lib/concurrency";
 
 const router: IRouter = Router();
+
+// Full-backup ZIPs can be large (every photo blob); allow a generous limit.
+const uploadZip = multer({ storage: multer.memoryStorage(), limits: { fileSize: 1024 * 1024 * 1024 } });
 
 /**
  * GET /backup/export
@@ -168,15 +174,114 @@ function excludedSet(table: PgTable): Record<string, unknown> {
 
 const importJson = json({ limit: "10mb" });
 
+type ImportData = z.infer<typeof ImportBody>["data"];
+
+/**
+ * Merge an exported backup's table data into the current database: rows missing
+ * in the DB are inserted, rows that already exist (matched by id) are updated
+ * with the backup's values. Nothing is deleted. IDs are preserved and serial
+ * sequences realigned afterwards so future inserts don't collide.
+ */
+async function mergeBackupData(d: ImportData): Promise<Record<string, number>> {
+  return db.transaction(async (tx) => {
+    const merge = async (table: PgTable, rows: Row[]): Promise<number> => {
+      if (!rows.length) return 0;
+      const values = coerceRows(table, rows);
+      await tx
+        .insert(table)
+        .values(values as any)
+        .onConflictDoUpdate({ target: (table as any).id, set: excludedSet(table) as any });
+      return values.length;
+    };
+
+    // Parents before children so foreign keys resolve for newly-inserted rows.
+    const summary = {
+      vehicles: await merge(vehiclesTable, d.vehicles),
+      materialsCatalog: await merge(materialsCatalogTable, d.materialsCatalog),
+      workOrders: await merge(workOrdersTable, d.workOrders),
+      serviceRecords: await merge(serviceRecordsTable, d.serviceRecords),
+      appointments: await merge(appointmentsTable, d.appointments),
+      workOrderMaterials: await merge(workOrderMaterialsTable, d.workOrderMaterials),
+      photos: await merge(photosTable, d.photos),
+      settings: await merge(settingsTable, d.settings),
+    };
+
+    // Realign serial sequences so future inserts don't collide with restored IDs.
+    const serialTables = [
+      "vehicles",
+      "service_records",
+      "work_orders",
+      "materials_catalog",
+      "work_order_materials",
+      "photos",
+      "appointments",
+    ];
+    for (const t of serialTables) {
+      await tx.execute(
+        sql`SELECT setval(pg_get_serial_sequence(${t}, 'id'), COALESCE((SELECT MAX(id) FROM ${sql.raw(`"${t}"`)}), 1), (SELECT COUNT(*) > 0 FROM ${sql.raw(`"${t}"`)}))`,
+      );
+    }
+
+    return summary;
+  });
+}
+
+/**
+ * After a restore, check which photo blobs are missing from storage so the UI
+ * can warn that a DB-only backup was restored without its files.
+ */
+async function reportMissingFiles(): Promise<Array<{ photoId: number; url: string; filename: string | null }>> {
+  const storage = getObjectStorageService();
+  const photos = await db
+    .select({ id: photosTable.id, url: photosTable.url, filename: photosTable.filename })
+    .from(photosTable);
+  const presence = await mapLimit(photos, 8, (p) => storage.objectExists(p.url));
+  return photos
+    .filter((_, i) => !presence[i])
+    .map((p) => ({ photoId: p.id, url: p.url, filename: p.filename }));
+}
+
+const CONTENT_TYPE_BY_EXT: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  gif: "image/gif",
+  webp: "image/webp",
+  heic: "image/heic",
+  pdf: "application/pdf",
+};
+
+function guessContentType(name: string | null | undefined): string {
+  const ext = (name ?? "").toLowerCase().split(".").pop() ?? "";
+  return CONTENT_TYPE_BY_EXT[ext] ?? "application/octet-stream";
+}
+
+/**
+ * GET /backup/full
+ *
+ * Download a complete backup ZIP (backup.json + objects/) when the storage
+ * driver can read objects back. Streams the archive; reports any missing files
+ * via a response header so the client can surface a warning.
+ */
+router.get("/backup/full", async (req, res): Promise<void> => {
+  try {
+    const result = await createFullBackupZip();
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", `attachment; filename="${result.filename}"`);
+    res.setHeader("X-Included-Objects", String(result.includedObjects));
+    res.setHeader("X-Missing-Objects", String(result.missingObjects.length));
+    res.send(result.buffer);
+  } catch (err) {
+    req.log.error({ err }, "Full backup export failed");
+    res.status(500).json({ error: "Vytvoření úplné zálohy selhalo" });
+  }
+});
+
 /**
  * POST /backup/import
  *
- * Merge the contents of an exported backup into the current data:
- * rows missing in the database are inserted, rows that already exist (matched by
- * id) are updated with the backup's values. Nothing is deleted — records present
- * in the database but absent from the backup are left untouched. IDs from the
- * backup are preserved and serial sequences are realigned afterwards so future
- * inserts don't collide.
+ * Merge the contents of an exported JSON backup into the current data. Reports
+ * any photo files still missing from storage after the merge.
  */
 router.post("/backup/import", importJson, async (req, res): Promise<void> => {
   const parsed = ImportBody.safeParse(req.body);
@@ -185,55 +290,92 @@ router.post("/backup/import", importJson, async (req, res): Promise<void> => {
     return;
   }
 
-  const d = parsed.data.data;
-
   try {
-    const merged = await db.transaction(async (tx) => {
-      const merge = async (table: PgTable, rows: Row[]): Promise<number> => {
-        if (!rows.length) return 0;
-        const values = coerceRows(table, rows);
-        await tx
-          .insert(table)
-          .values(values as any)
-          .onConflictDoUpdate({ target: (table as any).id, set: excludedSet(table) as any });
-        return values.length;
-      };
-
-      // Parents before children so foreign keys resolve for newly-inserted rows.
-      const summary = {
-        vehicles: await merge(vehiclesTable, d.vehicles),
-        materialsCatalog: await merge(materialsCatalogTable, d.materialsCatalog),
-        workOrders: await merge(workOrdersTable, d.workOrders),
-        serviceRecords: await merge(serviceRecordsTable, d.serviceRecords),
-        appointments: await merge(appointmentsTable, d.appointments),
-        workOrderMaterials: await merge(workOrderMaterialsTable, d.workOrderMaterials),
-        photos: await merge(photosTable, d.photos),
-        settings: await merge(settingsTable, d.settings),
-      };
-
-      // Realign serial sequences so future inserts don't collide with restored IDs.
-      const serialTables = [
-        "vehicles",
-        "service_records",
-        "work_orders",
-        "materials_catalog",
-        "work_order_materials",
-        "photos",
-        "appointments",
-      ];
-      for (const t of serialTables) {
-        await tx.execute(
-          sql`SELECT setval(pg_get_serial_sequence(${t}, 'id'), COALESCE((SELECT MAX(id) FROM ${sql.raw(`"${t}"`)}), 1), (SELECT COUNT(*) > 0 FROM ${sql.raw(`"${t}"`)}))`,
-        );
-      }
-
-      return summary;
-    });
-
-    res.json({ ok: true, merged });
+    const merged = await mergeBackupData(parsed.data.data);
+    const missingFiles = await reportMissingFiles();
+    res.json({ ok: true, merged, missingFiles });
   } catch (err) {
     req.log.error({ err }, "Backup import failed");
     res.status(500).json({ error: "Obnova ze zálohy selhala" });
+  }
+});
+
+/**
+ * POST /backup/import-full
+ *
+ * Restore a complete backup ZIP: merge backup.json, then re-upload every
+ * objects/<entityId> entry back into storage. Reports how many files were
+ * restored and any photo blobs that were absent from the archive.
+ */
+router.post("/backup/import-full", uploadZip.single("backup"), async (req, res): Promise<void> => {
+  if (!req.file) {
+    res.status(400).json({ error: "Chybí soubor zálohy" });
+    return;
+  }
+
+  let zip: JSZip;
+  try {
+    zip = await JSZip.loadAsync(req.file.buffer);
+  } catch {
+    res.status(400).json({ error: "Soubor není platný ZIP archiv" });
+    return;
+  }
+
+  const manifest = zip.file("backup.json");
+  if (!manifest) {
+    res.status(400).json({ error: "Archiv neobsahuje backup.json" });
+    return;
+  }
+
+  let parsedJson: unknown;
+  try {
+    parsedJson = JSON.parse(await manifest.async("string"));
+  } catch {
+    res.status(400).json({ error: "Soubor backup.json je poškozený" });
+    return;
+  }
+
+  const parsed = ImportBody.safeParse(parsedJson);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Soubor zálohy je neplatný nebo poškozený" });
+    return;
+  }
+
+  try {
+    const merged = await mergeBackupData(parsed.data.data);
+
+    // Re-upload object blobs from the archive, guessing content type from the
+    // matching photo row's filename.
+    const storage = getObjectStorageService();
+    const nameByUrl = new Map<string, string | null>();
+    for (const p of parsed.data.data.photos) {
+      const url = typeof p.url === "string" ? p.url : null;
+      if (url) nameByUrl.set(url, typeof p.filename === "string" ? p.filename : null);
+    }
+
+    const objectEntries = Object.values(zip.files).filter(
+      (f) => !f.dir && f.name.startsWith("objects/"),
+    );
+    let restoredFiles = 0;
+    const failedFiles: string[] = [];
+    for (const entry of objectEntries) {
+      const entityId = entry.name.slice("objects/".length);
+      const path = `/objects/${entityId}`;
+      try {
+        const buf = await entry.async("nodebuffer");
+        await storage.restoreObject(path, buf, guessContentType(nameByUrl.get(path)));
+        restoredFiles++;
+      } catch (err) {
+        req.log.error({ err, path }, "Restoring backup object failed");
+        failedFiles.push(path);
+      }
+    }
+
+    const missingFiles = await reportMissingFiles();
+    res.json({ ok: true, merged, restoredFiles, failedFiles, missingFiles });
+  } catch (err) {
+    req.log.error({ err }, "Full backup import failed");
+    res.status(500).json({ error: "Obnova z úplné zálohy selhala" });
   }
 });
 

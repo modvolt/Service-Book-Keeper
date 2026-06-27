@@ -4,6 +4,7 @@ import {
   useGetBackups, useRunBackup, getGetBackupsQueryKey,
   useSetScannerPassword, useDeleteScannerPassword,
   useGetAuthStatus, getGetAuthStatusQueryKey,
+  useGetStorageIntegrity, useCleanupStorageOrphans, getGetStorageIntegrityQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -12,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Upload, Image as ImageIcon, Mail, Palette, Building2, Trash2, Sun, Moon, Check, Monitor, PenLine, Database, Download, Loader2, FileText, CloudUpload, ShieldCheck } from "lucide-react";
+import { Upload, Image as ImageIcon, Mail, Palette, Building2, Trash2, Sun, Moon, Check, Monitor, PenLine, Database, Download, Loader2, FileText, CloudUpload, ShieldCheck, FileArchive, AlertTriangle, RefreshCw, HardDrive } from "lucide-react";
 import { AresButton } from "@/components/ares-button";
 import { openDataBackupPdf } from "@/lib/data-backup-pdf";
 import { useToast } from "@/hooks/use-toast";
@@ -54,6 +55,13 @@ export default function SettingsPage() {
   const sendTestReminder = useSendTestReminder();
   const { data: backups } = useGetBackups();
   const runBackup = useRunBackup();
+  const {
+    data: integrity,
+    isFetching: integrityFetching,
+    refetch: refetchIntegrity,
+  } = useGetStorageIntegrity({ query: { enabled: false } as any });
+  const cleanupOrphans = useCleanupStorageOrphans();
+  const [integrityChecked, setIntegrityChecked] = useState(false);
   const { data: authStatus } = useGetAuthStatus({
     query: { queryKey: getGetAuthStatusQueryKey(), staleTime: 30_000 } as any,
   });
@@ -68,8 +76,11 @@ export default function SettingsPage() {
   const [uploading, setUploading] = useState(false);
   const [uploadingSignature, setUploadingSignature] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [exportingFull, setExportingFull] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [missingFiles, setMissingFiles] = useState<Array<{ filename: string | null; url: string }> | null>(null);
   const [pdfBusy, setPdfBusy] = useState(false);
+  const fullBackupInputRef = useRef<HTMLInputElement>(null);
   const { theme, setTheme } = useTheme();
   const { palette, setPalette, palettes } = usePalette();
 
@@ -256,13 +267,48 @@ export default function SettingsPage() {
     }
   }
 
+  function reportRestoreResult(missing: Array<{ filename: string | null; url: string }>, restoredFiles?: number) {
+    setMissingFiles(missing);
+    if (missing.length > 0) {
+      toast({
+        title: "Data obnovena – chybí soubory",
+        description: `Záznamy byly obnoveny, ale ${missing.length} fotografií chybí v úložišti.`,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Data obnovena",
+        description:
+          restoredFiles != null
+            ? `Záloha byla načtena. Obnoveno souborů: ${restoredFiles}.`
+            : "Záloha byla úspěšně načtena.",
+      });
+    }
+  }
+
   async function handleImportBackup(file: File) {
+    const isZip = file.name.toLowerCase().endsWith(".zip") || file.type === "application/zip";
     const ok = confirm(
       "Obnova ze zálohy SLOUČÍ data ze souboru se současnými: chybějící doplní a existující záznamy (podle ID) přepíše hodnotami ze zálohy. Nic se nemaže. Přepsané hodnoty u existujících záznamů nelze vrátit zpět. Pokračovat?",
     );
     if (!ok) return;
     setImporting(true);
+    setMissingFiles(null);
     try {
+      if (isZip) {
+        const fd = new FormData();
+        fd.append("backup", file);
+        const res = await fetch("/api/backup/import-full", { method: "POST", body: fd });
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          throw new Error(body?.error ?? "Obnova selhala.");
+        }
+        const body = await res.json();
+        await queryClient.invalidateQueries();
+        reportRestoreResult(body?.missingFiles ?? [], body?.restoredFiles);
+        return;
+      }
+
       const text = await file.text();
       let payload: unknown;
       try {
@@ -279,12 +325,72 @@ export default function SettingsPage() {
         const body = await res.json().catch(() => null);
         throw new Error(body?.error ?? "Obnova selhala.");
       }
+      const body = await res.json();
       await queryClient.invalidateQueries();
-      toast({ title: "Data obnovena", description: "Záloha byla úspěšně načtena." });
+      reportRestoreResult(body?.missingFiles ?? []);
     } catch (e: any) {
       toast({ title: "Chyba", description: String(e?.message ?? e), variant: "destructive" });
     } finally {
       setImporting(false);
+    }
+  }
+
+  async function handleExportFullBackup() {
+    setExportingFull(true);
+    try {
+      const res = await fetch("/api/backup/full");
+      if (!res.ok) throw new Error("Export failed");
+      const missingCount = Number(res.headers.get("X-Missing-Objects") ?? "0");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const stamp = new Date().toISOString().slice(0, 10);
+      a.href = url;
+      a.download = `autoservis-uplna-zaloha-${stamp}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+      toast({
+        title: "Úplná záloha vytvořena",
+        description:
+          missingCount > 0
+            ? `Soubor byl stažen. Pozor: ${missingCount} fotografií chybělo v úložišti a není v záloze.`
+            : "Soubor (data i fotografie) byl stažen do vašeho zařízení.",
+        variant: missingCount > 0 ? "destructive" : undefined,
+      });
+    } catch {
+      toast({ title: "Chyba", description: "Úplnou zálohu se nepodařilo vytvořit.", variant: "destructive" });
+    } finally {
+      setExportingFull(false);
+    }
+  }
+
+  async function handleCheckIntegrity() {
+    setIntegrityChecked(true);
+    try {
+      await refetchIntegrity();
+    } catch {
+      toast({ title: "Chyba", description: "Kontrola souborů selhala.", variant: "destructive" });
+    }
+  }
+
+  async function handleCleanupOrphans() {
+    if (!integrity?.orphanObjects?.length) return;
+    const ok = confirm(
+      `Trvale smazat ${integrity.orphanObjects.length} osamocených souborů z úložiště? Tato akce je nevratná.`,
+    );
+    if (!ok) return;
+    try {
+      const result = await cleanupOrphans.mutateAsync({ data: { paths: integrity.orphanObjects } });
+      toast({
+        title: "Hotovo",
+        description: `Smazáno souborů: ${result.deleted.length}. Přeskočeno: ${result.refused.length + result.failed.length}.`,
+      });
+      await queryClient.invalidateQueries({ queryKey: getGetStorageIntegrityQueryKey() });
+      await refetchIntegrity();
+    } catch {
+      toast({ title: "Chyba", description: "Vyčištění souborů selhalo.", variant: "destructive" });
     }
   }
 
@@ -761,26 +867,58 @@ export default function SettingsPage() {
           <CardDescription>Stáhněte si zálohu všech dat nebo obnovte data ze zálohy</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="rounded-md border p-4 space-y-2">
+          <div className="rounded-md border p-4 space-y-3">
             <div className="font-medium">Export zálohy</div>
             <p className="text-sm text-muted-foreground">
               Stáhne soubor se všemi vozidly, zakázkami, servisní historií, materiály a nastavením. Soubor si uložte na bezpečné místo.
             </p>
-            <Button onClick={handleExportBackup} disabled={exporting}>
-              {exporting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Vytvářím…</> : <><Download className="h-4 w-4 mr-2" /> Stáhnout zálohu</>}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={handleExportBackup} disabled={exporting}>
+                {exporting ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Vytvářím…</> : <><Download className="h-4 w-4 mr-2" /> Stáhnout zálohu (jen data)</>}
+              </Button>
+              <Button variant="outline" onClick={handleExportFullBackup} disabled={exportingFull}>
+                {exportingFull ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Vytvářím…</> : <><FileArchive className="h-4 w-4 mr-2" /> Stáhnout úplnou zálohu (data + fotky)</>}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Záloha „jen data" (JSON) obsahuje záznamy a odkazy na fotografie, ale ne samotné soubory fotografií. Úplná záloha (ZIP) obsahuje i soubory fotografií z úložiště.
+            </p>
           </div>
 
           <div className="rounded-md border p-4 space-y-2">
             <div className="font-medium">Obnova ze zálohy</div>
             <p className="text-sm text-muted-foreground">
-              Načte data ze záložního souboru a sloučí je se současnými: chybějící záznamy doplní a existující (podle ID) aktualizuje hodnotami ze zálohy. Záznamy, které v záloze nejsou, zůstanou zachovány — nic se nemaže.
+              Načte data ze záložního souboru (JSON nebo úplný ZIP) a sloučí je se současnými: chybějící záznamy doplní a existující (podle ID) aktualizuje hodnotami ze zálohy. U úplné zálohy (ZIP) se obnoví i soubory fotografií. Záznamy, které v záloze nejsou, zůstanou zachovány — nic se nemaže.
             </p>
-            <input ref={backupInputRef} type="file" accept="application/json,.json" className="hidden"
+            <input ref={backupInputRef} type="file" accept="application/json,.json,application/zip,.zip" className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImportBackup(f); e.target.value = ""; }} />
             <Button variant="outline" onClick={() => backupInputRef.current?.click()} disabled={importing}>
-              {importing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Obnovuji…</> : <><Upload className="h-4 w-4 mr-2" /> Obnovit ze zálohy</>}
+              {importing ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Obnovuji…</> : <><Upload className="h-4 w-4 mr-2" /> Obnovit ze zálohy (JSON / ZIP)</>}
             </Button>
+            {missingFiles && missingFiles.length > 0 && (
+              <Alert variant="destructive" className="mt-2">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Po obnově chybí soubory fotografií</AlertTitle>
+                <AlertDescription>
+                  <p className="mb-1">
+                    Záznamy byly obnoveny, ale {missingFiles.length} fotografií není v úložišti. Pokud máte úplnou zálohu (ZIP), obnovte ji pro doplnění souborů.
+                  </p>
+                  <ul className="list-disc pl-5 text-xs">
+                    {missingFiles.slice(0, 10).map((f) => (
+                      <li key={f.url}>{f.filename || f.url}</li>
+                    ))}
+                    {missingFiles.length > 10 && <li>… a dalších {missingFiles.length - 10}</li>}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
+            {missingFiles && missingFiles.length === 0 && (
+              <Alert className="mt-2">
+                <Check className="h-4 w-4" />
+                <AlertTitle>Obnova dokončena</AlertTitle>
+                <AlertDescription>Všechny fotografie jsou v úložišti.</AlertDescription>
+              </Alert>
+            )}
           </div>
           <div className="rounded-md border p-4 space-y-2">
             <div className="font-medium">Čitelný přehled (PDF)</div>
@@ -794,6 +932,81 @@ export default function SettingsPage() {
           <p className="text-xs text-muted-foreground">
             Poznámka: PDF přehled je určen jen ke čtení a tisku. Pro úplné obnovení dat zpět do aplikace použijte zálohu ve formátu JSON. Záloha obsahuje záznamy a odkazy na fotografie; samotné soubory fotografií zůstávají v úložišti aplikace.
           </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><HardDrive className="h-5 w-5" /> Kontrola souborů</CardTitle>
+          <CardDescription>Ověří, zda ke všem fotografiím existují soubory v úložišti a najde osamocené soubory bez záznamu</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button variant="outline" onClick={handleCheckIntegrity} disabled={integrityFetching}>
+            {integrityFetching ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Kontroluji…</> : <><RefreshCw className="h-4 w-4 mr-2" /> Spustit kontrolu</>}
+          </Button>
+
+          {integrityChecked && !integrityFetching && integrity && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Zkontrolováno fotografií: {integrity.checkedPhotos}.
+              </p>
+
+              {integrity.missingObjects.length > 0 ? (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Chybějící soubory ({integrity.missingObjects.length})</AlertTitle>
+                  <AlertDescription>
+                    <p className="mb-1">U těchto fotografií existuje záznam, ale soubor v úložišti chybí:</p>
+                    <ul className="list-disc pl-5 text-xs">
+                      {integrity.missingObjects.slice(0, 10).map((m) => (
+                        <li key={m.photoId}>
+                          {(m.filename || m.url)}{m.deleted ? " (v koši)" : ""}
+                        </li>
+                      ))}
+                      {integrity.missingObjects.length > 10 && <li>… a dalších {integrity.missingObjects.length - 10}</li>}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert>
+                  <Check className="h-4 w-4" />
+                  <AlertTitle>Žádné chybějící soubory</AlertTitle>
+                  <AlertDescription>Ke všem fotografiím existuje soubor v úložišti.</AlertDescription>
+                </Alert>
+              )}
+
+              {!integrity.orphanScanSupported ? (
+                <Alert>
+                  <HardDrive className="h-4 w-4" />
+                  <AlertTitle>Vyhledání osamocených souborů není dostupné</AlertTitle>
+                  <AlertDescription>Aktuální úložiště nepodporuje výpis souborů, proto nelze najít soubory bez záznamu.</AlertDescription>
+                </Alert>
+              ) : integrity.orphanObjects.length > 0 ? (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Osamocené soubory ({integrity.orphanObjects.length})</AlertTitle>
+                  <AlertDescription>
+                    <p className="mb-2">Tyto soubory jsou v úložišti, ale neodkazuje na ně žádný záznam:</p>
+                    <ul className="list-disc pl-5 text-xs mb-3">
+                      {integrity.orphanObjects.slice(0, 10).map((o) => (
+                        <li key={o}>{o}</li>
+                      ))}
+                      {integrity.orphanObjects.length > 10 && <li>… a dalších {integrity.orphanObjects.length - 10}</li>}
+                    </ul>
+                    <Button variant="destructive" size="sm" onClick={handleCleanupOrphans} disabled={cleanupOrphans.isPending}>
+                      {cleanupOrphans.isPending ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Mažu…</> : <><Trash2 className="h-4 w-4 mr-2" /> Smazat osamocené soubory</>}
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Alert>
+                  <Check className="h-4 w-4" />
+                  <AlertTitle>Žádné osamocené soubory</AlertTitle>
+                  <AlertDescription>V úložišti nejsou žádné soubory bez záznamu.</AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

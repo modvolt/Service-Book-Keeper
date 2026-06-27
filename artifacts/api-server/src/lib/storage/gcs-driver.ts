@@ -71,6 +71,9 @@ async function signObjectURL({
  * reads stream directly via the storage client.
  */
 export class GcsStorageDriver implements StorageDriver {
+  // GCS supports object enumeration via bucket.getFiles, so orphan detection works.
+  readonly capabilities = { list: true } as const;
+
   private getPrivateObjectDir(): string {
     const dir = process.env.PRIVATE_OBJECT_DIR || "";
     if (!dir) {
@@ -150,6 +153,22 @@ export class GcsStorageDriver implements StorageDriver {
     const { bucketName, objectName } = parseObjectPath(fullPath);
     const file = objectStorageClient.bucket(bucketName).file(objectName);
     await file.delete({ ignoreNotFound: true });
+  }
+
+  async privateObjectExists(entityId: string): Promise<boolean> {
+    const fullPath = `${this.getPrivateObjectDir()}/${entityId}`;
+    const { bucketName, objectName } = parseObjectPath(fullPath);
+    const [exists] = await objectStorageClient.bucket(bucketName).file(objectName).exists();
+    return exists;
+  }
+
+  async listPrivateObjects(prefix: string): Promise<string[]> {
+    const dir = this.getPrivateObjectDir();
+    const { bucketName, objectName: rootPrefix } = parseObjectPath(`${dir}/`);
+    // rootPrefix ends with a trailing "/" because of the appended slash above.
+    const fullPrefix = `${rootPrefix}${prefix}`;
+    const [files] = await objectStorageClient.bucket(bucketName).getFiles({ prefix: fullPrefix });
+    return files.map((f) => (f.name.startsWith(rootPrefix) ? f.name.slice(rootPrefix.length) : f.name));
   }
 
   async healthCheck(): Promise<void> {

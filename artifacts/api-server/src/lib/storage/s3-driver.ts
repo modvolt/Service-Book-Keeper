@@ -4,6 +4,8 @@ import {
   PutObjectCommand,
   DeleteObjectCommand,
   HeadBucketCommand,
+  HeadObjectCommand,
+  ListObjectsV2Command,
   type GetObjectCommandOutput,
 } from "@aws-sdk/client-s3";
 import type { Readable } from "stream";
@@ -77,6 +79,11 @@ function isNotFound(err: unknown): boolean {
  * proxied through the server, so the bucket needs no CORS configuration.
  */
 export class S3StorageDriver implements StorageDriver {
+  // S3 ListObjectsV2 supports enumeration, though some providers withhold the
+  // s3:ListBucket permission; in that case listPrivateObjects rejects and the
+  // caller degrades gracefully (orphan scan reported as unsupported).
+  readonly capabilities = { list: true } as const;
+
   private readonly client: S3Client;
   private readonly bucket: string;
   private readonly privatePrefix: string;
@@ -157,6 +164,41 @@ export class S3StorageDriver implements StorageDriver {
       }
       throw err;
     }
+  }
+
+  async privateObjectExists(entityId: string): Promise<boolean> {
+    try {
+      await this.client.send(
+        new HeadObjectCommand({ Bucket: this.bucket, Key: `${this.privatePrefix}/${entityId}` }),
+      );
+      return true;
+    } catch (err) {
+      if (isNotFound(err)) {
+        return false;
+      }
+      throw err;
+    }
+  }
+
+  async listPrivateObjects(prefix: string): Promise<string[]> {
+    const keyPrefix = `${this.privatePrefix}/${prefix}`;
+    const entityIds: string[] = [];
+    let continuationToken: string | undefined;
+    do {
+      const out = await this.client.send(
+        new ListObjectsV2Command({
+          Bucket: this.bucket,
+          Prefix: keyPrefix,
+          ContinuationToken: continuationToken,
+        }),
+      );
+      for (const obj of out.Contents ?? []) {
+        if (!obj.Key) continue;
+        entityIds.push(obj.Key.slice(`${this.privatePrefix}/`.length));
+      }
+      continuationToken = out.IsTruncated ? out.NextContinuationToken : undefined;
+    } while (continuationToken);
+    return entityIds;
   }
 
   async healthCheck(): Promise<void> {

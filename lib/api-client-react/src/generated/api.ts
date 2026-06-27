@@ -75,6 +75,9 @@ import type {
   SetScannerPasswordInput,
   Settings,
   SettingsInput,
+  StorageCleanupRequest,
+  StorageCleanupResult,
+  StorageIntegrityResult,
   SuccessResult,
   TestReminderResult,
   TrashItem,
@@ -4550,6 +4553,154 @@ export const useRunBackup = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getRunBackupMutationOptions(options));
+    }
+
+export const getGetStorageIntegrityUrl = () => {
+
+
+
+
+  return `/api/storage/integrity`
+}
+
+/**
+ * @summary Cross-reference photo rows against stored objects
+ */
+export const getStorageIntegrity = async ( options?: RequestInit): Promise<StorageIntegrityResult> => {
+
+  return customFetch<StorageIntegrityResult>(getGetStorageIntegrityUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetStorageIntegrityQueryKey = () => {
+    return [
+    `/api/storage/integrity`
+    ] as const;
+    }
+
+
+export const getGetStorageIntegrityQueryOptions = <TData = Awaited<ReturnType<typeof getStorageIntegrity>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStorageIntegrity>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetStorageIntegrityQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getStorageIntegrity>>> = ({ signal }) => getStorageIntegrity({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getStorageIntegrity>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetStorageIntegrityQueryResult = NonNullable<Awaited<ReturnType<typeof getStorageIntegrity>>>
+export type GetStorageIntegrityQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Cross-reference photo rows against stored objects
+ */
+
+export function useGetStorageIntegrity<TData = Awaited<ReturnType<typeof getStorageIntegrity>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStorageIntegrity>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetStorageIntegrityQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCleanupStorageOrphansUrl = () => {
+
+
+
+
+  return `/api/storage/integrity/cleanup`
+}
+
+/**
+ * @summary Delete confirmed orphan upload objects
+ */
+export const cleanupStorageOrphans = async (storageCleanupRequest: StorageCleanupRequest, options?: RequestInit): Promise<StorageCleanupResult> => {
+
+  return customFetch<StorageCleanupResult>(getCleanupStorageOrphansUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      storageCleanupRequest,)
+  }
+);}
+
+
+
+
+export const getCleanupStorageOrphansMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cleanupStorageOrphans>>, TError,{data: BodyType<StorageCleanupRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof cleanupStorageOrphans>>, TError,{data: BodyType<StorageCleanupRequest>}, TContext> => {
+
+const mutationKey = ['cleanupStorageOrphans'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof cleanupStorageOrphans>>, {data: BodyType<StorageCleanupRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  cleanupStorageOrphans(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CleanupStorageOrphansMutationResult = NonNullable<Awaited<ReturnType<typeof cleanupStorageOrphans>>>
+    export type CleanupStorageOrphansMutationBody = BodyType<StorageCleanupRequest>
+    export type CleanupStorageOrphansMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Delete confirmed orphan upload objects
+ */
+export const useCleanupStorageOrphans = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof cleanupStorageOrphans>>, TError,{data: BodyType<StorageCleanupRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof cleanupStorageOrphans>>,
+        TError,
+        {data: BodyType<StorageCleanupRequest>},
+        TContext
+      > => {
+      return useMutation(getCleanupStorageOrphansMutationOptions(options));
     }
 
 export const getGetDashboardSummaryUrl = () => {

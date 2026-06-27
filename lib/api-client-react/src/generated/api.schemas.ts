@@ -1303,6 +1303,31 @@ export interface BackupRunResult {
   backup?: Backup;
 }
 
+export interface MissingObject {
+  photoId: number;
+  url: string;
+  filename?: string | null;
+  workOrderId?: number | null;
+  deleted: boolean;
+}
+
+export interface StorageIntegrityResult {
+  checkedPhotos: number;
+  missingObjects: MissingObject[];
+  orphanScanSupported: boolean;
+  orphanObjects: string[];
+}
+
+export interface StorageCleanupRequest {
+  paths: string[];
+}
+
+export interface StorageCleanupResult {
+  deleted: string[];
+  refused: string[];
+  failed: string[];
+}
+
 export interface DashboardSummary {
   totalVehicles: number;
   openWorkOrders: number;

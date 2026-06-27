@@ -21,3 +21,4 @@
 - [Vite build OOM in capped container](vite-build-oom-container.md) — prod vite build silently killed in a 4GB Docker/Coolify cgroup though it builds locally; cap NODE_OPTIONS --max-old-space-size below the limit.
 - [Soft-delete filtering completeness](soft-delete-filtering-completeness.md) — when adding deletedAt, EVERY read/get/update/FK-resolve/scan query needs isNull(deletedAt), not just list endpoints; side-channels leak deleted rows.
 - [Inline-mock route tests](inline-mock-route-tests.md) — api-server tests that inline-mock drizzle-orm 500 when a route adds a new operator import (isNull/and); add it to the mock + its matchRow.
+- [rel-db harness extension](rel-db-harness-extension.md) — a route under test 500s when it uses a drizzle feature the in-memory rel-db harness lacks (onConflictDoUpdate/execute/getTableColumns/sql.identifier); extend engine + re-export, don't reshape the route.

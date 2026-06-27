@@ -1226,6 +1226,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/BackupRunResult"
 
+  /storage/integrity:
+    get:
+      operationId: getStorageIntegrity
+      tags: [storage]
+      summary: Cross-reference photo rows against stored objects
+      responses:
+        "200":
+          description: Integrity report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageIntegrityResult"
+
+  /storage/integrity/cleanup:
+    post:
+      operationId: cleanupStorageOrphans
+      tags: [storage]
+      summary: Delete confirmed orphan upload objects
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StorageCleanupRequest"
+      responses:
+        "200":
+          description: Cleanup result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StorageCleanupResult"
+
   /dashboard/summary:
     get:
       operationId: getDashboardSummary
@@ -2857,6 +2889,66 @@ components:
           type: string
         backup:
           $ref: "#/components/schemas/Backup"
+
+    MissingObject:
+      type: object
+      required: [photoId, url, deleted]
+      properties:
+        photoId:
+          type: integer
+        url:
+          type: string
+        filename:
+          type: string
+          nullable: true
+        workOrderId:
+          type: integer
+          nullable: true
+        deleted:
+          type: boolean
+
+    StorageIntegrityResult:
+      type: object
+      required: [checkedPhotos, missingObjects, orphanScanSupported, orphanObjects]
+      properties:
+        checkedPhotos:
+          type: integer
+        missingObjects:
+          type: array
+          items:
+            $ref: "#/components/schemas/MissingObject"
+        orphanScanSupported:
+          type: boolean
+        orphanObjects:
+          type: array
+          items:
+            type: string
+
+    StorageCleanupRequest:
+      type: object
+      required: [paths]
+      properties:
+        paths:
+          type: array
+          items:
+            type: string
+
+    StorageCleanupResult:
+      type: object
+      required: [deleted, refused, failed]
+      properties:
+        deleted:
+          type: array
+          items:
+            type: string
+        refused:
+          type: array
+          items:
+            type: string
+        failed:
+          type: array
+          items:
+            type: string
 
     DashboardSummary:
       type: object

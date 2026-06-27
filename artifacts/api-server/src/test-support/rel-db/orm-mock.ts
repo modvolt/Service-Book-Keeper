@@ -16,4 +16,5 @@ export {
   desc,
   sql,
   count,
+  getTableColumns,
 } from "./engine";

@@ -18,6 +18,7 @@ export const ACTION_LABELS: Record<AuditAction, string> = {
   work_order_deleted: "Smazání zakázky",
   scanner_password_changed: "Heslo skeneru nastaveno",
   scanner_password_deleted: "Účet skeneru deaktivován",
+  storage_orphans_cleaned: "Vyčištění osamocených souborů",
   entity_created: "Vytvoření",
   entity_updated: "Úprava",
   entity_deleted: "Smazání",

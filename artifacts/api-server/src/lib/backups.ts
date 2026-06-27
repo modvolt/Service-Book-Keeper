@@ -1,5 +1,6 @@
 import { gzipSync } from "zlib";
 import { desc, eq } from "drizzle-orm";
+import JSZip from "jszip";
 import {
   db,
   backupsTable,
@@ -12,7 +13,7 @@ import {
   photosTable,
   appointmentsTable,
 } from "@workspace/db";
-import { getObjectStorageService } from "./storage";
+import { getObjectStorageService, ObjectNotFoundError } from "./storage";
 import { logger } from "./logger";
 
 const BACKUP_VERSION = 1;
@@ -50,6 +51,71 @@ export async function createBackupSnapshot(): Promise<{
   }));
 
   return { version: BACKUP_VERSION, exportedAt: new Date().toISOString(), data };
+}
+
+export interface FullBackupResult {
+  buffer: Buffer;
+  filename: string;
+  includedObjects: number;
+  /** Photo object paths that were referenced but absent from storage. */
+  missingObjects: string[];
+}
+
+/**
+ * Build a complete backup ZIP: `backup.json` (the same snapshot the JSON export
+ * produces) plus an `objects/<entityId>` entry for every photo blob that still
+ * exists in storage. Photos whose blob is missing are listed in `MISSING.txt`
+ * and reported back so the caller can warn. Streamed to the browser for the user
+ * to keep — never stored in the object store (it would duplicate every binary).
+ */
+export async function createFullBackupZip(): Promise<FullBackupResult> {
+  const snapshot = await createBackupSnapshot();
+  const zip = new JSZip();
+  zip.file("backup.json", JSON.stringify(snapshot));
+
+  const storage = getObjectStorageService();
+  const photos = (snapshot.data.photos ?? []) as Array<{ url?: unknown }>;
+  const seen = new Set<string>();
+  let includedObjects = 0;
+  const missingObjects: string[] = [];
+
+  for (const photo of photos) {
+    const url = typeof photo.url === "string" ? photo.url : null;
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    const entityId = url.startsWith("/objects/") ? url.slice("/objects/".length) : null;
+    if (!entityId) {
+      missingObjects.push(url);
+      continue;
+    }
+    try {
+      const buf = await storage.readObjectToBuffer(url);
+      zip.file(`objects/${entityId}`, buf);
+      includedObjects++;
+    } catch (err) {
+      if (err instanceof ObjectNotFoundError) {
+        missingObjects.push(url);
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  if (missingObjects.length) {
+    zip.file(
+      "MISSING.txt",
+      `Tyto soubory chybely v ulozisti a nejsou soucasti zalohy:\n${missingObjects.join("\n")}\n`,
+    );
+  }
+
+  const buffer = await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  return {
+    buffer,
+    filename: `autoservis-uplna-zaloha-${stamp}.zip`,
+    includedObjects,
+    missingObjects,
+  };
 }
 
 export interface BackupRow {

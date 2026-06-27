@@ -1578,6 +1578,37 @@ export const RunBackupResponse = zod.object({
 
 
 /**
+ * @summary Cross-reference photo rows against stored objects
+ */
+export const GetStorageIntegrityResponse = zod.object({
+  "checkedPhotos": zod.number(),
+  "missingObjects": zod.array(zod.object({
+  "photoId": zod.number(),
+  "url": zod.string(),
+  "filename": zod.string().nullish(),
+  "workOrderId": zod.number().nullish(),
+  "deleted": zod.boolean()
+})),
+  "orphanScanSupported": zod.boolean(),
+  "orphanObjects": zod.array(zod.string())
+})
+
+
+/**
+ * @summary Delete confirmed orphan upload objects
+ */
+export const CleanupStorageOrphansBody = zod.object({
+  "paths": zod.array(zod.string())
+})
+
+export const CleanupStorageOrphansResponse = zod.object({
+  "deleted": zod.array(zod.string()),
+  "refused": zod.array(zod.string()),
+  "failed": zod.array(zod.string())
+})
+
+
+/**
  * @summary Dashboard summary statistics
  */
 export const GetDashboardSummaryResponse = zod.object({

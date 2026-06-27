@@ -60,13 +60,25 @@ export class ObjectStorageService {
     return `/objects/${entityId}`;
   }
 
-  /** Open a private object by its `/objects/<entityId>` path. */
-  async serveObject(objectPath: string): Promise<StoredObject> {
+  /**
+   * Validate an `/objects/<entityId>` path and return its entityId, or null when
+   * the path is malformed (wrong prefix, empty, or contains traversal segments).
+   */
+  private parseEntityId(objectPath: string): string | null {
     if (!objectPath.startsWith("/objects/")) {
-      throw new ObjectNotFoundError();
+      return null;
     }
     const entityId = objectPath.slice("/objects/".length);
     if (!entityId || entityId.split("/").some((seg) => seg === "" || seg === "." || seg === "..")) {
+      return null;
+    }
+    return entityId;
+  }
+
+  /** Open a private object by its `/objects/<entityId>` path. */
+  async serveObject(objectPath: string): Promise<StoredObject> {
+    const entityId = this.parseEntityId(objectPath);
+    if (entityId == null) {
       throw new ObjectNotFoundError();
     }
     return this.driver.getPrivateObject(entityId);
@@ -85,14 +97,64 @@ export class ObjectStorageService {
    * No-op for paths that don't resolve to a valid private object.
    */
   async deleteObject(objectPath: string): Promise<void> {
-    if (!objectPath.startsWith("/objects/")) {
-      return;
-    }
-    const entityId = objectPath.slice("/objects/".length);
-    if (!entityId || entityId.split("/").some((seg) => seg === "" || seg === "." || seg === "..")) {
+    const entityId = this.parseEntityId(objectPath);
+    if (entityId == null) {
       return;
     }
     await this.driver.deletePrivateObject(entityId);
+  }
+
+  /**
+   * Whether the active driver can enumerate stored objects. When false, orphan
+   * detection is unavailable (the file-integrity check still reports missing
+   * objects for known photo rows).
+   */
+  canListObjects(): boolean {
+    return this.driver.capabilities.list;
+  }
+
+  /**
+   * True when the object at `/objects/<entityId>` exists in the backing store.
+   * Returns false for malformed paths (treated as absent).
+   */
+  async objectExists(objectPath: string): Promise<boolean> {
+    const entityId = this.parseEntityId(objectPath);
+    if (entityId == null) {
+      return false;
+    }
+    return this.driver.privateObjectExists(entityId);
+  }
+
+  /**
+   * Enumerate stored private objects under `prefix` (e.g. `uploads/`), returning
+   * their stable `/objects/<entityId>` paths. Only valid when
+   * {@link canListObjects} is true; rejects if the backend denies enumeration.
+   */
+  async listObjects(prefix: string): Promise<string[]> {
+    const entityIds = await this.driver.listPrivateObjects(prefix);
+    return entityIds.map((id) => `/objects/${id}`);
+  }
+
+  /** Read a private object fully into a Buffer (used to bundle full backups). */
+  async readObjectToBuffer(objectPath: string): Promise<Buffer> {
+    const obj = await this.serveObject(objectPath);
+    const chunks: Buffer[] = [];
+    for await (const chunk of obj.stream) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
+  }
+
+  /**
+   * Restore an object to a known `/objects/<entityId>` path (used by full-backup
+   * import to re-upload bundled binaries). Throws on a malformed path.
+   */
+  async restoreObject(objectPath: string, body: Buffer, contentType: string): Promise<void> {
+    const entityId = this.parseEntityId(objectPath);
+    if (entityId == null) {
+      throw new Error(`Invalid object path: ${objectPath}`);
+    }
+    await this.driver.putPrivateObject(entityId, body, contentType);
   }
 
   /** Probe the backing store for reachability. Rejects when unreachable. */

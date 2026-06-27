@@ -13,4 +13,6 @@ export {
   materialsCatalogTable,
   auditLogTable,
   customerReminderLogTable,
+  settingsTable,
+  backupsTable,
 } from "./engine";
