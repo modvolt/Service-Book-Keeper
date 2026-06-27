@@ -1,0 +1,1 @@
+ALTER TABLE "settings" ADD COLUMN "last_trash_cleanup_at" timestamp with time zone;

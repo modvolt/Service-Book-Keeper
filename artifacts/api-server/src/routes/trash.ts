@@ -10,14 +10,17 @@ import {
   appointmentsTable,
   photosTable,
 } from "@workspace/db";
-import { auditEntity } from "../lib/audit";
+import { auditEntity, type AuditActor } from "../lib/audit";
 import { getActor } from "../lib/actor";
 import { getObjectStorageService } from "../lib/storage";
 
 const router: IRouter = Router();
 const storage = getObjectStorageService();
 
-type TrashEntity =
+/** Minimal logger shape so both `req.log` (pino) and the singleton logger fit. */
+type ErrorLogger = { error: (obj: unknown, msg?: string) => void };
+
+export type TrashEntity =
   | "vehicle"
   | "work_order"
   | "service_record"
@@ -309,12 +312,60 @@ function parseId(raw: string): number | null {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
-// GET /trash — all trashed items across entities, most recently deleted first.
-router.get("/trash", async (_req, res): Promise<void> => {
+/** Every trashed item across all entities, most recently deleted first. */
+export async function listAllTrashItems(): Promise<TrashItem[]> {
   const groups = await Promise.all(Object.values(ENTITIES).map((cfg) => cfg.list()));
   const items = groups.flat();
   items.sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
-  res.json(items);
+  return items;
+}
+
+export type PurgeResult =
+  | { ok: true; purged: Snapshot }
+  | { ok: false; reason: "not_found" | "blob_failed" };
+
+/**
+ * Permanently hard-delete one trashed item, reused by both the manual DELETE
+ * route and the automatic retention cleanup. Frees object storage first: the
+ * photo blobs this purge would orphan are deleted via the storage facade BEFORE
+ * the DB rows (GDPR erasure ordering). A blob delete failure aborts the purge
+ * (`blob_failed`) leaving the row intact so a retry is safe. `photoUrls` only
+ * returns paths for a trashed, purge-eligible row, and deleteObject is
+ * idempotent. The purge is audited under `actor`.
+ */
+export async function purgeTrashItem(
+  entity: TrashEntity,
+  id: number,
+  actor: AuditActor,
+  log: ErrorLogger,
+): Promise<PurgeResult> {
+  const cfg = ENTITIES[entity];
+
+  if (cfg.photoUrls) {
+    const urls = await cfg.photoUrls(id);
+    if (urls.length > 0) {
+      const results = await Promise.allSettled(urls.map((u) => storage.deleteObject(u)));
+      const failed = results.filter((r) => r.status === "rejected");
+      if (failed.length > 0) {
+        log.error(
+          { entity, id, failed: failed.length },
+          "Trash purge aborted: failed to delete photo blobs from storage",
+        );
+        return { ok: false, reason: "blob_failed" };
+      }
+    }
+  }
+
+  const purged = await cfg.purge(id);
+  if (!purged) return { ok: false, reason: "not_found" };
+
+  await auditEntity.purged(entity, id, actor, purged);
+  return { ok: true, purged };
+}
+
+// GET /trash — all trashed items across entities, most recently deleted first.
+router.get("/trash", async (_req, res): Promise<void> => {
+  res.json(await listAllTrashItems());
 });
 
 // POST /trash/:entity/:id/restore — clear soft-delete, audit the restore.
@@ -353,37 +404,18 @@ router.delete("/trash/:entity/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const cfg = ENTITIES[entity];
-
-  // Free up object storage: delete the photo blobs this purge would orphan
-  // BEFORE removing the DB rows (GDPR erasure ordering). `photoUrls` only
-  // returns paths for a trashed, purge-eligible row, so a non-existent/live
-  // target yields none. deleteObject is idempotent, so a retry is safe.
-  if (cfg.photoUrls) {
-    const urls = await cfg.photoUrls(id);
-    if (urls.length > 0) {
-      const results = await Promise.allSettled(urls.map((u) => storage.deleteObject(u)));
-      const failed = results.filter((r) => r.status === "rejected");
-      if (failed.length > 0) {
-        req.log.error(
-          { entity, id, failed: failed.length },
-          "Trash purge aborted: failed to delete photo blobs from storage",
-        );
-        res.status(500).json({
-          error: "Smazání fotografií z úložiště selhalo. Záznam nebyl smazán, zkuste to znovu.",
-        });
-        return;
-      }
+  const result = await purgeTrashItem(entity, id, getActor(req), req.log);
+  if (!result.ok) {
+    if (result.reason === "blob_failed") {
+      res.status(500).json({
+        error: "Smazání fotografií z úložiště selhalo. Záznam nebyl smazán, zkuste to znovu.",
+      });
+      return;
     }
-  }
-
-  const purged = await cfg.purge(id);
-  if (!purged) {
     res.status(404).json({ error: "Záznam nenalezen" });
     return;
   }
 
-  await auditEntity.purged(entity, id, getActor(req), purged);
   res.json({ success: true, message: "Záznam byl trvale smazán." });
 });
 

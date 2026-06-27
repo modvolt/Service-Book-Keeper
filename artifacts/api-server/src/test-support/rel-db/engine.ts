@@ -628,7 +628,7 @@ export const settingsTable = makeTable("settings", [
   "companyIco", "companyDic", "logoUrl", "signatureName", "signatureImageUrl",
   "primaryColor", "emailRemindersEnabled", "reminderStkDays", "reminderServiceDays",
   "notificationEmail", "lastStkReminderSentAt", "backupsEnabled", "lastBackupAt",
-  "updatedAt",
+  "lastTrashCleanupAt", "updatedAt",
 ]);
 
 export const backupsTable = makeTable("backups", [
