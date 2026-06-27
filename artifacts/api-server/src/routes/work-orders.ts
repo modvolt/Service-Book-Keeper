@@ -287,8 +287,10 @@ router.delete("/work-orders/:id", async (req, res): Promise<void> => {
 // Soft-delete a work order's photos and any loaner linked via workOrderId with
 // the same actor/reason/timestamp, auditing each cascaded delete. Only rows not
 // already trashed are touched (isNull(deletedAt)), so a child deleted separately
-// earlier keeps its own deletedBy/deleteReason.
-async function cascadeSoftDeleteWorkOrderChildren(
+// earlier keeps its own deletedBy/deleteReason. Exported so the vehicle delete
+// cascade can reuse it for each cascaded work order (keeping the photo subtree
+// consistent under the vehicle delete path).
+export async function cascadeSoftDeleteWorkOrderChildren(
   workOrderId: number,
   actor: AuditActor,
   reason: string | null,

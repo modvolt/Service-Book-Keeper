@@ -40,6 +40,7 @@ import {
   serviceRecordsTable,
   loanersTable,
   appointmentsTable,
+  photosTable,
 } from "../../test-support/rel-db/engine";
 
 function makeApp(): Express {
@@ -75,6 +76,10 @@ function seedVehicleTree(): void {
     { id: 10, vehicleId: 1, licensePlate: "1A0 0001", deletedAt: null },
     { id: 11, vehicleId: 1, licensePlate: "1A0 0001", deletedAt: null },
   ]);
+  seed(photosTable, [
+    { id: 20, workOrderId: 10, url: "/objects/p1", filename: "p1.jpg", deletedAt: null },
+    { id: 21, workOrderId: 11, url: "/objects/p2", filename: "p2.jpg", deletedAt: null },
+  ]);
   seed(serviceRecordsTable, [{ id: 5, vehicleId: 1, description: "Olej", deletedAt: null }]);
   seed(appointmentsTable, [
     { id: 9, vehicleId: 1, scheduledDate: "2026-02-01", status: "planned", deletedAt: null },
@@ -97,6 +102,7 @@ describe("DELETE /vehicles/:id — cascade soft-delete to children", () => {
 
     expect(__store.rows("vehicles").find((r) => r.id === 1)!.deletedAt).not.toBeNull();
     expect(trashed(__store.rows("work_orders"))).toBe(true);
+    expect(trashed(__store.rows("photos"))).toBe(true);
     expect(trashed(__store.rows("service_records"))).toBe(true);
     expect(trashed(__store.rows("appointments"))).toBe(true);
     expect(trashed(__store.rows("loaners"))).toBe(true);
@@ -111,11 +117,21 @@ describe("DELETE /vehicles/:id — cascade soft-delete to children", () => {
     await request(makeApp()).delete("/vehicles/1").send({ reason: "duplicate" });
 
     const deleted = __store.rows("audit_log").filter((a) => a.action === "entity_deleted");
-    // vehicle + 2 work orders + 1 service record + 1 appointment + 1 loaner.
-    expect(deleted).toHaveLength(6);
+    // vehicle + 2 work orders + 2 photos (one per work order) + 1 service record
+    // + 1 appointment + 1 loaner.
+    expect(deleted).toHaveLength(8);
     const entities = deleted.map((a) => a.entity).sort();
     expect(entities).toEqual(
-      ["appointment", "loaner", "service_record", "vehicle", "work_order", "work_order"].sort(),
+      [
+        "appointment",
+        "loaner",
+        "photo",
+        "photo",
+        "service_record",
+        "vehicle",
+        "work_order",
+        "work_order",
+      ].sort(),
     );
   });
 
@@ -142,14 +158,28 @@ describe("DELETE /vehicles/:id — cascade soft-delete to children", () => {
     const res = await request(makeApp()).post("/trash/vehicle/1/restore").send({ cascade: true });
 
     expect(res.status).toBe(200);
-    // 2 work orders + 1 service record + 1 appointment + 1 loaner.
-    expect(res.body.restoredCount).toBe(5);
+    // 2 work orders + 2 photos + 1 service record + 1 appointment + 1 loaner.
+    expect(res.body.restoredCount).toBe(7);
 
     expect(__store.rows("vehicles").find((r) => r.id === 1)!.deletedAt).toBeNull();
     expect(__store.rows("work_orders").every((r) => r.deletedAt === null)).toBe(true);
+    expect(__store.rows("photos").every((r) => r.deletedAt === null)).toBe(true);
     expect(__store.rows("service_records").every((r) => r.deletedAt === null)).toBe(true);
     expect(__store.rows("appointments").every((r) => r.deletedAt === null)).toBe(true);
     expect(__store.rows("loaners").every((r) => r.deletedAt === null)).toBe(true);
+  });
+
+  it("soft-deletes the work orders' photos so nothing stays live under a hidden order", async () => {
+    seedVehicleTree();
+
+    const res = await request(makeApp()).delete("/vehicles/1").send({ reason: "duplicate" });
+    expect(res.status).toBe(204);
+
+    // Both photos hang off the cascaded work orders and must be hidden with the
+    // same delete metadata as the rest of the tree.
+    const photos = __store.rows("photos");
+    expect(photos.every((p) => p.deletedAt != null)).toBe(true);
+    expect(photos.every((p) => p.deletedBy === "admin" && p.deleteReason === "duplicate")).toBe(true);
   });
 
   it("returns 404 and cascades nothing for an unknown vehicle", async () => {

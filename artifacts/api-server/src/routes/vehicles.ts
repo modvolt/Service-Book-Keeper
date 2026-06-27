@@ -22,6 +22,7 @@ import {
 } from "@workspace/api-zod";
 import { normalizeSpz } from "../lib/spz";
 import { recomputeVehicleServiceStatus } from "../lib/vehicleStatus";
+import { cascadeSoftDeleteWorkOrderChildren } from "./work-orders";
 
 const router: IRouter = Router();
 
@@ -316,6 +317,11 @@ async function cascadeSoftDeleteVehicleChildren(
     .returning();
   for (const row of workOrders) {
     await auditEntity.deleted("work_order", row.id, actor, row);
+    // Reuse the work-order child cascade so each cascaded order's photos (and
+    // any loaner linked via workOrderId) are hidden too — otherwise the photo
+    // subtree stays "live" pointing at a hidden work order and a later cascade
+    // restore can't bring it back.
+    await cascadeSoftDeleteWorkOrderChildren(row.id, actor, reason, deletedAt);
   }
 
   const serviceRecords = await db
