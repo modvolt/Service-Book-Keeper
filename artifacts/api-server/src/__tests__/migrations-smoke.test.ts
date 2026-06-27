@@ -127,16 +127,21 @@ async function runMigrate(
  * `pnpm --filter @workspace/db run migrate` -> `drizzle-kit migrate`).
  *
  * Mirrors `lib/db/drizzle.config.ts` but points `dbCredentials.url` at the
- * scratch DB. `out` is the real committed migrations folder so the CLI applies
- * the same chain. The config is written as a plain default-export object (no
- * `drizzle-kit` import) so it loads regardless of the temp file's location.
+ * scratch DB. `out` defaults to the real committed migrations folder so the CLI
+ * applies the same chain; a caller can pass `migrationsFolder` (e.g. a trimmed
+ * baseline dir) to simulate booting an OLDER release of the container. The
+ * config is written as a plain default-export object (no `drizzle-kit` import)
+ * so it loads regardless of the temp file's location.
  *
  * The CLI is spawned with cwd `/`: drizzle-kit prepends `./` to the configured
  * `out`, and an absolute `out` only collapses cleanly (`.//abs` -> `/abs`) from
  * the filesystem root (see the drizzle-kit gotcha in replit.md). Returns the
  * captured stdout so callers can assert on the CLI's own output.
  */
-async function runMigrateCli(dbName: string): Promise<string> {
+async function runMigrateCli(
+  dbName: string,
+  migrationsFolder: string = REAL_MIGRATIONS_DIR,
+): Promise<string> {
   const configPath = path.join(
     fs.mkdtempSync(path.join(os.tmpdir(), "drizzle-cli-cfg-")),
     "drizzle.config.ts",
@@ -145,7 +150,7 @@ async function runMigrateCli(dbName: string): Promise<string> {
     configPath,
     `export default {\n` +
       `  schema: ${JSON.stringify(SCHEMA_PATH)},\n` +
-      `  out: ${JSON.stringify(REAL_MIGRATIONS_DIR)},\n` +
+      `  out: ${JSON.stringify(migrationsFolder)},\n` +
       `  dialect: "postgresql",\n` +
       `  dbCredentials: { url: ${JSON.stringify(scratchUrl(dbName))} },\n` +
       `};\n`,
@@ -475,6 +480,134 @@ describe.skipIf(!BASE_URL || !CLI_AVAILABLE)(
           });
         } finally {
           await dropScratchDb(dbName);
+        }
+      },
+      120_000,
+    );
+
+    it(
+      "existing-prod upgrade: the real CLI applies new migrations on a seeded baseline DB and backfills data correctly",
+      async () => {
+        const dbName = await createScratchDb();
+        const { dir: baselineDir, entryCount: baselineCount } =
+          buildBaselineDir(BASELINE_TAG);
+        try {
+          // 1. Boot the OLDER release: run the real CLI with a config whose `out`
+          //    is the trimmed baseline dir, bringing the DB to the previous
+          //    release's schema exactly the way that container booted.
+          const baselineOut = await runMigrateCli(dbName, baselineDir);
+          expect(baselineOut).toContain("migrations applied successfully");
+
+          await withDb(dbName, async (pool) => {
+            expect(await migrationCount(pool)).toBe(baselineCount);
+            // Baseline shape: `paid` exists, payment refactor + consent history
+            // not yet.
+            expect(await columnExists(pool, "work_orders", "paid")).toBe(true);
+            expect(
+              await columnExists(pool, "work_orders", "payment_status"),
+            ).toBe(false);
+            expect(await tableExists(pool, "consent_history")).toBe(false);
+
+            // 2. Seed representative rows that the upcoming backfills act on.
+            await pool.query(
+              `INSERT INTO vehicles (license_plate, make, model, consent_given_at, consent_note)
+               VALUES ('1AB1111', 'Skoda', 'Octavia', now(), 'souhlas A')`,
+            );
+            await pool.query(
+              `INSERT INTO vehicles (license_plate, make, model)
+               VALUES ('2CD2222', 'VW', 'Golf')`,
+            );
+            await pool.query(
+              `INSERT INTO work_orders (license_plate, status, paid)
+               VALUES ('1AB1111', 'completed', true)`,
+            );
+            await pool.query(
+              `INSERT INTO work_orders (license_plate, status, paid)
+               VALUES ('1AB1111', 'completed', false)`,
+            );
+            await pool.query(
+              `INSERT INTO work_orders (license_plate, status, paid)
+               VALUES ('2CD2222', 'open', false)`,
+            );
+          });
+
+          // 3. Deploy the NEW release: run the real CLI with the full committed
+          //    chain on top of the seeded baseline — the exact prod boot upgrade.
+          const upgradeOut = await runMigrateCli(dbName);
+          expect(upgradeOut).toContain("migrations applied successfully");
+
+          await withDb(dbName, async (pool) => {
+            expect(await migrationCount(pool)).toBe(TOTAL_MIGRATIONS);
+
+            // Schema change landed.
+            expect(await columnExists(pool, "work_orders", "paid")).toBe(false);
+            expect(
+              await columnExists(pool, "work_orders", "payment_status"),
+            ).toBe(true);
+            expect(await tableExists(pool, "consent_history")).toBe(true);
+
+            // No data lost across the upgrade.
+            const woCount = await pool.query<{ c: number }>(
+              "SELECT count(*)::int AS c FROM work_orders",
+            );
+            expect(woCount.rows[0].c).toBe(3);
+            const vCount = await pool.query<{ c: number }>(
+              "SELECT count(*)::int AS c FROM vehicles",
+            );
+            expect(vCount.rows[0].c).toBe(2);
+
+            // 0008 backfill: paid/status -> payment_status + invoice_status.
+            const wo = await pool.query(
+              "SELECT payment_status, invoice_status FROM work_orders ORDER BY id",
+            );
+            expect(wo.rows[0]).toMatchObject({
+              payment_status: "paid",
+              invoice_status: "invoiced",
+            });
+            expect(wo.rows[1]).toMatchObject({
+              payment_status: "unpaid",
+              invoice_status: "ready_to_invoice",
+            });
+            expect(wo.rows[2]).toMatchObject({
+              payment_status: "unpaid",
+              invoice_status: "not_invoiced",
+            });
+
+            // 0010 backfill: existing consent -> legal_basis + a seed history row.
+            const v1 = await pool.query<{ legal_basis: string | null }>(
+              "SELECT legal_basis FROM vehicles WHERE license_plate='1AB1111'",
+            );
+            expect(v1.rows[0].legal_basis).toBe("consent");
+            const v2 = await pool.query<{ legal_basis: string | null }>(
+              "SELECT legal_basis FROM vehicles WHERE license_plate='2CD2222'",
+            );
+            expect(v2.rows[0].legal_basis).toBeNull();
+
+            const ch = await pool.query(
+              "SELECT event, basis, note, actor FROM consent_history",
+            );
+            expect(ch.rowCount).toBe(1);
+            expect(ch.rows[0]).toMatchObject({
+              event: "migrated",
+              basis: "consent",
+              note: "souhlas A",
+              actor: "system",
+            });
+          });
+
+          // 4. Idempotency: re-running the CLI (a container restart with no new
+          //    migrations) is a clean no-op — no error, no extra backfill rows.
+          await runMigrateCli(dbName);
+          await withDb(dbName, async (pool) => {
+            expect(await migrationCount(pool)).toBe(TOTAL_MIGRATIONS);
+            const ch = await pool.query<{ c: number }>(
+              "SELECT count(*)::int AS c FROM consent_history",
+            );
+            expect(ch.rows[0].c).toBe(1);
+          });
+        } finally {
+          await dropScratchDb(dbName);
+          fs.rmSync(baselineDir, { recursive: true, force: true });
         }
       },
       120_000,
