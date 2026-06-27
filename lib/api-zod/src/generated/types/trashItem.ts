@@ -15,4 +15,6 @@ export interface TrashItem {
   deletedBy?: string | null;
   /** @nullable */
   deleteReason?: string | null;
+  /** Number of trashed child items that belong to this item and would be restored by a cascade restore. Present (and non-zero) only for parent entities that currently have trashed children. */
+  childCount?: number;
 }

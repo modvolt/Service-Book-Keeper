@@ -74,6 +74,7 @@ export * from './messageResult';
 export * from './missingObject';
 export * from './photo';
 export * from './resetPasswordInput';
+export * from './restoreTrashItemInput';
 export * from './retentionCategory';
 export * from './retentionItem';
 export * from './retentionReport';

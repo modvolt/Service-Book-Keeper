@@ -9,4 +9,6 @@
 export interface SuccessResult {
   success: boolean;
   message?: string;
+  /** Number of related child items also restored by a cascade restore (excludes the parent itself). Present only on cascade restores. */
+  restoredCount?: number;
 }

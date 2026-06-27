@@ -46,10 +46,21 @@ export default function TrashPage() {
   const restore = useRestoreTrashItem();
   const purge = usePurgeTrashItem();
 
-  const handleRestore = async (item: TrashItem) => {
+  const handleRestore = async (item: TrashItem, cascade = false) => {
     try {
-      await restore.mutateAsync({ entity: item.entity, id: item.id });
-      toast({ title: "Obnoveno", description: `${entityLabel(item.entity)} „${item.label}" byl(a) obnoven(a).` });
+      const result = await restore.mutateAsync({
+        entity: item.entity,
+        id: item.id,
+        data: { cascade },
+      });
+      const restoredCount = result.restoredCount ?? 0;
+      toast({
+        title: "Obnoveno",
+        description:
+          cascade && restoredCount > 0
+            ? `${entityLabel(item.entity)} „${item.label}" obnoven(a) včetně ${restoredCount} souvisejících záznamů.`
+            : `${entityLabel(item.entity)} „${item.label}" byl(a) obnoven(a).`,
+      });
       invalidate();
     } catch (err) {
       toast({
@@ -120,16 +131,56 @@ export default function TrashPage() {
                       <TableCell className="text-sm text-muted-foreground">{item.deleteReason || "—"}</TableCell>
                       <TableCell>
                         <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRestore(item)}
-                            disabled={restore.isPending}
-                            title="Obnovit"
-                            className="text-emerald-600 dark:text-emerald-400"
-                          >
-                            <RotateCcw className="h-4 w-4 mr-1" /> Obnovit
-                          </Button>
+                          {item.childCount && item.childCount > 0 ? (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={restore.isPending}
+                                  title="Obnovit"
+                                  className="text-emerald-600 dark:text-emerald-400"
+                                >
+                                  <RotateCcw className="h-4 w-4 mr-1" /> Obnovit
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Obnovit i související záznamy?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    {entityLabel(item.entity)} „{item.label}" má v koši {item.childCount}{" "}
+                                    souvisejících záznamů (zakázky, servisní záznamy, fotky…). Můžete obnovit
+                                    pouze tento záznam, nebo jej obnovit i se souvisejícími záznamy.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter className="sm:justify-between">
+                                  <AlertDialogCancel>Zrušit</AlertDialogCancel>
+                                  <div className="flex gap-2">
+                                    <AlertDialogAction
+                                      className="bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                                      onClick={() => handleRestore(item, false)}
+                                    >
+                                      Pouze tento záznam
+                                    </AlertDialogAction>
+                                    <AlertDialogAction onClick={() => handleRestore(item, true)}>
+                                      Obnovit vše ({item.childCount})
+                                    </AlertDialogAction>
+                                  </div>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRestore(item)}
+                              disabled={restore.isPending}
+                              title="Obnovit"
+                              className="text-emerald-600 dark:text-emerald-400"
+                            >
+                              <RotateCcw className="h-4 w-4 mr-1" /> Obnovit
+                            </Button>
+                          )}
 
                           <AlertDialog>
                             <AlertDialogTrigger asChild>

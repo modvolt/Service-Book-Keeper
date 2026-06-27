@@ -2056,7 +2056,8 @@ export const ListTrashResponseItem = zod.object({
   "label": zod.string(),
   "deletedAt": zod.string(),
   "deletedBy": zod.string().nullish(),
-  "deleteReason": zod.string().nullish()
+  "deleteReason": zod.string().nullish(),
+  "childCount": zod.number().optional().describe('Number of trashed child items that belong to this item and would be restored by a cascade restore. Present (and non-zero) only for parent entities that currently have trashed children.')
 })
 export const ListTrashResponse = zod.array(ListTrashResponseItem)
 
@@ -2069,9 +2070,14 @@ export const RestoreTrashItemParams = zod.object({
   "id": zod.coerce.number()
 })
 
+export const RestoreTrashItemBody = zod.object({
+  "cascade": zod.boolean().optional().describe('When true, also restore the trashed children that belong to this parent (e.g. a vehicle\'s work orders, service records, appointments, loaners, and their photos). Opt-in; defaults to restoring only the single item.')
+})
+
 export const RestoreTrashItemResponse = zod.object({
   "success": zod.boolean(),
-  "message": zod.string().optional()
+  "message": zod.string().optional(),
+  "restoredCount": zod.number().optional().describe('Number of related child items also restored by a cascade restore (excludes the parent itself). Present only on cascade restores.')
 })
 
 
@@ -2085,7 +2091,8 @@ export const PurgeTrashItemParams = zod.object({
 
 export const PurgeTrashItemResponse = zod.object({
   "success": zod.boolean(),
-  "message": zod.string().optional()
+  "message": zod.string().optional(),
+  "restoredCount": zod.number().optional().describe('Number of related child items also restored by a cascade restore (excludes the parent itself). Present only on cascade restores.')
 })
 
 

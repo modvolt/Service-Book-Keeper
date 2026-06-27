@@ -256,6 +256,152 @@ describe("POST /trash/:entity/:id/restore — parent still in trash (no orphans)
   });
 });
 
+describe("GET /trash — childCount for parents with trashed children", () => {
+  it("reports the number of trashed descendants on the parent vehicle", async () => {
+    seed(vehiclesTable, [
+      { id: 1, licensePlate: "1A0 0001", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+    seed(workOrdersTable, [
+      { id: 10, vehicleId: 1, licensePlate: "1A0 0001", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+    seed(serviceRecordsTable, [
+      { id: 5, vehicleId: 1, description: "Olej", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+    seed(photosTable, [
+      { id: 7, workOrderId: 10, url: "/objects/x", filename: "a.jpg", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+
+    const res = await request(makeApp()).get("/trash");
+    expect(res.status).toBe(200);
+    const vehicle = res.body.find((i: { entity: string }) => i.entity === "vehicle");
+    // 1 work order + 1 service record + 1 photo (under the work order).
+    expect(vehicle.childCount).toBe(3);
+  });
+
+  it("omits childCount when the parent has no trashed children", async () => {
+    seed(vehiclesTable, [
+      { id: 1, licensePlate: "1A0 0001", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+    seed(workOrdersTable, [
+      { id: 10, vehicleId: 1, licensePlate: "1A0 0001", deletedAt: null },
+    ]);
+
+    const res = await request(makeApp()).get("/trash");
+    const vehicle = res.body.find((i: { entity: string }) => i.entity === "vehicle");
+    expect(vehicle.childCount).toBeUndefined();
+  });
+});
+
+describe("POST /trash/:entity/:id/restore — cascade", () => {
+  it("restores only the vehicle by default (no cascade)", async () => {
+    seed(vehiclesTable, [
+      { id: 1, licensePlate: "1A0 0001", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+    seed(workOrdersTable, [
+      { id: 10, vehicleId: 1, licensePlate: "1A0 0001", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+
+    const res = await request(makeApp()).post("/trash/vehicle/1/restore");
+    expect(res.status).toBe(200);
+    expect(__store.rows("vehicles")[0].deletedAt).toBeNull();
+    // Work order stays trashed.
+    expect(__store.rows("work_orders")[0].deletedAt).not.toBeNull();
+    // Only the vehicle restore was audited.
+    expect(__store.rows("audit_log")).toHaveLength(1);
+  });
+
+  it("restores the vehicle and its trashed children when cascade is true", async () => {
+    const at = new Date("2026-01-01T10:00:00Z");
+    seed(vehiclesTable, [{ id: 1, licensePlate: "1A0 0001", deletedAt: at }]);
+    seed(workOrdersTable, [
+      { id: 10, vehicleId: 1, licensePlate: "1A0 0001", deletedAt: at },
+    ]);
+    seed(serviceRecordsTable, [{ id: 5, vehicleId: 1, description: "Olej", deletedAt: at }]);
+    seed(appointmentsTable, [
+      { id: 9, vehicleId: 1, scheduledDate: "2026-02-01", status: "planned", deletedAt: at },
+    ]);
+    seed(photosTable, [
+      { id: 7, workOrderId: 10, url: "/objects/x", filename: "a.jpg", deletedAt: at },
+    ]);
+
+    const res = await request(makeApp()).post("/trash/vehicle/1/restore").send({ cascade: true });
+    expect(res.status).toBe(200);
+    expect(res.body.restoredCount).toBe(4);
+
+    expect(__store.rows("vehicles")[0].deletedAt).toBeNull();
+    expect(__store.rows("work_orders")[0].deletedAt).toBeNull();
+    expect(__store.rows("service_records")[0].deletedAt).toBeNull();
+    expect(__store.rows("appointments")[0].deletedAt).toBeNull();
+    expect(__store.rows("photos")[0].deletedAt).toBeNull();
+
+    // Parent + 4 children audited as restored.
+    const restored = __store.rows("audit_log").filter((a) => a.action === "entity_restored");
+    expect(restored).toHaveLength(5);
+  });
+
+  it("does not restore children that were never trashed", async () => {
+    const at = new Date("2026-01-01T10:00:00Z");
+    seed(vehiclesTable, [{ id: 1, licensePlate: "1A0 0001", deletedAt: at }]);
+    seed(workOrdersTable, [
+      { id: 10, vehicleId: 1, licensePlate: "1A0 0001", deletedAt: at },
+      { id: 11, vehicleId: 1, licensePlate: "1A0 0001", deletedAt: null },
+    ]);
+
+    const res = await request(makeApp()).post("/trash/vehicle/1/restore").send({ cascade: true });
+    expect(res.status).toBe(200);
+    expect(res.body.restoredCount).toBe(1);
+    expect(__store.rows("work_orders").find((r) => r.id === 10)!.deletedAt).toBeNull();
+    expect(__store.rows("work_orders").find((r) => r.id === 11)!.deletedAt).toBeNull();
+  });
+
+  it("skips a child whose other parent is still trashed (no orphan)", async () => {
+    const at = new Date("2026-01-01T10:00:00Z");
+    // V1 (customer vehicle, being restored) + V2 fleet vehicle still trashed.
+    seed(vehiclesTable, [
+      { id: 1, licensePlate: "1A0 0001", deletedAt: at },
+      { id: 2, licensePlate: "FLEET1", isFleet: true, deletedAt: at },
+    ]);
+    // Loaner reachable from V1 via customerVehicleId, but its fleet vehicle V2 stays trashed.
+    seed(loanersTable, [
+      { id: 3, fleetVehicleId: 2, customerVehicleId: 1, startDate: "2026-01-01", status: "active", deletedAt: at },
+    ]);
+
+    const res = await request(makeApp()).post("/trash/vehicle/1/restore").send({ cascade: true });
+    expect(res.status).toBe(200);
+    // Loaner left in the trash because its fleet vehicle is still trashed.
+    expect(res.body.restoredCount).toBe(0);
+    expect(__store.rows("loaners")[0].deletedAt).not.toBeNull();
+  });
+
+  it("cascade-restores a work order's trashed photos", async () => {
+    const at = new Date("2026-01-01T10:00:00Z");
+    seed(workOrdersTable, [
+      { id: 10, vehicleId: null, licensePlate: "1A0 0001", deletedAt: at },
+    ]);
+    seed(photosTable, [
+      { id: 7, workOrderId: 10, url: "/objects/x", filename: "a.jpg", deletedAt: at },
+      { id: 8, workOrderId: 10, url: "/objects/y", filename: "b.jpg", deletedAt: at },
+    ]);
+
+    const res = await request(makeApp()).post("/trash/work_order/10/restore").send({ cascade: true });
+    expect(res.status).toBe(200);
+    expect(res.body.restoredCount).toBe(2);
+    expect(__store.rows("photos").every((p) => p.deletedAt === null)).toBe(true);
+  });
+
+  it("still blocks cascade restore of a child whose parent is trashed", async () => {
+    const at = new Date("2026-01-01T10:00:00Z");
+    seed(vehiclesTable, [{ id: 1, licensePlate: "1A0 0001", deletedAt: at }]);
+    seed(workOrdersTable, [
+      { id: 10, vehicleId: 1, licensePlate: "1A0 0001", deletedAt: at },
+    ]);
+
+    const res = await request(makeApp()).post("/trash/work_order/10/restore").send({ cascade: true });
+    expect(res.status).toBe(409);
+    expect(__store.rows("work_orders")[0].deletedAt).not.toBeNull();
+  });
+});
+
 describe("DELETE /trash/:entity/:id", () => {
   it("hard-deletes the row and writes a purge audit entry", async () => {
     seed(workOrdersTable, [

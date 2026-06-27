@@ -1531,11 +1531,20 @@ export interface TrashItem {
   deletedBy?: string | null;
   /** @nullable */
   deleteReason?: string | null;
+  /** Number of trashed child items that belong to this item and would be restored by a cascade restore. Present (and non-zero) only for parent entities that currently have trashed children. */
+  childCount?: number;
+}
+
+export interface RestoreTrashItemInput {
+  /** When true, also restore the trashed children that belong to this parent (e.g. a vehicle's work orders, service records, appointments, loaners, and their photos). Opt-in; defaults to restoring only the single item. */
+  cascade?: boolean;
 }
 
 export interface SuccessResult {
   success: boolean;
   message?: string;
+  /** Number of related child items also restored by a cascade restore (excludes the parent itself). Present only on cascade restores. */
+  restoredCount?: number;
 }
 
 export type ListVehicleModelsParams = {

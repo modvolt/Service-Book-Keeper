@@ -69,6 +69,7 @@ import type {
   MessageResult,
   Photo,
   ResetPasswordInput,
+  RestoreTrashItemInput,
   RetentionReport,
   ScanMaterialsInput,
   ScanMaterialsResult,
@@ -5575,14 +5576,16 @@ export const getRestoreTrashItemUrl = (entity: string,
  * @summary Restore a soft-deleted item
  */
 export const restoreTrashItem = async (entity: string,
-    id: number, options?: RequestInit): Promise<SuccessResult> => {
+    id: number,
+    restoreTrashItemInput?: RestoreTrashItemInput, options?: RequestInit): Promise<SuccessResult> => {
 
   return customFetch<SuccessResult>(getRestoreTrashItemUrl(entity,id),
   {
     ...options,
-    method: 'POST'
-
-
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      restoreTrashItemInput,)
   }
 );}
 
@@ -5590,8 +5593,8 @@ export const restoreTrashItem = async (entity: string,
 
 
 export const getRestoreTrashItemMutationOptions = <TError = ErrorType<Error>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreTrashItem>>, TError,{entity: string;id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof restoreTrashItem>>, TError,{entity: string;id: number}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreTrashItem>>, TError,{entity: string;id: number;data?: BodyType<RestoreTrashItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof restoreTrashItem>>, TError,{entity: string;id: number;data?: BodyType<RestoreTrashItemInput>}, TContext> => {
 
 const mutationKey = ['restoreTrashItem'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -5603,10 +5606,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreTrashItem>>, {entity: string;id: number}> = (props) => {
-          const {entity,id} = props ?? {};
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof restoreTrashItem>>, {entity: string;id: number;data?: BodyType<RestoreTrashItemInput>}> = (props) => {
+          const {entity,id,data} = props ?? {};
 
-          return  restoreTrashItem(entity,id,requestOptions)
+          return  restoreTrashItem(entity,id,data,requestOptions)
         }
 
 
@@ -5617,18 +5620,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type RestoreTrashItemMutationResult = NonNullable<Awaited<ReturnType<typeof restoreTrashItem>>>
-
+    export type RestoreTrashItemMutationBody = BodyType<RestoreTrashItemInput> | undefined
     export type RestoreTrashItemMutationError = ErrorType<Error>
 
     /**
  * @summary Restore a soft-deleted item
  */
 export const useRestoreTrashItem = <TError = ErrorType<Error>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreTrashItem>>, TError,{entity: string;id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof restoreTrashItem>>, TError,{entity: string;id: number;data?: BodyType<RestoreTrashItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof restoreTrashItem>>,
         TError,
-        {entity: string;id: number},
+        {entity: string;id: number;data?: BodyType<RestoreTrashItemInput>},
         TContext
       > => {
       return useMutation(getRestoreTrashItemMutationOptions(options));

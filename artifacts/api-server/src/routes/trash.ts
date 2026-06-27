@@ -37,6 +37,10 @@ interface TrashItem {
   deletedAt: string;
   deletedBy: string | null;
   deleteReason: string | null;
+  // Number of trashed children that a cascade restore of this item would bring
+  // back. Set (and > 0) only for parent entities that currently have trashed
+  // children; omitted otherwise so the UI only offers cascade when relevant.
+  childCount?: number;
 }
 
 // A snapshot is the row captured before restore/purge, used for the audit trail.
@@ -55,6 +59,14 @@ interface ParentLink {
   parentTrashed: (childId: number) => Promise<boolean>;
 }
 
+// A child link knows how to find the trashed children of a given parent id for
+// a specific child entity. Used by cascade restore (bring a parent's children
+// back in one click) and to compute a parent's `childCount` for the UI.
+interface ChildLink {
+  entity: TrashEntity;
+  trashedIds: (parentId: number) => Promise<number[]>;
+}
+
 interface EntityConfig {
   // Trashed rows for this entity, most recently deleted first.
   list: () => Promise<TrashItem[]>;
@@ -62,6 +74,9 @@ interface EntityConfig {
   // restore is blocked with that link's message. Omitted for top-level entities
   // (vehicle, material) that have no parent.
   parents?: ParentLink[];
+  // Child links describing every trashed-child relationship this entity owns.
+  // Cascade restore walks these top-down; omitted for leaf entities.
+  children?: ChildLink[];
   // Clears the soft-delete flags; returns the restored row or null if not found.
   restore: (id: number) => Promise<Snapshot | null>;
   // Hard-deletes the row (children cascade / set-null via FK); returns the
@@ -113,6 +128,22 @@ function parentLink(
   };
 }
 
+// Build a ChildLink: the trashed rows of `childTable` whose `fkColumn` points at
+// a given parent id. Used to walk a parent's trashed children for cascade
+// restore and to count them for the UI.
+function childLink(entity: TrashEntity, childTable: ChildTable, fkColumn: PgColumn): ChildLink {
+  return {
+    entity,
+    trashedIds: async (parentId) => {
+      const rows = await db
+        .select({ id: childTable.id })
+        .from(childTable)
+        .where(and(eq(fkColumn, parentId), isNotNull(childTable.deletedAt)));
+      return rows.map((r) => r.id as number);
+    },
+  };
+}
+
 const ENTITIES: Record<TrashEntity, EntityConfig> = {
   vehicle: {
     list: async () => {
@@ -123,6 +154,13 @@ const ENTITIES: Record<TrashEntity, EntityConfig> = {
         .orderBy(desc(vehiclesTable.deletedAt));
       return rows.map((r) => toItem("vehicle", r.id, r.licensePlate || `#${r.id}`, r));
     },
+    children: [
+      childLink("work_order", workOrdersTable, workOrdersTable.vehicleId),
+      childLink("service_record", serviceRecordsTable, serviceRecordsTable.vehicleId),
+      childLink("appointment", appointmentsTable, appointmentsTable.vehicleId),
+      childLink("loaner", loanersTable, loanersTable.fleetVehicleId),
+      childLink("loaner", loanersTable, loanersTable.customerVehicleId),
+    ],
     restore: async (id) => {
       const [existing] = await db
         .select()
@@ -158,6 +196,10 @@ const ENTITIES: Record<TrashEntity, EntityConfig> = {
         vehiclesTable,
         "Zakázku nelze obnovit: nadřazené vozidlo je v koši. Nejprve obnovte vozidlo.",
       ),
+    ],
+    children: [
+      childLink("photo", photosTable, photosTable.workOrderId),
+      childLink("loaner", loanersTable, loanersTable.workOrderId),
     ],
     restore: async (id) => {
       const [existing] = await db
@@ -416,11 +458,88 @@ function parseId(raw: string): number | null {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
+// True when any of this entity's parents is still soft-deleted. Restoring such a
+// child would orphan it (it would attach to a hidden parent), so cascade restore
+// skips it. Top-level entities (no `parents`) are never blocked.
+async function isAnyParentTrashed(entity: TrashEntity, id: number): Promise<boolean> {
+  for (const parent of ENTITIES[entity].parents ?? []) {
+    if (await parent.parentTrashed(id)) return true;
+  }
+  return false;
+}
+
+// Walk a parent's trashed descendants breadth-first (top-down: a node always
+// precedes its own children). De-duped by entity+id so a row reachable by more
+// than one link (e.g. a loaner linked to both a vehicle and its work order) is
+// visited once. Snapshot of who is trashed *now* — used both to count children
+// for the UI and to drive the cascade restore.
+async function collectTrashedDescendants(
+  entity: TrashEntity,
+  id: number,
+): Promise<{ entity: TrashEntity; id: number }[]> {
+  const out: { entity: TrashEntity; id: number }[] = [];
+  const seen = new Set<string>([`${entity}:${id}`]);
+  const queue: { entity: TrashEntity; id: number }[] = [{ entity, id }];
+  while (queue.length > 0) {
+    const cur = queue.shift()!;
+    for (const child of ENTITIES[cur.entity].children ?? []) {
+      const ids = await child.trashedIds(cur.id);
+      for (const childId of ids) {
+        const key = `${child.entity}:${childId}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        const node = { entity: child.entity, id: childId };
+        out.push(node);
+        queue.push(node);
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Restore a parent and, in one action, its trashed children (cascade). The
+ * parent is restored + audited first (the caller already ran the parent's own
+ * parent-block check), then each trashed descendant is restored in top-down
+ * order. A descendant is skipped if any of its parents is *still* trashed —
+ * which, processed top-down, also skips the subtree under any skipped node
+ * (its tree-parent stays trashed). Returns the restored parent snapshot (null
+ * if it was not actually trashed) and the count of children restored.
+ */
+async function restoreWithChildren(
+  entity: TrashEntity,
+  id: number,
+  actor: AuditActor,
+): Promise<{ parent: Snapshot | null; restoredCount: number }> {
+  const parent = await ENTITIES[entity].restore(id);
+  if (!parent) return { parent: null, restoredCount: 0 };
+  await auditEntity.restored(entity, id, actor, parent);
+
+  const descendants = await collectTrashedDescendants(entity, id);
+  let restoredCount = 0;
+  for (const d of descendants) {
+    if (await isAnyParentTrashed(d.entity, d.id)) continue;
+    const restored = await ENTITIES[d.entity].restore(d.id);
+    if (restored) {
+      await auditEntity.restored(d.entity, d.id, actor, restored);
+      restoredCount += 1;
+    }
+  }
+  return { parent, restoredCount };
+}
+
 /** Every trashed item across all entities, most recently deleted first. */
 export async function listAllTrashItems(): Promise<TrashItem[]> {
   const groups = await Promise.all(Object.values(ENTITIES).map((cfg) => cfg.list()));
   const items = groups.flat();
   items.sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
+  // Annotate parent entities with how many trashed children a cascade restore
+  // would bring back, so the UI can offer the option only when it matters.
+  for (const item of items) {
+    if (!ENTITIES[item.entity].children) continue;
+    const childCount = (await collectTrashedDescendants(item.entity, item.id)).length;
+    if (childCount > 0) item.childCount = childCount;
+  }
   return items;
 }
 
@@ -493,6 +612,22 @@ router.post("/trash/:entity/:id/restore", async (req, res): Promise<void> => {
       res.status(409).json({ error: parent.blockedMessage });
       return;
     }
+  }
+
+  // Opt-in cascade: also restore the trashed children that belong to this item.
+  const cascade = req.body?.cascade === true;
+  if (cascade) {
+    const result = await restoreWithChildren(entity, id, getActor(req));
+    if (!result.parent) {
+      res.status(404).json({ error: "Záznam nenalezen" });
+      return;
+    }
+    const message =
+      result.restoredCount > 0
+        ? `Záznam byl obnoven včetně ${result.restoredCount} souvisejících záznamů.`
+        : "Záznam byl obnoven.";
+    res.json({ success: true, message, restoredCount: result.restoredCount });
+    return;
   }
 
   const restored = await ENTITIES[entity].restore(id);
