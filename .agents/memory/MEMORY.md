@@ -25,3 +25,4 @@
 - [rel-db harness extension](rel-db-harness-extension.md) — a route under test 500s when it uses a drizzle feature the in-memory rel-db harness lacks (onConflictDoUpdate/execute/getTableColumns/sql.identifier); extend engine + re-export, don't reshape the route.
 - [Verify migrations on a fresh DB](verify-migrations-fresh-db.md) — verify the prod boot migrate path on a throwaway scratch DB; the push-provisioned dev DB gives false migrate failures.
 - [Orval path+query param collision](orval-path-query-param-collision.md) — adding a query param to an op that also has path params breaks zod codegen (dup `<Op>Params`); use a requestBody instead.
+- [testing-harness DB isolation](testing-harness-db-isolation.md) — executeSql + runTest [DB] hit built-in heliumdb, but this app reads an external DATABASE_URL; DB-injection/seeded-credential tests never reach the app. Use pure-UI setup + a real login.
