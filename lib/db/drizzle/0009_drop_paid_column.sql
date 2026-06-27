@@ -1,1 +1,1 @@
-ALTER TABLE "work_orders" DROP COLUMN "paid";
+ALTER TABLE "work_orders" DROP COLUMN IF EXISTS "paid";
