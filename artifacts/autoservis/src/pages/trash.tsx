@@ -32,6 +32,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, RotateCcw } from "lucide-react";
 import { entityLabel, formatDateTime } from "@/lib/audit-labels";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export default function TrashPage() {
   const { toast } = useToast();
@@ -50,8 +51,12 @@ export default function TrashPage() {
       await restore.mutateAsync({ entity: item.entity, id: item.id });
       toast({ title: "Obnoveno", description: `${entityLabel(item.entity)} „${item.label}" byl(a) obnoven(a).` });
       invalidate();
-    } catch {
-      toast({ title: "Chyba", description: "Obnovení se nezdařilo.", variant: "destructive" });
+    } catch (err) {
+      toast({
+        title: "Chyba",
+        description: getApiErrorMessage(err, "Obnovení se nezdařilo."),
+        variant: "destructive",
+      });
     }
   };
 

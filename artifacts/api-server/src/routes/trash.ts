@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { and, desc, eq, isNotNull } from "drizzle-orm";
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import {
   db,
   vehiclesTable,
@@ -41,9 +42,26 @@ interface TrashItem {
 // A snapshot is the row captured before restore/purge, used for the audit trail.
 type Snapshot = Record<string, unknown>;
 
+// A child row points at one or more parents via FK columns. Restoring a child
+// while its parent is still soft-deleted would orphan it (it would reappear
+// attached to a hidden parent, inconsistent with every list that filters out
+// deleted parents). Each link knows how to detect that and the Czech message to
+// show when it blocks the restore.
+interface ParentLink {
+  // Czech message shown when this parent is still in the trash.
+  blockedMessage: string;
+  // True when the (trashed) child has a non-null FK pointing at a parent that
+  // is itself still soft-deleted.
+  parentTrashed: (childId: number) => Promise<boolean>;
+}
+
 interface EntityConfig {
   // Trashed rows for this entity, most recently deleted first.
   list: () => Promise<TrashItem[]>;
+  // Parent links checked before a restore; if any parent is still trashed the
+  // restore is blocked with that link's message. Omitted for top-level entities
+  // (vehicle, material) that have no parent.
+  parents?: ParentLink[];
   // Clears the soft-delete flags; returns the restored row or null if not found.
   restore: (id: number) => Promise<Snapshot | null>;
   // Hard-deletes the row (children cascade / set-null via FK); returns the
@@ -60,6 +78,40 @@ interface EntityConfig {
 }
 
 const CLEAR = { deletedAt: null, deletedBy: null, deleteReason: null };
+
+// Minimal structural shapes so the factory accepts any soft-deletable table /
+// FK column without dragging in drizzle's full column generics.
+type ChildTable = PgTable & { id: PgColumn; deletedAt: PgColumn };
+type ParentTable = PgTable & { id: PgColumn; deletedAt: PgColumn };
+
+// Build a ParentLink: a trashed child with a non-null `fkColumn` whose target
+// parent row is itself still soft-deleted blocks the restore. A null FK (no
+// parent) or a live parent does not block. The child is filtered on
+// `isNotNull(deletedAt)` so a non-trashed / missing child never blocks here —
+// it falls through to the restore handler's own 404.
+function parentLink(
+  childTable: ChildTable,
+  fkColumn: PgColumn,
+  parentTable: ParentTable,
+  blockedMessage: string,
+): ParentLink {
+  return {
+    blockedMessage,
+    parentTrashed: async (childId) => {
+      const [child] = await db
+        .select({ fk: fkColumn })
+        .from(childTable)
+        .where(and(eq(childTable.id, childId), isNotNull(childTable.deletedAt)));
+      const fk = child?.fk;
+      if (fk == null) return false;
+      const [parent] = await db
+        .select({ deletedAt: parentTable.deletedAt })
+        .from(parentTable)
+        .where(eq(parentTable.id, fk as number));
+      return parent != null && parent.deletedAt != null;
+    },
+  };
+}
 
 const ENTITIES: Record<TrashEntity, EntityConfig> = {
   vehicle: {
@@ -99,6 +151,14 @@ const ENTITIES: Record<TrashEntity, EntityConfig> = {
         .orderBy(desc(workOrdersTable.deletedAt));
       return rows.map((r) => toItem("work_order", r.id, `${r.licensePlate || "?"} #${r.id}`, r));
     },
+    parents: [
+      parentLink(
+        workOrdersTable,
+        workOrdersTable.vehicleId,
+        vehiclesTable,
+        "Zakázku nelze obnovit: nadřazené vozidlo je v koši. Nejprve obnovte vozidlo.",
+      ),
+    ],
     restore: async (id) => {
       const [existing] = await db
         .select()
@@ -143,6 +203,14 @@ const ENTITIES: Record<TrashEntity, EntityConfig> = {
         toItem("service_record", r.id, (r.description || `Záznam #${r.id}`).slice(0, 80), r),
       );
     },
+    parents: [
+      parentLink(
+        serviceRecordsTable,
+        serviceRecordsTable.vehicleId,
+        vehiclesTable,
+        "Servisní záznam nelze obnovit: nadřazené vozidlo je v koši. Nejprve obnovte vozidlo.",
+      ),
+    ],
     restore: async (id) => {
       const [existing] = await db
         .select()
@@ -201,6 +269,26 @@ const ENTITIES: Record<TrashEntity, EntityConfig> = {
         toItem("loaner", r.id, `Zápůjčka #${r.id}${r.customerName ? ` — ${r.customerName}` : ""}`, r),
       );
     },
+    parents: [
+      parentLink(
+        loanersTable,
+        loanersTable.fleetVehicleId,
+        vehiclesTable,
+        "Zápůjčku nelze obnovit: vozidlo z vozového parku je v koši. Nejprve obnovte vozidlo.",
+      ),
+      parentLink(
+        loanersTable,
+        loanersTable.workOrderId,
+        workOrdersTable,
+        "Zápůjčku nelze obnovit: nadřazená zakázka je v koši. Nejprve obnovte zakázku.",
+      ),
+      parentLink(
+        loanersTable,
+        loanersTable.customerVehicleId,
+        vehiclesTable,
+        "Zápůjčku nelze obnovit: vozidlo zákazníka je v koši. Nejprve obnovte vozidlo.",
+      ),
+    ],
     restore: async (id) => {
       const [existing] = await db
         .select()
@@ -231,6 +319,14 @@ const ENTITIES: Record<TrashEntity, EntityConfig> = {
         toItem("appointment", r.id, `Termín #${r.id}${r.customerName ? ` — ${r.customerName}` : ""}`, r),
       );
     },
+    parents: [
+      parentLink(
+        appointmentsTable,
+        appointmentsTable.vehicleId,
+        vehiclesTable,
+        "Termín nelze obnovit: nadřazené vozidlo je v koši. Nejprve obnovte vozidlo.",
+      ),
+    ],
     restore: async (id) => {
       const [existing] = await db
         .select()
@@ -259,6 +355,14 @@ const ENTITIES: Record<TrashEntity, EntityConfig> = {
         .orderBy(desc(photosTable.deletedAt));
       return rows.map((r) => toItem("photo", r.id, r.filename || `Foto #${r.id}`, r));
     },
+    parents: [
+      parentLink(
+        photosTable,
+        photosTable.workOrderId,
+        workOrdersTable,
+        "Fotografii nelze obnovit: nadřazená zakázka je v koši. Nejprve obnovte zakázku.",
+      ),
+    ],
     restore: async (id) => {
       const [existing] = await db
         .select()
@@ -379,6 +483,16 @@ router.post("/trash/:entity/:id/restore", async (req, res): Promise<void> => {
   if (id == null) {
     res.status(404).json({ error: "Záznam nenalezen" });
     return;
+  }
+
+  // Block restoring a child whose parent is still in the trash — it would come
+  // back orphaned, attached to a hidden parent. Tell the user to restore the
+  // parent first. (No-op for top-level entities, which have no parents.)
+  for (const parent of ENTITIES[entity].parents ?? []) {
+    if (await parent.parentTrashed(id)) {
+      res.status(409).json({ error: parent.blockedMessage });
+      return;
+    }
   }
 
   const restored = await ENTITIES[entity].restore(id);

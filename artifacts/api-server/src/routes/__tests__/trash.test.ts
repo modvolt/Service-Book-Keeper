@@ -22,6 +22,10 @@ import {
   seed,
   vehiclesTable,
   workOrdersTable,
+  serviceRecordsTable,
+  loanersTable,
+  appointmentsTable,
+  photosTable,
   auditLogTable,
 } from "../../test-support/rel-db/engine";
 
@@ -108,6 +112,147 @@ describe("POST /trash/:entity/:id/restore", () => {
     const res = await request(makeApp()).post("/trash/vehicle/1/restore");
     expect(res.status).toBe(404);
     expect(__store.rows("audit_log")).toHaveLength(0);
+  });
+});
+
+describe("POST /trash/:entity/:id/restore — parent still in trash (no orphans)", () => {
+  it("blocks restoring a work order whose parent vehicle is still trashed", async () => {
+    seed(vehiclesTable, [
+      { id: 1, licensePlate: "1A0 0001", deletedAt: new Date("2026-01-01T10:00:00Z"), deletedBy: "admin" },
+    ]);
+    seed(workOrdersTable, [
+      { id: 10, vehicleId: 1, licensePlate: "1A0 0001", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+
+    const res = await request(makeApp()).post("/trash/work_order/10/restore");
+    expect(res.status).toBe(409);
+    expect(res.body.error).toContain("vozidlo");
+
+    // Still trashed, no audit entry written.
+    const [order] = __store.rows("work_orders");
+    expect(order.deletedAt).not.toBeNull();
+    expect(__store.rows("audit_log")).toHaveLength(0);
+  });
+
+  it("restores a work order once its parent vehicle is live again", async () => {
+    seed(vehiclesTable, [{ id: 1, licensePlate: "1A0 0001", deletedAt: null }]);
+    seed(workOrdersTable, [
+      { id: 10, vehicleId: 1, licensePlate: "1A0 0001", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+
+    const res = await request(makeApp()).post("/trash/work_order/10/restore");
+    expect(res.status).toBe(200);
+    const [order] = __store.rows("work_orders");
+    expect(order.deletedAt).toBeNull();
+    expect(__store.rows("audit_log")[0]).toMatchObject({ action: "entity_restored", entity: "work_order" });
+  });
+
+  it("allows restoring a work order with no parent vehicle (vehicleId null)", async () => {
+    seed(workOrdersTable, [
+      { id: 10, vehicleId: null, licensePlate: "1A0 0001", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+
+    const res = await request(makeApp()).post("/trash/work_order/10/restore");
+    expect(res.status).toBe(200);
+    expect(__store.rows("work_orders")[0].deletedAt).toBeNull();
+  });
+
+  it("blocks restoring a service record whose parent vehicle is still trashed", async () => {
+    seed(vehiclesTable, [
+      { id: 1, licensePlate: "1A0 0001", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+    seed(serviceRecordsTable, [
+      { id: 5, vehicleId: 1, description: "Olej", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+
+    const res = await request(makeApp()).post("/trash/service_record/5/restore");
+    expect(res.status).toBe(409);
+    expect(__store.rows("service_records")[0].deletedAt).not.toBeNull();
+    expect(__store.rows("audit_log")).toHaveLength(0);
+  });
+
+  it("blocks restoring a photo whose parent work order is still trashed", async () => {
+    seed(workOrdersTable, [
+      { id: 10, vehicleId: null, licensePlate: "1A0 0001", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+    seed(photosTable, [
+      { id: 7, workOrderId: 10, url: "/objects/x", filename: "a.jpg", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+
+    const res = await request(makeApp()).post("/trash/photo/7/restore");
+    expect(res.status).toBe(409);
+    expect(res.body.error).toContain("zakázka");
+    expect(__store.rows("photos")[0].deletedAt).not.toBeNull();
+  });
+
+  it("blocks restoring a loaner whose fleet vehicle is still trashed", async () => {
+    seed(vehiclesTable, [
+      { id: 1, licensePlate: "FLEET1", isFleet: true, deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+    seed(loanersTable, [
+      { id: 3, fleetVehicleId: 1, startDate: "2026-01-01", status: "active", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+
+    const res = await request(makeApp()).post("/trash/loaner/3/restore");
+    expect(res.status).toBe(409);
+    expect(__store.rows("loaners")[0].deletedAt).not.toBeNull();
+  });
+
+  it("blocks restoring a loaner whose linked work order is still trashed", async () => {
+    seed(vehiclesTable, [{ id: 1, licensePlate: "FLEET1", isFleet: true, deletedAt: null }]);
+    seed(workOrdersTable, [
+      { id: 20, vehicleId: null, licensePlate: "1A0 0001", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+    seed(loanersTable, [
+      { id: 3, fleetVehicleId: 1, workOrderId: 20, startDate: "2026-01-01", status: "active", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+
+    const res = await request(makeApp()).post("/trash/loaner/3/restore");
+    expect(res.status).toBe(409);
+    expect(res.body.error).toContain("zakázka");
+    expect(__store.rows("loaners")[0].deletedAt).not.toBeNull();
+  });
+
+  it("blocks restoring a loaner whose customer vehicle is still trashed", async () => {
+    seed(vehiclesTable, [
+      { id: 1, licensePlate: "FLEET1", isFleet: true, deletedAt: null },
+      { id: 2, licensePlate: "2B0 0002", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+    seed(loanersTable, [
+      { id: 3, fleetVehicleId: 1, customerVehicleId: 2, startDate: "2026-01-01", status: "active", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+
+    const res = await request(makeApp()).post("/trash/loaner/3/restore");
+    expect(res.status).toBe(409);
+    expect(__store.rows("loaners")[0].deletedAt).not.toBeNull();
+  });
+
+  it("restores a loaner once all its parents are live", async () => {
+    seed(vehiclesTable, [
+      { id: 1, licensePlate: "FLEET1", isFleet: true, deletedAt: null },
+      { id: 2, licensePlate: "2B0 0002", deletedAt: null },
+    ]);
+    seed(workOrdersTable, [{ id: 20, vehicleId: null, licensePlate: "1A0 0001", deletedAt: null }]);
+    seed(loanersTable, [
+      { id: 3, fleetVehicleId: 1, workOrderId: 20, customerVehicleId: 2, startDate: "2026-01-01", status: "active", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+
+    const res = await request(makeApp()).post("/trash/loaner/3/restore");
+    expect(res.status).toBe(200);
+    expect(__store.rows("loaners")[0].deletedAt).toBeNull();
+  });
+
+  it("blocks restoring an appointment whose parent vehicle is still trashed", async () => {
+    seed(vehiclesTable, [
+      { id: 1, licensePlate: "1A0 0001", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+    seed(appointmentsTable, [
+      { id: 9, vehicleId: 1, scheduledDate: "2026-02-01", status: "planned", deletedAt: new Date("2026-01-01T10:00:00Z") },
+    ]);
+
+    const res = await request(makeApp()).post("/trash/appointment/9/restore");
+    expect(res.status).toBe(409);
+    expect(__store.rows("appointments")[0].deletedAt).not.toBeNull();
   });
 });
 
