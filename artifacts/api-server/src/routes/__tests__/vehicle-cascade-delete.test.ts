@@ -151,6 +151,33 @@ describe("DELETE /vehicles/:id — cascade soft-delete to children", () => {
     expect(wo11.deleteReason).toBe("old");
   });
 
+  it("does not touch a photo already in the trash (keeps its own metadata)", async () => {
+    seedVehicleTree();
+    // Pre-trash one photo (a grandchild via its work order) separately, by a
+    // different actor/reason/timestamp.
+    const earlier = new Date("2025-12-01T00:00:00Z");
+    __store.rows("photos").find((r) => r.id === 20)!.deletedAt = earlier;
+    __store.rows("photos").find((r) => r.id === 20)!.deletedBy = "scanner";
+    __store.rows("photos").find((r) => r.id === 20)!.deleteReason = "old";
+
+    await request(makeApp()).delete("/vehicles/1").send({ reason: "duplicate" });
+
+    // The pre-trashed photo keeps its original metadata.
+    const p20 = __store.rows("photos").find((r) => r.id === 20)!;
+    expect(p20.deletedAt).toEqual(earlier);
+    expect(p20.deletedBy).toBe("scanner");
+    expect(p20.deleteReason).toBe("old");
+
+    // The rest of the subtree is cascaded with the vehicle delete metadata.
+    const p21 = __store.rows("photos").find((r) => r.id === 21)!;
+    expect(p21.deletedAt).not.toBeNull();
+    expect(p21.deletedBy).toBe("admin");
+    expect(p21.deleteReason).toBe("duplicate");
+    expect(
+      __store.rows("work_orders").every((r) => r.deletedAt != null && r.deletedBy === "admin" && r.deleteReason === "duplicate"),
+    ).toBe(true);
+  });
+
   it("brings the whole tree back via cascade restore", async () => {
     seedVehicleTree();
 
