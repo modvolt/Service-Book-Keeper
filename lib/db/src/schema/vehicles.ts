@@ -23,6 +23,11 @@ export const vehiclesTable = pgTable("vehicles", {
   ownerDic: text("owner_dic"),
   ownerPhone: text("owner_phone"),
   ownerEmail: text("owner_email"),
+  // GDPR: legal basis for processing the owner's personal data. One of
+  // "contract" (plnění smlouvy), "legitimate_interest" (oprávněný zájem) or
+  // "consent" (souhlas). Null means no basis recorded yet. The dated history of
+  // changes lives in `consent_history`; this column is the current value.
+  legalBasis: text("legal_basis"),
   // GDPR: recorded consent of the owner (data subject) to store/process their
   // personal data. Null consentGivenAt means no consent on record.
   consentGivenAt: timestamp("consent_given_at", { withTimezone: true }),

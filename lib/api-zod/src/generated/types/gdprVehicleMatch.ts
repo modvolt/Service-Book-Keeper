@@ -5,6 +5,7 @@
  * AutoServis API
  * OpenAPI spec version: 0.1.0
  */
+import type { GdprVehicleMatchLegalBasis } from './gdprVehicleMatchLegalBasis';
 
 export interface GdprVehicleMatch {
   id: number;
@@ -16,6 +17,8 @@ export interface GdprVehicleMatch {
   ownerPhone?: string | null;
   /** @nullable */
   ownerEmail?: string | null;
+  /** @nullable */
+  legalBasis?: GdprVehicleMatchLegalBasis;
   /** @nullable */
   consentGivenAt?: string | null;
   serviceRecordCount: number;

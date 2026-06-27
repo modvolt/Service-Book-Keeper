@@ -27,6 +27,22 @@ matching mock file (`orm-mock.ts` for `drizzle-orm`, `pgcore-mock.ts` for
   ("date" for `*At` timestamp cols, else "string") so `coerceRows` rehydrates
   timestamp ISO strings into `Date` and drops unknown columns.
 
+Predicate-level `sql` (e.g. retention's `lt(sql\`coalesce(${a}, ${b})\`, cutoff)`):
+the `sql` marker must capture its interpolated values and `resolve()` must
+special-case `coalesce(...)` (first non-null) — otherwise the marker resolves to
+a string and every comparison is wrong. Add new aged columns (`legalBasis`,
+`createdAt`, `consent_history` table) to the `makeTable` lists + re-export.
+
+**Live-reference aliasing pitfall:** a `select(*)` returns the *live* store row
+object, and `update().set()` mutates that same object in place. So a route that
+reads a column *after* issuing its own update sees the post-update value (unlike
+real drizzle, where the earlier select result is a detached snapshot). Symptom:
+a history/event classification that depends on the prior value comes out wrong
+only under test. Fix the route to capture prior state *before* the write (correct
+in prod too); don't work around it in the harness.
+
 **Why:** trust the route — it mirrors real drizzle. The harness is the
 incomplete side, so extend the harness rather than reshaping the route to dodge
-an unimplemented feature.
+an unimplemented feature. The one exception is the live-reference aliasing above:
+that's a real fragility (read-after-write), so fix the route to read prior state
+first.

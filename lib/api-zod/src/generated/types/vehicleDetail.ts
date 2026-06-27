@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ServiceRecord } from './serviceRecord';
+import type { VehicleDetailLegalBasis } from './vehicleDetailLegalBasis';
 import type { VehicleDetailOwnerType } from './vehicleDetailOwnerType';
 import type { VehicleDetailTransmission } from './vehicleDetailTransmission';
 import type { WorkOrder } from './workOrder';
@@ -39,6 +40,8 @@ export interface VehicleDetail {
   ownerPhone?: string | null;
   /** @nullable */
   ownerEmail?: string | null;
+  /** @nullable */
+  legalBasis?: VehicleDetailLegalBasis;
   /** @nullable */
   consentGivenAt?: string | null;
   /** @nullable */

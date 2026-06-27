@@ -1391,6 +1391,50 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
+  /gdpr/consent-history/{vehicleId}:
+    get:
+      operationId: getConsentHistory
+      tags: [gdpr]
+      summary: List the consent / legal-basis change history for a vehicle
+      parameters:
+        - name: vehicleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Consent history (most recent first)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ConsentHistoryEntry"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /gdpr/retention:
+    get:
+      operationId: getRetentionReport
+      tags: [gdpr]
+      summary: List aged records (work orders, photos, contacts) eligible for cleanup
+      parameters:
+        - name: years
+          in: query
+          description: Age threshold in years (default 3)
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Retention candidates grouped by category
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RetentionReport"
   /gdpr/audit-log:
     get:
       operationId: getAuditLog
@@ -1680,6 +1724,9 @@ components:
           type: ["string", "null"]
         ownerEmail:
           type: ["string", "null"]
+        legalBasis:
+          type: ["string", "null"]
+          enum: [contract, legitimate_interest, consent, null]
         consentGivenAt:
           type: ["string", "null"]
         consentNote:
@@ -1764,6 +1811,9 @@ components:
           type: ["string", "null"]
         ownerEmail:
           type: ["string", "null"]
+        legalBasis:
+          type: ["string", "null"]
+          enum: [contract, legitimate_interest, consent, null]
         consentGivenAt:
           type: ["string", "null"]
         consentNote:
@@ -2999,6 +3049,9 @@ components:
           type: ["string", "null"]
         ownerEmail:
           type: ["string", "null"]
+        legalBasis:
+          type: ["string", "null"]
+          enum: [contract, legitimate_interest, consent, null]
         consentGivenAt:
           type: ["string", "null"]
         serviceRecordCount:
@@ -3019,7 +3072,7 @@ components:
             $ref: "#/components/schemas/GdprVehicleMatch"
     GdprExport:
       type: object
-      required: [exportedAt, vehicle, serviceRecords, workOrders, appointments, loaners]
+      required: [exportedAt, vehicle, serviceRecords, workOrders, appointments, loaners, consentHistory]
       properties:
         exportedAt:
           type: string
@@ -3041,13 +3094,78 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Loaner"
+        consentHistory:
+          type: array
+          items:
+            $ref: "#/components/schemas/ConsentHistoryEntry"
+    ConsentHistoryEntry:
+      type: object
+      required: [id, vehicleId, event, createdAt]
+      properties:
+        id:
+          type: integer
+        vehicleId:
+          type: integer
+        basis:
+          type: ["string", "null"]
+          enum: [contract, legitimate_interest, consent, null]
+        event:
+          type: string
+          enum: [granted, withdrawn, updated, migrated]
+        note:
+          type: ["string", "null"]
+        actor:
+          type: ["string", "null"]
+        createdAt:
+          type: string
     SetConsentInput:
       type: object
       required: [given]
       properties:
         given:
           type: boolean
+        legalBasis:
+          type: ["string", "null"]
+          enum: [contract, legitimate_interest, consent, null]
         note:
+          type: ["string", "null"]
+    RetentionReport:
+      type: object
+      required: [thresholdYears, generatedAt, workOrders, photos, contacts]
+      properties:
+        thresholdYears:
+          type: integer
+        generatedAt:
+          type: string
+        workOrders:
+          $ref: "#/components/schemas/RetentionCategory"
+        photos:
+          $ref: "#/components/schemas/RetentionCategory"
+        contacts:
+          $ref: "#/components/schemas/RetentionCategory"
+    RetentionCategory:
+      type: object
+      required: [count, items]
+      properties:
+        count:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/RetentionItem"
+    RetentionItem:
+      type: object
+      required: [label, date]
+      properties:
+        vehicleId:
+          type: ["integer", "null"]
+        licensePlate:
+          type: ["string", "null"]
+        label:
+          type: string
+        date:
+          type: ["string", "null"]
+        detail:
           type: ["string", "null"]
     GdprActionResult:
       type: object

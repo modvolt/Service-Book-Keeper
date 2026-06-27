@@ -9,6 +9,7 @@ export {
   workOrderMaterialsTable,
   photosTable,
   serviceRecordsTable,
+  consentHistoryTable,
   appointmentsTable,
   materialsCatalogTable,
   auditLogTable,

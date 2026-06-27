@@ -5,9 +5,12 @@
  * AutoServis API
  * OpenAPI spec version: 0.1.0
  */
+import type { SetConsentInputLegalBasis } from './setConsentInputLegalBasis';
 
 export interface SetConsentInput {
   given: boolean;
+  /** @nullable */
+  legalBasis?: SetConsentInputLegalBasis;
   /** @nullable */
   note?: string | null;
 }

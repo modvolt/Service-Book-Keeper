@@ -115,6 +115,18 @@ export const VehicleOwnerType = {
   company: 'company',
 } as const;
 
+/**
+ * @nullable
+ */
+export type VehicleLegalBasis = typeof VehicleLegalBasis[keyof typeof VehicleLegalBasis] | null;
+
+
+export const VehicleLegalBasis = {
+  contract: 'contract',
+  legitimate_interest: 'legitimate_interest',
+  consent: 'consent',
+} as const;
+
 export interface Vehicle {
   id: number;
   licensePlate: string;
@@ -144,6 +156,8 @@ export interface Vehicle {
   ownerPhone?: string | null;
   /** @nullable */
   ownerEmail?: string | null;
+  /** @nullable */
+  legalBasis?: VehicleLegalBasis;
   /** @nullable */
   consentGivenAt?: string | null;
   /** @nullable */
@@ -204,6 +218,18 @@ export type VehicleDetailOwnerType = typeof VehicleDetailOwnerType[keyof typeof 
 export const VehicleDetailOwnerType = {
   private: 'private',
   company: 'company',
+} as const;
+
+/**
+ * @nullable
+ */
+export type VehicleDetailLegalBasis = typeof VehicleDetailLegalBasis[keyof typeof VehicleDetailLegalBasis] | null;
+
+
+export const VehicleDetailLegalBasis = {
+  contract: 'contract',
+  legitimate_interest: 'legitimate_interest',
+  consent: 'consent',
 } as const;
 
 export interface ServiceRecord {
@@ -369,6 +395,8 @@ export interface VehicleDetail {
   ownerPhone?: string | null;
   /** @nullable */
   ownerEmail?: string | null;
+  /** @nullable */
+  legalBasis?: VehicleDetailLegalBasis;
   /** @nullable */
   consentGivenAt?: string | null;
   /** @nullable */
@@ -1347,6 +1375,18 @@ export interface DashboardSummary {
   recentWorkOrders?: WorkOrder[];
 }
 
+/**
+ * @nullable
+ */
+export type GdprVehicleMatchLegalBasis = typeof GdprVehicleMatchLegalBasis[keyof typeof GdprVehicleMatchLegalBasis] | null;
+
+
+export const GdprVehicleMatchLegalBasis = {
+  contract: 'contract',
+  legitimate_interest: 'legitimate_interest',
+  consent: 'consent',
+} as const;
+
 export interface GdprVehicleMatch {
   id: number;
   licensePlate: string;
@@ -1357,6 +1397,8 @@ export interface GdprVehicleMatch {
   ownerPhone?: string | null;
   /** @nullable */
   ownerEmail?: string | null;
+  /** @nullable */
+  legalBasis?: GdprVehicleMatchLegalBasis;
   /** @nullable */
   consentGivenAt?: string | null;
   serviceRecordCount: number;
@@ -1369,6 +1411,41 @@ export interface GdprSearchResult {
   vehicles: GdprVehicleMatch[];
 }
 
+/**
+ * @nullable
+ */
+export type ConsentHistoryEntryBasis = typeof ConsentHistoryEntryBasis[keyof typeof ConsentHistoryEntryBasis] | null;
+
+
+export const ConsentHistoryEntryBasis = {
+  contract: 'contract',
+  legitimate_interest: 'legitimate_interest',
+  consent: 'consent',
+} as const;
+
+export type ConsentHistoryEntryEvent = typeof ConsentHistoryEntryEvent[keyof typeof ConsentHistoryEntryEvent];
+
+
+export const ConsentHistoryEntryEvent = {
+  granted: 'granted',
+  withdrawn: 'withdrawn',
+  updated: 'updated',
+  migrated: 'migrated',
+} as const;
+
+export interface ConsentHistoryEntry {
+  id: number;
+  vehicleId: number;
+  /** @nullable */
+  basis?: ConsentHistoryEntryBasis;
+  event: ConsentHistoryEntryEvent;
+  /** @nullable */
+  note?: string | null;
+  /** @nullable */
+  actor?: string | null;
+  createdAt: string;
+}
+
 export interface GdprExport {
   exportedAt: string;
   vehicle: Vehicle;
@@ -1376,12 +1453,52 @@ export interface GdprExport {
   workOrders: WorkOrder[];
   appointments: Appointment[];
   loaners: Loaner[];
+  consentHistory: ConsentHistoryEntry[];
 }
+
+/**
+ * @nullable
+ */
+export type SetConsentInputLegalBasis = typeof SetConsentInputLegalBasis[keyof typeof SetConsentInputLegalBasis] | null;
+
+
+export const SetConsentInputLegalBasis = {
+  contract: 'contract',
+  legitimate_interest: 'legitimate_interest',
+  consent: 'consent',
+} as const;
 
 export interface SetConsentInput {
   given: boolean;
   /** @nullable */
+  legalBasis?: SetConsentInputLegalBasis;
+  /** @nullable */
   note?: string | null;
+}
+
+export interface RetentionItem {
+  /** @nullable */
+  vehicleId?: number | null;
+  /** @nullable */
+  licensePlate?: string | null;
+  label: string;
+  /** @nullable */
+  date: string | null;
+  /** @nullable */
+  detail?: string | null;
+}
+
+export interface RetentionCategory {
+  count: number;
+  items: RetentionItem[];
+}
+
+export interface RetentionReport {
+  thresholdYears: number;
+  generatedAt: string;
+  workOrders: RetentionCategory;
+  photos: RetentionCategory;
+  contacts: RetentionCategory;
 }
 
 export interface GdprActionResult {
@@ -1497,6 +1614,13 @@ search: string;
 
 export type GdprSearchParams = {
 q: string;
+};
+
+export type GetRetentionReportParams = {
+/**
+ * Age threshold in years (default 3)
+ */
+years?: number;
 };
 
 export type GetAuditLogParams = {

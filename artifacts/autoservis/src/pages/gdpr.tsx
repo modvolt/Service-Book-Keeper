@@ -7,9 +7,17 @@ import {
   useGdprAnonymizeVehicle,
   useGdprDeleteVehicle,
   useSetVehicleConsent,
+  useGetConsentHistory,
+  useGetRetentionReport,
+  getGetConsentHistoryQueryKey,
   gdprExportVehicle,
 } from "@workspace/api-client-react";
-import type { GdprVehicleMatch } from "@workspace/api-client-react";
+import type {
+  GdprVehicleMatch,
+  SetConsentInputLegalBasis,
+  ConsentHistoryEntry,
+  RetentionCategory,
+} from "@workspace/api-client-react";
 import { actionLabel, formatDateTime } from "@/lib/audit-labels";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +27,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -47,7 +62,29 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, Download, UserX, Trash2, FileCheck, Search } from "lucide-react";
+import { Shield, Download, UserX, Trash2, FileCheck, Search, FileText, Clock, History } from "lucide-react";
+
+// Czech labels for the legal bases (GDPR Art. 6) and consent-history events.
+const LEGAL_BASIS_LABELS: Record<string, string> = {
+  contract: "Plnění smlouvy",
+  legitimate_interest: "Oprávněný zájem",
+  consent: "Souhlas",
+};
+const LEGAL_BASIS_OPTIONS: { value: SetConsentInputLegalBasis; label: string }[] = [
+  { value: "consent", label: "Souhlas" },
+  { value: "contract", label: "Plnění smlouvy" },
+  { value: "legitimate_interest", label: "Oprávněný zájem" },
+];
+const CONSENT_EVENT_LABELS: Record<string, string> = {
+  granted: "Udělen souhlas",
+  withdrawn: "Odvolán souhlas",
+  updated: "Změna právního základu",
+  migrated: "Převzato z historie",
+};
+
+function legalBasisLabel(basis: string | null | undefined): string {
+  return basis ? (LEGAL_BASIS_LABELS[basis] ?? basis) : "—";
+}
 
 export default function GdprPage() {
   const { toast } = useToast();
@@ -76,9 +113,18 @@ export default function GdprPage() {
   const setConsent = useSetVehicleConsent();
 
   const [exportingId, setExportingId] = useState<number | null>(null);
+  const [reportingId, setReportingId] = useState<number | null>(null);
   const [consentTarget, setConsentTarget] = useState<GdprVehicleMatch | null>(null);
   const [consentGiven, setConsentGiven] = useState(false);
+  const [consentBasis, setConsentBasis] = useState<SetConsentInputLegalBasis>("consent");
   const [consentNote, setConsentNote] = useState("");
+
+  const consentHistory = useGetConsentHistory(consentTarget?.id ?? 0, {
+    query: {
+      enabled: consentTarget !== null,
+      queryKey: getGetConsentHistoryQueryKey(consentTarget?.id ?? 0),
+    },
+  });
 
   const handleExport = async (vehicle: GdprVehicleMatch) => {
     setExportingId(vehicle.id);
@@ -102,9 +148,37 @@ export default function GdprPage() {
     }
   };
 
+  // Human-readable (HTML) export — served by the server as a printable document.
+  // Uses a plain authed fetch (not codegen) since it returns HTML, not JSON.
+  const handleReport = async (vehicle: GdprVehicleMatch) => {
+    setReportingId(vehicle.id);
+    try {
+      const res = await fetch(`/api/gdpr/export/${vehicle.id}/report`, {
+        credentials: "include",
+      });
+      if (!res.ok) throw new Error("report failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `gdpr-export-${vehicle.licensePlate}.html`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      toast({ title: "Čitelný export vytvořen", description: `Dokument vozidla ${vehicle.licensePlate} byl stažen.` });
+      invalidateGdpr();
+    } catch {
+      toast({ title: "Chyba", description: "Čitelný export se nepodařilo vytvořit.", variant: "destructive" });
+    } finally {
+      setReportingId(null);
+    }
+  };
+
   const openConsent = (vehicle: GdprVehicleMatch) => {
     setConsentTarget(vehicle);
     setConsentGiven(!!vehicle.consentGivenAt);
+    setConsentBasis(vehicle.legalBasis ?? "consent");
     setConsentNote("");
   };
 
@@ -113,7 +187,11 @@ export default function GdprPage() {
     try {
       await setConsent.mutateAsync({
         vehicleId: consentTarget.id,
-        data: { given: consentGiven, note: consentNote.trim() || null },
+        data: {
+          given: consentGiven,
+          legalBasis: consentGiven ? consentBasis : null,
+          note: consentNote.trim() || null,
+        },
       });
       toast({ title: "Souhlas uložen" });
       setConsentTarget(null);
@@ -214,13 +292,22 @@ export default function GdprPage() {
                         <div className="text-muted-foreground">{v.ownerEmail || ""}</div>
                       </TableCell>
                       <TableCell>
-                        {v.consentGivenAt ? (
-                          <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                            {formatDateTime(v.consentGivenAt)}
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-muted-foreground">Není</Badge>
-                        )}
+                        <div className="space-y-1">
+                          {v.consentGivenAt ? (
+                            <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+                              {formatDateTime(v.consentGivenAt)}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground">Není</Badge>
+                          )}
+                          {v.legalBasis && (
+                            <div>
+                              <Badge variant="outline" className="text-xs font-normal">
+                                {legalBasisLabel(v.legalBasis)}
+                              </Badge>
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-center text-sm text-muted-foreground">
                         {v.serviceRecordCount + v.workOrderCount + v.appointmentCount + (v.loanerCount ?? 0)}
@@ -232,9 +319,18 @@ export default function GdprPage() {
                             size="sm"
                             disabled={exportingId === v.id}
                             onClick={() => handleExport(v)}
-                            title="Export dat"
+                            title="Export dat (JSON)"
                           >
                             {exportingId === v.id ? <Spinner className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={reportingId === v.id}
+                            onClick={() => handleReport(v)}
+                            title="Čitelný export (HTML)"
+                          >
+                            {reportingId === v.id ? <Spinner className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
                           </Button>
                           <Button
                             variant="ghost"
@@ -300,6 +396,8 @@ export default function GdprPage() {
         </CardContent>
       </Card>
 
+      <RetentionCard />
+
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Záznam o činnostech</CardTitle>
@@ -351,6 +449,26 @@ export default function GdprPage() {
               <Label htmlFor="consent-given">Souhlas udělen</Label>
               <Switch id="consent-given" checked={consentGiven} onCheckedChange={setConsentGiven} />
             </div>
+            {consentGiven && (
+              <div className="space-y-2">
+                <Label htmlFor="consent-basis">Právní základ zpracování</Label>
+                <Select
+                  value={consentBasis ?? "consent"}
+                  onValueChange={(val) => setConsentBasis(val as SetConsentInputLegalBasis)}
+                >
+                  <SelectTrigger id="consent-basis">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LEGAL_BASIS_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value ?? "consent"}>
+                        {opt.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="consent-note">Poznámka / účel zpracování</Label>
               <Textarea
@@ -360,6 +478,37 @@ export default function GdprPage() {
                 placeholder="Např. servis vozidla, fakturace"
                 rows={3}
               />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <History className="h-4 w-4 text-muted-foreground" />
+                Historie souhlasu
+              </div>
+              {consentHistory.isLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Spinner className="h-4 w-4" /> Načítání…
+                </div>
+              ) : (consentHistory.data?.length ?? 0) === 0 ? (
+                <p className="text-sm text-muted-foreground">Žádné záznamy.</p>
+              ) : (
+                <ul className="max-h-48 overflow-y-auto rounded-md border divide-y text-sm">
+                  {consentHistory.data?.map((h: ConsentHistoryEntry) => (
+                    <li key={h.id} className="px-3 py-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium">{CONSENT_EVENT_LABELS[h.event] ?? h.event}</span>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {formatDateTime(h.createdAt)}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {legalBasisLabel(h.basis)}
+                        {h.note ? ` · ${h.note}` : ""}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -371,5 +520,107 @@ export default function GdprPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+const RETENTION_YEAR_OPTIONS = [1, 2, 3, 5, 10];
+
+function RetentionCategoryTable({
+  title,
+  category,
+}: {
+  title: string;
+  category: RetentionCategory;
+}) {
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium">{title}</h3>
+        <Badge variant={category.count > 0 ? "secondary" : "outline"} className="text-muted-foreground">
+          {category.count}
+        </Badge>
+      </div>
+      {category.count === 0 ? (
+        <p className="text-sm text-muted-foreground">Žádné záznamy nad limitem.</p>
+      ) : (
+        <div className="rounded-md border overflow-x-auto max-h-64 overflow-y-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Položka</TableHead>
+                <TableHead>SPZ</TableHead>
+                <TableHead>Datum</TableHead>
+                <TableHead>Detail</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {category.items.map((item, i) => (
+                <TableRow key={i}>
+                  <TableCell className="font-medium">{item.label}</TableCell>
+                  <TableCell>{item.licensePlate || "—"}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                    {item.date ? formatDateTime(item.date) : "—"}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{item.detail || "—"}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RetentionCard() {
+  const [years, setYears] = useState(3);
+  const retention = useGetRetentionReport({ years });
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            Retenční politika
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <Label htmlFor="retention-years" className="text-sm text-muted-foreground whitespace-nowrap">
+              Limit
+            </Label>
+            <Select value={String(years)} onValueChange={(v) => setYears(Number(v))}>
+              <SelectTrigger id="retention-years" className="w-28">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {RETENTION_YEAR_OPTIONS.map((y) => (
+                  <SelectItem key={y} value={String(y)}>
+                    {y} {y === 1 ? "rok" : y < 5 ? "roky" : "let"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Záznamy starší než zvolený limit, navržené k posouzení a případnému smazání. Nic se nemaže automaticky.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {retention.isLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Spinner className="h-4 w-4" /> Načítání…
+          </div>
+        ) : !retention.data ? (
+          <p className="text-sm text-muted-foreground">Data se nepodařilo načíst.</p>
+        ) : (
+          <>
+            <RetentionCategoryTable title="Zakázky" category={retention.data.workOrders} />
+            <RetentionCategoryTable title="Fotografie" category={retention.data.photos} />
+            <RetentionCategoryTable title="Kontakty" category={retention.data.contacts} />
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

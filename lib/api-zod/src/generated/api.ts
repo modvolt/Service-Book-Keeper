@@ -159,6 +159,7 @@ export const ListVehiclesResponseItem = zod.object({
   "ownerDic": zod.string().nullish(),
   "ownerPhone": zod.string().nullish(),
   "ownerEmail": zod.string().nullish(),
+  "legalBasis": zod.union([zod.literal('contract'),zod.literal('legitimate_interest'),zod.literal('consent'),zod.literal(null)]).nullish(),
   "consentGivenAt": zod.string().nullish(),
   "consentNote": zod.string().nullish(),
   "currentKm": zod.number().nullish(),
@@ -529,6 +530,7 @@ export const GetVehicleByPlateResponse = zod.object({
   "ownerDic": zod.string().nullish(),
   "ownerPhone": zod.string().nullish(),
   "ownerEmail": zod.string().nullish(),
+  "legalBasis": zod.union([zod.literal('contract'),zod.literal('legitimate_interest'),zod.literal('consent'),zod.literal(null)]).nullish(),
   "consentGivenAt": zod.string().nullish(),
   "consentNote": zod.string().nullish(),
   "currentKm": zod.number().nullish(),
@@ -578,6 +580,7 @@ export const GetVehicleResponse = zod.object({
   "ownerDic": zod.string().nullish(),
   "ownerPhone": zod.string().nullish(),
   "ownerEmail": zod.string().nullish(),
+  "legalBasis": zod.union([zod.literal('contract'),zod.literal('legitimate_interest'),zod.literal('consent'),zod.literal(null)]).nullish(),
   "consentGivenAt": zod.string().nullish(),
   "consentNote": zod.string().nullish(),
   "currentKm": zod.number().nullish(),
@@ -774,6 +777,7 @@ export const UpdateVehicleResponse = zod.object({
   "ownerDic": zod.string().nullish(),
   "ownerPhone": zod.string().nullish(),
   "ownerEmail": zod.string().nullish(),
+  "legalBasis": zod.union([zod.literal('contract'),zod.literal('legitimate_interest'),zod.literal('consent'),zod.literal(null)]).nullish(),
   "consentGivenAt": zod.string().nullish(),
   "consentNote": zod.string().nullish(),
   "currentKm": zod.number().nullish(),
@@ -831,6 +835,7 @@ export const RecomputeVehicleStatusResponse = zod.object({
   "ownerDic": zod.string().nullish(),
   "ownerPhone": zod.string().nullish(),
   "ownerEmail": zod.string().nullish(),
+  "legalBasis": zod.union([zod.literal('contract'),zod.literal('legitimate_interest'),zod.literal('consent'),zod.literal(null)]).nullish(),
   "consentGivenAt": zod.string().nullish(),
   "consentNote": zod.string().nullish(),
   "currentKm": zod.number().nullish(),
@@ -1687,6 +1692,7 @@ export const GdprSearchResponse = zod.object({
   "ownerName": zod.string().nullish(),
   "ownerPhone": zod.string().nullish(),
   "ownerEmail": zod.string().nullish(),
+  "legalBasis": zod.union([zod.literal('contract'),zod.literal('legitimate_interest'),zod.literal('consent'),zod.literal(null)]).nullish(),
   "consentGivenAt": zod.string().nullish(),
   "serviceRecordCount": zod.number(),
   "workOrderCount": zod.number(),
@@ -1723,6 +1729,7 @@ export const GdprExportVehicleResponse = zod.object({
   "ownerDic": zod.string().nullish(),
   "ownerPhone": zod.string().nullish(),
   "ownerEmail": zod.string().nullish(),
+  "legalBasis": zod.union([zod.literal('contract'),zod.literal('legitimate_interest'),zod.literal('consent'),zod.literal(null)]).nullish(),
   "consentGivenAt": zod.string().nullish(),
   "consentNote": zod.string().nullish(),
   "currentKm": zod.number().nullish(),
@@ -1838,6 +1845,15 @@ export const GdprExportVehicleResponse = zod.object({
   "fleetMake": zod.string().nullish(),
   "fleetModel": zod.string().nullish(),
   "customerLicensePlate": zod.string().nullish()
+})),
+  "consentHistory": zod.array(zod.object({
+  "id": zod.number(),
+  "vehicleId": zod.number(),
+  "basis": zod.union([zod.literal('contract'),zod.literal('legitimate_interest'),zod.literal('consent'),zod.literal(null)]).nullish(),
+  "event": zod.enum(['granted', 'withdrawn', 'updated', 'migrated']),
+  "note": zod.string().nullish(),
+  "actor": zod.string().nullish(),
+  "createdAt": zod.string()
 }))
 })
 
@@ -1877,6 +1893,7 @@ export const SetVehicleConsentParams = zod.object({
 
 export const SetVehicleConsentBody = zod.object({
   "given": zod.boolean(),
+  "legalBasis": zod.union([zod.literal('contract'),zod.literal('legitimate_interest'),zod.literal('consent'),zod.literal(null)]).nullish(),
   "note": zod.string().nullish()
 })
 
@@ -1898,6 +1915,7 @@ export const SetVehicleConsentResponse = zod.object({
   "ownerDic": zod.string().nullish(),
   "ownerPhone": zod.string().nullish(),
   "ownerEmail": zod.string().nullish(),
+  "legalBasis": zod.union([zod.literal('contract'),zod.literal('legitimate_interest'),zod.literal('consent'),zod.literal(null)]).nullish(),
   "consentGivenAt": zod.string().nullish(),
   "consentNote": zod.string().nullish(),
   "currentKm": zod.number().nullish(),
@@ -1919,6 +1937,68 @@ export const SetVehicleConsentResponse = zod.object({
   "timingIntervalMonths": zod.number().nullish(),
   "brakeFluidIntervalMonths": zod.number().nullish(),
   "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List the consent / legal-basis change history for a vehicle
+ */
+export const GetConsentHistoryParams = zod.object({
+  "vehicleId": zod.coerce.number()
+})
+
+export const GetConsentHistoryResponseItem = zod.object({
+  "id": zod.number(),
+  "vehicleId": zod.number(),
+  "basis": zod.union([zod.literal('contract'),zod.literal('legitimate_interest'),zod.literal('consent'),zod.literal(null)]).nullish(),
+  "event": zod.enum(['granted', 'withdrawn', 'updated', 'migrated']),
+  "note": zod.string().nullish(),
+  "actor": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+export const GetConsentHistoryResponse = zod.array(GetConsentHistoryResponseItem)
+
+
+/**
+ * @summary List aged records (work orders, photos, contacts) eligible for cleanup
+ */
+export const GetRetentionReportQueryParams = zod.object({
+  "years": zod.coerce.number().optional().describe('Age threshold in years (default 3)')
+})
+
+export const GetRetentionReportResponse = zod.object({
+  "thresholdYears": zod.number(),
+  "generatedAt": zod.string(),
+  "workOrders": zod.object({
+  "count": zod.number(),
+  "items": zod.array(zod.object({
+  "vehicleId": zod.number().nullish(),
+  "licensePlate": zod.string().nullish(),
+  "label": zod.string(),
+  "date": zod.string().nullable(),
+  "detail": zod.string().nullish()
+}))
+}),
+  "photos": zod.object({
+  "count": zod.number(),
+  "items": zod.array(zod.object({
+  "vehicleId": zod.number().nullish(),
+  "licensePlate": zod.string().nullish(),
+  "label": zod.string(),
+  "date": zod.string().nullable(),
+  "detail": zod.string().nullish()
+}))
+}),
+  "contacts": zod.object({
+  "count": zod.number(),
+  "items": zod.array(zod.object({
+  "vehicleId": zod.number().nullish(),
+  "licensePlate": zod.string().nullish(),
+  "label": zod.string(),
+  "date": zod.string().nullable(),
+  "detail": zod.string().nullish()
+}))
+})
 })
 
 

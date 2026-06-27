@@ -5,6 +5,7 @@
  * AutoServis API
  * OpenAPI spec version: 0.1.0
  */
+import type { VehicleLegalBasis } from './vehicleLegalBasis';
 import type { VehicleOwnerType } from './vehicleOwnerType';
 import type { VehicleTransmission } from './vehicleTransmission';
 
@@ -37,6 +38,8 @@ export interface Vehicle {
   ownerPhone?: string | null;
   /** @nullable */
   ownerEmail?: string | null;
+  /** @nullable */
+  legalBasis?: VehicleLegalBasis;
   /** @nullable */
   consentGivenAt?: string | null;
   /** @nullable */

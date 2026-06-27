@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Appointment } from './appointment';
+import type { ConsentHistoryEntry } from './consentHistoryEntry';
 import type { Loaner } from './loaner';
 import type { ServiceRecord } from './serviceRecord';
 import type { Vehicle } from './vehicle';
@@ -18,4 +19,5 @@ export interface GdprExport {
   workOrders: WorkOrder[];
   appointments: Appointment[];
   loaners: Loaner[];
+  consentHistory: ConsentHistoryEntry[];
 }

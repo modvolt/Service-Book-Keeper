@@ -83,6 +83,7 @@ interface OrderSpec {
 interface SqlMarker {
   __sql: true;
   text: string;
+  values?: unknown[];
 }
 
 function isColumn(x: unknown): x is ColumnRef {
@@ -119,7 +120,10 @@ export const asc = (col: ColumnRef): OrderSpec => ({ t: "order", col, dir: "asc"
 export const desc = (col: ColumnRef): OrderSpec => ({ t: "order", col, dir: "desc" });
 
 export function sql(strings: TemplateStringsArray, ...values: unknown[]): SqlMarker {
-  return { __sql: true, text: strings.join(" ") + " " + values.join(" ") };
+  // Keep the interpolated values (often ColumnRefs) so predicate-level SQL such
+  // as `coalesce(${a}, ${b})` can be resolved per-row by the engine. The text
+  // uses `?` placeholders purely so markers like count(*) stay recognizable.
+  return { __sql: true, text: strings.join("?"), values };
 }
 // drizzle's sql.identifier / sql.raw helpers — only used to build raw fragments
 // (e.g. excluded.* in upserts, setval to realign sequences). The engine ignores
@@ -187,6 +191,19 @@ function resolve(x: unknown, ns: Namespace): unknown {
   if (isColumn(x)) {
     const row = ns.get(x.__ownerId);
     return row == null ? null : row[x.__name];
+  }
+  // Predicate-level SQL: only `coalesce(a, b, ...)` is exercised (retention's
+  // "completed-or-created" cutoff). Resolve each captured value and return the
+  // first non-null, mirroring SQL coalesce.
+  if (isSql(x)) {
+    if (/coalesce/i.test(x.text) && x.values) {
+      for (const v of x.values) {
+        const r = resolve(v, ns);
+        if (r != null) return r;
+      }
+      return null;
+    }
+    return null;
   }
   return x;
 }
@@ -567,7 +584,8 @@ export const loanersTable = makeTable("loaners", [
 export const vehiclesTable = makeTable("vehicles", [
   "id", "licensePlate", "make", "model", "isFleet", "ownerType", "ownerName",
   "ownerAddress", "ownerPhone", "ownerEmail", "ownerIco", "ownerDic",
-  "consentGivenAt", "consentNote", "currentKm", "stkValidUntil", ...SOFT_DELETE_COLS,
+  "legalBasis", "consentGivenAt", "consentNote", "currentKm", "stkValidUntil",
+  "createdAt", ...SOFT_DELETE_COLS,
 ]);
 
 export const workOrdersTable = makeTable("work_orders", [
@@ -579,7 +597,11 @@ export const workOrderMaterialsTable = makeTable("work_order_materials", [
   "id", "workOrderId", "name", "quantity", "unit", "unitPrice", "createdAt",
 ]);
 
-export const photosTable = makeTable("photos", ["id", "workOrderId", "url", "filename", ...SOFT_DELETE_COLS]);
+export const photosTable = makeTable("photos", ["id", "workOrderId", "url", "filename", "createdAt", ...SOFT_DELETE_COLS]);
+
+export const consentHistoryTable = makeTable("consent_history", [
+  "id", "vehicleId", "basis", "event", "note", "actor", "createdAt",
+]);
 
 export const serviceRecordsTable = makeTable("service_records", ["id", "vehicleId", "description", ...SOFT_DELETE_COLS]);
 

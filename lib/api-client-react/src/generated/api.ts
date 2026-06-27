@@ -31,6 +31,7 @@ import type {
   ChangePasswordInput,
   ChangeScannerPasswordInput,
   CheckLoanerOverlapParams,
+  ConsentHistoryEntry,
   CustomerReminderLogEntry,
   DashboardSummary,
   Error,
@@ -40,6 +41,7 @@ import type {
   GdprSearchParams,
   GdprSearchResult,
   GetAuditLogParams,
+  GetRetentionReportParams,
   HealthStatus,
   ImportMaterialsInput,
   ImportTpInput,
@@ -67,6 +69,7 @@ import type {
   MessageResult,
   Photo,
   ResetPasswordInput,
+  RetentionReport,
   ScanMaterialsInput,
   ScanMaterialsResult,
   ServiceRecord,
@@ -5152,6 +5155,167 @@ export const useSetVehicleConsent = <TError = ErrorType<Error>,
       > => {
       return useMutation(getSetVehicleConsentMutationOptions(options));
     }
+
+export const getGetConsentHistoryUrl = (vehicleId: number,) => {
+
+
+
+
+  return `/api/gdpr/consent-history/${vehicleId}`
+}
+
+/**
+ * @summary List the consent / legal-basis change history for a vehicle
+ */
+export const getConsentHistory = async (vehicleId: number, options?: RequestInit): Promise<ConsentHistoryEntry[]> => {
+
+  return customFetch<ConsentHistoryEntry[]>(getGetConsentHistoryUrl(vehicleId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetConsentHistoryQueryKey = (vehicleId: number,) => {
+    return [
+    `/api/gdpr/consent-history/${vehicleId}`
+    ] as const;
+    }
+
+
+export const getGetConsentHistoryQueryOptions = <TData = Awaited<ReturnType<typeof getConsentHistory>>, TError = ErrorType<Error>>(vehicleId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsentHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetConsentHistoryQueryKey(vehicleId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getConsentHistory>>> = ({ signal }) => getConsentHistory(vehicleId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(vehicleId), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getConsentHistory>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetConsentHistoryQueryResult = NonNullable<Awaited<ReturnType<typeof getConsentHistory>>>
+export type GetConsentHistoryQueryError = ErrorType<Error>
+
+
+/**
+ * @summary List the consent / legal-basis change history for a vehicle
+ */
+
+export function useGetConsentHistory<TData = Awaited<ReturnType<typeof getConsentHistory>>, TError = ErrorType<Error>>(
+ vehicleId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getConsentHistory>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetConsentHistoryQueryOptions(vehicleId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetRetentionReportUrl = (params?: GetRetentionReportParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/gdpr/retention?${stringifiedParams}` : `/api/gdpr/retention`
+}
+
+/**
+ * @summary List aged records (work orders, photos, contacts) eligible for cleanup
+ */
+export const getRetentionReport = async (params?: GetRetentionReportParams, options?: RequestInit): Promise<RetentionReport> => {
+
+  return customFetch<RetentionReport>(getGetRetentionReportUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetRetentionReportQueryKey = (params?: GetRetentionReportParams,) => {
+    return [
+    `/api/gdpr/retention`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetRetentionReportQueryOptions = <TData = Awaited<ReturnType<typeof getRetentionReport>>, TError = ErrorType<unknown>>(params?: GetRetentionReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRetentionReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetRetentionReportQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getRetentionReport>>> = ({ signal }) => getRetentionReport(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getRetentionReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetRetentionReportQueryResult = NonNullable<Awaited<ReturnType<typeof getRetentionReport>>>
+export type GetRetentionReportQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List aged records (work orders, photos, contacts) eligible for cleanup
+ */
+
+export function useGetRetentionReport<TData = Awaited<ReturnType<typeof getRetentionReport>>, TError = ErrorType<unknown>>(
+ params?: GetRetentionReportParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getRetentionReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetRetentionReportQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetAuditLogUrl = (params?: GetAuditLogParams,) => {
   const normalizedParams = new URLSearchParams();

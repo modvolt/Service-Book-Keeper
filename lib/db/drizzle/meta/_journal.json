@@ -71,6 +71,13 @@
       "when": 1782518587036,
       "tag": "0009_drop_paid_column",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1782521381086,
+      "tag": "0010_mature_ezekiel",
+      "breakpoints": true
     }
   ]
 }
