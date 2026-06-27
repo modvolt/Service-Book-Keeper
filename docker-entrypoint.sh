@@ -7,6 +7,11 @@
 #    so it safely adopts databases that were previously provisioned via `push`.
 #    The user_sessions table that connect-pg-simple relies on is part of the
 #    migrations as well.
+#    Rollback safety: if a deploy is rolled back to an OLDER image, that image's
+#    boot runs migrate with a shorter migration chain. drizzle-kit migrate only
+#    applies entries newer than the last recorded one and has no down/rollback
+#    path, so a downgrade boot is a safe no-op — it never drops columns/tables or
+#    rewrites data (covered by the "accidental rollback" migration smoke test).
 # 2. Start the API server, which also serves the built SPA.
 set -e
 

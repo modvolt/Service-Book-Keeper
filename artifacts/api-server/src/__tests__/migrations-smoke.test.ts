@@ -612,5 +612,129 @@ describe.skipIf(!BASE_URL || !CLI_AVAILABLE)(
       },
       120_000,
     );
+
+    /**
+     * Accidental rollback / downgrade boot.
+     *
+     * Failure mode: a deploy goes wrong, the operator redeploys the PREVIOUS
+     * container image, and that older boot runs `drizzle-kit migrate` against a
+     * DB that already has the NEWER migrations applied. The older release only
+     * ships the migration files up to its own baseline (here `BASELINE_TAG`), so
+     * its journal is a strict prefix of what the DB has already recorded.
+     *
+     * Expected behavior (verified here): the older CLI run is a SAFE NO-OP.
+     * drizzle-kit migrate only applies journal entries whose timestamp is newer
+     * than the last row in `drizzle.__drizzle_migrations`; every entry in the
+     * trimmed baseline journal is older than that high-water mark, so nothing is
+     * applied. Crucially, drizzle-kit migrate has NO down/rollback path — it
+     * never drops columns/tables or rewrites rows — so the newer schema and all
+     * existing data survive the downgrade boot untouched. An operator can roll
+     * the image back and forward freely; the database is not the thing that
+     * breaks. (The reverse — the OLD app code reading the NEW schema at runtime —
+     * is an application concern, not a migration concern, and is out of scope.)
+     */
+    it(
+      "accidental rollback: an older release's CLI run is a safe no-op on a newer schema (no error, no data loss)",
+      async () => {
+        const dbName = await createScratchDb();
+        const { dir: baselineDir } = buildBaselineDir(BASELINE_TAG);
+        try {
+          // 1. Bring the DB fully up to the LATEST committed chain (the release
+          //    that is about to be rolled back from).
+          const fullOut = await runMigrateCli(dbName);
+          expect(fullOut).toContain("migrations applied successfully");
+
+          // 2. Seed representative data on the NEWER schema — rows that only the
+          //    post-refactor columns/tables can hold — so we can prove the
+          //    downgrade boot neither drops them nor rewrites their values.
+          await withDb(dbName, async (pool) => {
+            expect(await migrationCount(pool)).toBe(TOTAL_MIGRATIONS);
+            await pool.query(
+              `INSERT INTO vehicles (license_plate, make, model, legal_basis)
+               VALUES ('9XY9999', 'Skoda', 'Fabia', 'consent')`,
+            );
+            await pool.query(
+              `INSERT INTO work_orders (license_plate, status, payment_status, invoice_status)
+               VALUES ('9XY9999', 'completed', 'paid', 'invoiced')`,
+            );
+            await pool.query(
+              `INSERT INTO consent_history (vehicle_id, basis, event, note, actor)
+               SELECT id, 'consent', 'granted', 'po telefonu', 'admin'
+               FROM vehicles WHERE license_plate='9XY9999'`,
+            );
+          });
+
+          // 3. Redeploy the PREVIOUS image: run the real CLI with the trimmed
+          //    baseline config (only migrations up to BASELINE_TAG) on top of the
+          //    newer DB. This must NOT throw — execFileAsync rejects on a
+          //    non-zero exit, so reaching the assertions already proves no crash.
+          const rollbackOut = await runMigrateCli(dbName, baselineDir);
+          expect(rollbackOut).toContain("migrations applied successfully");
+
+          // 4. Nothing was rolled back, dropped, or rewritten.
+          await withDb(dbName, async (pool) => {
+            // Journal untouched: migrate never deletes journal rows, and the
+            // older journal applied no new ones.
+            expect(await migrationCount(pool)).toBe(TOTAL_MIGRATIONS);
+
+            // The newer schema is fully intact — no column/table was dropped.
+            expect(
+              await columnExists(pool, "work_orders", "payment_status"),
+            ).toBe(true);
+            expect(
+              await columnExists(pool, "work_orders", "invoice_status"),
+            ).toBe(true);
+            expect(await columnExists(pool, "work_orders", "paid")).toBe(false);
+            expect(await columnExists(pool, "vehicles", "legal_basis")).toBe(
+              true,
+            );
+            expect(await tableExists(pool, "consent_history")).toBe(true);
+
+            // The seeded rows survived with their original values — nothing was
+            // rewritten by a backfill re-run or truncated by a down-migration.
+            const wo = await pool.query(
+              "SELECT payment_status, invoice_status FROM work_orders WHERE license_plate='9XY9999'",
+            );
+            expect(wo.rowCount).toBe(1);
+            expect(wo.rows[0]).toMatchObject({
+              payment_status: "paid",
+              invoice_status: "invoiced",
+            });
+
+            const v = await pool.query<{ legal_basis: string | null }>(
+              "SELECT legal_basis FROM vehicles WHERE license_plate='9XY9999'",
+            );
+            expect(v.rows[0].legal_basis).toBe("consent");
+
+            const ch = await pool.query(
+              "SELECT event, basis, note, actor FROM consent_history",
+            );
+            expect(ch.rowCount).toBe(1);
+            expect(ch.rows[0]).toMatchObject({
+              event: "granted",
+              basis: "consent",
+              note: "po telefonu",
+              actor: "admin",
+            });
+          });
+
+          // 5. Rolling the NEW image forward again after the downgrade boot is
+          //    still a clean no-op — the chain is whole and the DB consistent.
+          const reUpgradeOut = await runMigrateCli(dbName);
+          expect(reUpgradeOut).toContain("migrations applied successfully");
+          await withDb(dbName, async (pool) => {
+            expect(await migrationCount(pool)).toBe(TOTAL_MIGRATIONS);
+            const ch = await pool.query<{ c: number }>(
+              "SELECT count(*)::int AS c FROM consent_history",
+            );
+            expect(ch.rows[0].c).toBe(1);
+          });
+        } finally {
+          await dropScratchDb(dbName);
+          fs.rmSync(baselineDir, { recursive: true, force: true });
+        }
+      },
+      120_000,
+    );
   },
 );
