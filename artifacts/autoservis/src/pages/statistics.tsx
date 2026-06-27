@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { LicensePlate } from "@/components/license-plate";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, FileText, FileSpreadsheet, Loader2, Search, TrendingUp, Wrench, Receipt, Car as CarIcon } from "lucide-react";
+import { BarChart3, FileText, FileSpreadsheet, Loader2, Search, TrendingUp, Wrench, Receipt, Car as CarIcon, BadgeCheck, AlertCircle, CircleDollarSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { format, parseISO, startOfMonth, subMonths } from "date-fns";
 import { cs } from "date-fns/locale";
@@ -273,6 +273,28 @@ export default function StatisticsPage() {
     const byStatus: Record<string, number> = {};
     for (const o of workOrders) byStatus[o.status] = (byStatus[o.status] ?? 0) + 1;
 
+    // ---------- Payment / invoicing split (labor only, matches totalRevenue basis) ----------
+    // Invoicing and payment are independent of work status, so these aggregate
+    // across all (non-deleted) orders rather than only completed ones.
+    let paidRevenue = 0;
+    let outstandingReceivables = 0; // invoiced but not fully paid (vyfakturováno-nezaplaceno)
+    let partialRevenue = 0;
+    let partialCount = 0;
+    let outstandingCount = 0;
+    for (const o of workOrders) {
+      const price = o.laborPrice ?? 0;
+      if (o.paymentStatus === "paid") {
+        paidRevenue += price;
+      } else if (o.invoiceStatus === "invoiced") {
+        outstandingReceivables += price;
+        outstandingCount++;
+      }
+      if (o.paymentStatus === "partial") {
+        partialRevenue += price;
+        partialCount++;
+      }
+    }
+
     const months: { label: string; count: number; revenue: number }[] = [];
     for (let i = 5; i >= 0; i--) {
       const start = startOfMonth(subMonths(new Date(), i));
@@ -299,7 +321,10 @@ export default function StatisticsPage() {
     }
     const topVehicles = Object.values(byVehicle).sort((a, b) => b.count - a.count).slice(0, 5);
 
-    return { totalRevenue, completedCount: completed.length, total: workOrders.length, byStatus, months, topVehicles };
+    return {
+      totalRevenue, completedCount: completed.length, total: workOrders.length, byStatus, months, topVehicles,
+      paidRevenue, outstandingReceivables, partialRevenue, partialCount, outstandingCount,
+    };
   }, [workOrders]);
 
   // ---------- Export ----------
@@ -439,6 +464,50 @@ export default function StatisticsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <CircleDollarSign className="h-5 w-5 text-primary" /> Přehled plateb
+          </CardTitle>
+          <CardDescription>Tržby z práce rozdělené podle stavu platby (bez materiálu).</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-lg border bg-emerald-50 dark:bg-emerald-950/30 p-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                <BadgeCheck className="h-4 w-4" /> Zaplaceno
+              </div>
+              <div className="mt-1 text-2xl font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                {formatCzk(stats.paidRevenue)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">přijaté tržby</p>
+            </div>
+            <div className="rounded-lg border bg-amber-50 dark:bg-amber-950/30 p-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-amber-700 dark:text-amber-500">
+                <AlertCircle className="h-4 w-4" /> Vyfakturováno-nezaplaceno
+              </div>
+              <div className="mt-1 text-2xl font-bold tabular-nums text-amber-700 dark:text-amber-500">
+                {formatCzk(stats.outstandingReceivables)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                pohledávky · {stats.outstandingCount} {stats.outstandingCount === 1 ? "zakázka" : stats.outstandingCount >= 2 && stats.outstandingCount <= 4 ? "zakázky" : "zakázek"}
+              </p>
+            </div>
+            <div className="rounded-lg border bg-muted/40 p-4">
+              <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Receipt className="h-4 w-4" /> Částečně zaplaceno
+              </div>
+              <div className="mt-1 text-2xl font-bold tabular-nums">
+                {formatCzk(stats.partialRevenue)}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {stats.partialCount} {stats.partialCount === 1 ? "zakázka" : stats.partialCount >= 2 && stats.partialCount <= 4 ? "zakázky" : "zakázek"} s částečnou platbou
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
