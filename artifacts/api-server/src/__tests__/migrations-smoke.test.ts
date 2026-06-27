@@ -2,11 +2,15 @@ import { describe, it, expect } from "vitest";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import pg from "pg";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import crypto from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+const execFileAsync = promisify(execFile);
 
 /**
  * Release smoke test for the committed database migration chain.
@@ -36,11 +40,17 @@ import { fileURLToPath } from "node:url";
 const { Pool, Client } = pg;
 
 const DIRNAME = path.dirname(fileURLToPath(import.meta.url));
-// artifacts/api-server/src/__tests__ -> repo root -> lib/db/drizzle
-const REAL_MIGRATIONS_DIR = path.resolve(
-  DIRNAME,
-  "../../../../lib/db/drizzle",
+// artifacts/api-server/src/__tests__ -> repo root
+const REPO_ROOT = path.resolve(DIRNAME, "../../../..");
+// repo root -> lib/db/drizzle
+const REAL_MIGRATIONS_DIR = path.join(REPO_ROOT, "lib/db/drizzle");
+// The exact drizzle-kit binary `pnpm --filter @workspace/db run migrate` runs.
+const DRIZZLE_KIT_BIN = path.join(
+  REPO_ROOT,
+  "lib/db/node_modules/.bin/drizzle-kit",
 );
+const SCHEMA_PATH = path.join(REPO_ROOT, "lib/db/src/schema/index.ts");
+const CLI_AVAILABLE = fs.existsSync(DRIZZLE_KIT_BIN);
 
 // Last release tag before the invoice/payment-status refactor (0008/0009) and
 // the consent-history refactor (0010). Upgrading across this boundary exercises
@@ -108,6 +118,47 @@ async function runMigrate(
     await migrate(drizzle(pool), { migrationsFolder });
   } finally {
     await pool.end();
+  }
+}
+
+/**
+ * Run the ACTUAL `drizzle-kit migrate` CLI against `dbName`, exactly the way the
+ * production container boots (`docker-entrypoint.sh` ->
+ * `pnpm --filter @workspace/db run migrate` -> `drizzle-kit migrate`).
+ *
+ * Mirrors `lib/db/drizzle.config.ts` but points `dbCredentials.url` at the
+ * scratch DB. `out` is the real committed migrations folder so the CLI applies
+ * the same chain. The config is written as a plain default-export object (no
+ * `drizzle-kit` import) so it loads regardless of the temp file's location.
+ *
+ * The CLI is spawned with cwd `/`: drizzle-kit prepends `./` to the configured
+ * `out`, and an absolute `out` only collapses cleanly (`.//abs` -> `/abs`) from
+ * the filesystem root (see the drizzle-kit gotcha in replit.md). Returns the
+ * captured stdout so callers can assert on the CLI's own output.
+ */
+async function runMigrateCli(dbName: string): Promise<string> {
+  const configPath = path.join(
+    fs.mkdtempSync(path.join(os.tmpdir(), "drizzle-cli-cfg-")),
+    "drizzle.config.ts",
+  );
+  fs.writeFileSync(
+    configPath,
+    `export default {\n` +
+      `  schema: ${JSON.stringify(SCHEMA_PATH)},\n` +
+      `  out: ${JSON.stringify(REAL_MIGRATIONS_DIR)},\n` +
+      `  dialect: "postgresql",\n` +
+      `  dbCredentials: { url: ${JSON.stringify(scratchUrl(dbName))} },\n` +
+      `};\n`,
+  );
+  try {
+    const { stdout, stderr } = await execFileAsync(
+      DRIZZLE_KIT_BIN,
+      ["migrate", "--config", configPath],
+      { cwd: "/", encoding: "utf8" },
+    );
+    return `${stdout}\n${stderr}`;
+  } finally {
+    fs.rmSync(path.dirname(configPath), { recursive: true, force: true });
   }
 }
 
@@ -366,3 +417,67 @@ describe.skipIf(!BASE_URL)("database migration smoke test", () => {
     120_000,
   );
 });
+
+/**
+ * Production boot path: run the REAL `drizzle-kit migrate` CLI, not drizzle-orm's
+ * in-process `migrate()`. The two share journal semantics today, so the
+ * in-process suite above is a faithful mirror — but a future drizzle-kit version
+ * bump, a config-only setting, or a CLI-specific quirk could make the container's
+ * boot command behave differently and slip past the in-process test. This block
+ * exercises the exact binary + config form the container runs on startup.
+ */
+describe.skipIf(!BASE_URL || !CLI_AVAILABLE)(
+  "database migration smoke test (drizzle-kit migrate CLI / prod boot path)",
+  () => {
+    if (BASE_URL && !CLI_AVAILABLE) {
+      console.warn(
+        `[migrations-smoke] drizzle-kit binary not found at ${DRIZZLE_KIT_BIN} — skipping CLI migration smoke test`,
+      );
+    }
+
+    it(
+      "fresh install: the real CLI applies the full chain cleanly and is a no-op on re-run",
+      async () => {
+        const dbName = await createScratchDb();
+        try {
+          // First boot: the CLI applies the whole committed chain.
+          const out = await runMigrateCli(dbName);
+          expect(out).toContain("migrations applied successfully");
+
+          await withDb(dbName, async (pool) => {
+            // The journal table records every committed migration, keyed the
+            // same way as the in-process migrator.
+            expect(await migrationCount(pool)).toBe(TOTAL_MIGRATIONS);
+
+            // Every expected table exists after the CLI run.
+            for (const t of EXPECTED_TABLES) {
+              expect(
+                await tableExists(pool, t),
+                `table ${t} should exist`,
+              ).toBe(true);
+            }
+
+            // Final schema reflects the latest refactors.
+            expect(
+              await columnExists(pool, "work_orders", "payment_status"),
+            ).toBe(true);
+            expect(await columnExists(pool, "work_orders", "paid")).toBe(false);
+            expect(await columnExists(pool, "vehicles", "legal_basis")).toBe(
+              true,
+            );
+          });
+
+          // Second boot (e.g. a container restart with no new migrations) must
+          // be a clean no-op: no error, no extra journal rows.
+          await runMigrateCli(dbName);
+          await withDb(dbName, async (pool) => {
+            expect(await migrationCount(pool)).toBe(TOTAL_MIGRATIONS);
+          });
+        } finally {
+          await dropScratchDb(dbName);
+        }
+      },
+      120_000,
+    );
+  },
+);
