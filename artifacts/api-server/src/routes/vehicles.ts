@@ -1,7 +1,15 @@
 import { Router, type IRouter } from "express";
 import { eq, ilike, or, desc, and, isNull } from "drizzle-orm";
-import { db, vehiclesTable, serviceRecordsTable, workOrdersTable, customerReminderLogTable } from "@workspace/db";
-import { auditEntity } from "../lib/audit";
+import {
+  db,
+  vehiclesTable,
+  serviceRecordsTable,
+  workOrdersTable,
+  appointmentsTable,
+  loanersTable,
+  customerReminderLogTable,
+} from "@workspace/db";
+import { auditEntity, type AuditActor } from "../lib/audit";
 import { getActor } from "../lib/actor";
 import {
   ListVehiclesQueryParams,
@@ -280,7 +288,67 @@ router.delete("/vehicles/:id", async (req, res): Promise<void> => {
 
   await auditEntity.deleted("vehicle", vehicle.id, actor, vehicle, vehicle.licensePlate);
 
+  // Cascade the soft-delete to the vehicle's children so nothing is left "live"
+  // pointing at a hidden parent and a later cascade restore brings the whole
+  // tree back. Only rows not already trashed are touched (isNull(deletedAt)),
+  // so a child deleted separately earlier keeps its own deletedBy/deleteReason.
+  await cascadeSoftDeleteVehicleChildren(vehicle.id, actor, reason, vehicle.deletedAt ?? new Date());
+
   res.sendStatus(204);
 });
+
+// Soft-delete a vehicle's work orders, service records, appointments and loaners
+// with the same actor/reason/timestamp, auditing each cascaded delete. Mirrors
+// the trash router's child-link map (loaners attach via either fleet or customer
+// vehicle) so delete + cascade-restore stay symmetric.
+async function cascadeSoftDeleteVehicleChildren(
+  vehicleId: number,
+  actor: AuditActor,
+  reason: string | null,
+  deletedAt: Date,
+): Promise<void> {
+  const set = { deletedAt, deletedBy: actor, deleteReason: reason };
+
+  const workOrders = await db
+    .update(workOrdersTable)
+    .set(set)
+    .where(and(eq(workOrdersTable.vehicleId, vehicleId), isNull(workOrdersTable.deletedAt)))
+    .returning();
+  for (const row of workOrders) {
+    await auditEntity.deleted("work_order", row.id, actor, row);
+  }
+
+  const serviceRecords = await db
+    .update(serviceRecordsTable)
+    .set(set)
+    .where(and(eq(serviceRecordsTable.vehicleId, vehicleId), isNull(serviceRecordsTable.deletedAt)))
+    .returning();
+  for (const row of serviceRecords) {
+    await auditEntity.deleted("service_record", row.id, actor, row);
+  }
+
+  const appointments = await db
+    .update(appointmentsTable)
+    .set(set)
+    .where(and(eq(appointmentsTable.vehicleId, vehicleId), isNull(appointmentsTable.deletedAt)))
+    .returning();
+  for (const row of appointments) {
+    await auditEntity.deleted("appointment", row.id, actor, row);
+  }
+
+  const loaners = await db
+    .update(loanersTable)
+    .set(set)
+    .where(
+      and(
+        or(eq(loanersTable.fleetVehicleId, vehicleId), eq(loanersTable.customerVehicleId, vehicleId)),
+        isNull(loanersTable.deletedAt),
+      ),
+    )
+    .returning();
+  for (const row of loaners) {
+    await auditEntity.deleted("loaner", row.id, actor, row);
+  }
+}
 
 export default router;
