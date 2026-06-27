@@ -508,11 +508,13 @@ export const photosTable = makeTable("photos", ["id", "workOrderId", "url", "fil
 export const serviceRecordsTable = makeTable("service_records", ["id", "vehicleId", "description", ...SOFT_DELETE_COLS]);
 
 export const appointmentsTable = makeTable("appointments", [
-  "id", "vehicleId", "customerName", "customerPhone", ...SOFT_DELETE_COLS,
+  "id", "vehicleId", "licensePlate", "scheduledDate", "scheduledTime", "status",
+  "customerName", "customerPhone", "description", "notes", ...SOFT_DELETE_COLS,
 ]);
 
 export const materialsCatalogTable = makeTable("materials_catalog", [
-  "id", "name", "productNumber", "unit", "defaultPrice", "supplier", ...SOFT_DELETE_COLS,
+  "id", "name", "productNumber", "unit", "defaultPrice", "supplier",
+  "askQuantityOnScan", ...SOFT_DELETE_COLS,
 ]);
 
 export const auditLogTable = makeTable("audit_log", [
