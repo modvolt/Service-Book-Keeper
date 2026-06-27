@@ -310,6 +310,42 @@ describe("POST /trash/:entity/:id/restore — cascade", () => {
     expect(__store.rows("audit_log")).toHaveLength(1);
   });
 
+  it("brings back a vehicle and its single work order together (Obnovit vše)", async () => {
+    // Mirrors the Koš UI flow: a deleted vehicle with exactly one trashed work
+    // order. Clicking "Obnovit vše (1)" sends cascade:true; both rows must come
+    // back in one action and the response carries restoredCount 1 (the source of
+    // the "včetně 1 souvisejících záznamů" toast).
+    const at = new Date("2026-01-01T10:00:00Z");
+    seed(vehiclesTable, [
+      { id: 1, licensePlate: "1A0 0001", deletedAt: at, deletedBy: "admin", deleteReason: "test" },
+    ]);
+    seed(workOrdersTable, [
+      { id: 10, vehicleId: 1, licensePlate: "1A0 0001", deletedAt: at, deletedBy: "admin" },
+    ]);
+
+    // The list endpoint reports exactly one trashed child so the UI offers
+    // "Obnovit vše (1)".
+    const list = await request(makeApp()).get("/trash");
+    const vehicleItem = list.body.find((i: { entity: string }) => i.entity === "vehicle");
+    expect(vehicleItem.childCount).toBe(1);
+
+    const res = await request(makeApp()).post("/trash/vehicle/1/restore").send({ cascade: true });
+    expect(res.status).toBe(200);
+    expect(res.body.restoredCount).toBe(1);
+
+    // Both the vehicle and its work order are live again.
+    expect(__store.rows("vehicles")[0].deletedAt).toBeNull();
+    expect(__store.rows("work_orders")[0].deletedAt).toBeNull();
+
+    // Parent + child each audited as restored.
+    const restored = __store.rows("audit_log").filter((a) => a.action === "entity_restored");
+    expect(restored).toHaveLength(2);
+    expect(restored.map((a) => `${a.entity}:${a.entityId}`).sort()).toEqual([
+      "vehicle:1",
+      "work_order:10",
+    ]);
+  });
+
   it("restores the vehicle and its trashed children when cascade is true", async () => {
     const at = new Date("2026-01-01T10:00:00Z");
     seed(vehiclesTable, [{ id: 1, licensePlate: "1A0 0001", deletedAt: at }]);
