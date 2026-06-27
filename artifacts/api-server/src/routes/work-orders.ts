@@ -161,7 +161,8 @@ router.post("/work-orders", async (req, res): Promise<void> => {
     ...parsed.data,
     licensePlate: plate,
     vehicleId: vehicle?.id ?? null,
-    paid: parsed.data.paid ?? false,
+    invoiceStatus: parsed.data.invoiceStatus ?? "not_invoiced",
+    paymentStatus: parsed.data.paymentStatus ?? "unpaid",
     oilChange: parsed.data.oilChange ?? false,
     brakes: parsed.data.brakes ?? false,
     timing: parsed.data.timing ?? false,
@@ -234,10 +235,10 @@ router.patch("/work-orders/:id", async (req, res): Promise<void> => {
 
   await auditEntity.updated("work_order", order.id, getActor(req), existing, order.licensePlate);
 
-  // When the work order is marked as invoiced (Vyfakturováno / paid), any
-  // active loaner running off this work order is auto-returned today — unless
-  // the user already set the return date by hand (manualEndDate).
-  if (parsed.data.paid === true) {
+  // When the work order is marked as invoiced (Vyfakturováno), any active
+  // loaner running off this work order is auto-returned today — unless the
+  // user already set the return date by hand (manualEndDate).
+  if (parsed.data.invoiceStatus === "invoiced") {
     const today = new Date().toISOString().slice(0, 10);
     await db.update(loanersTable)
       .set({ endDate: today, status: "returned" })

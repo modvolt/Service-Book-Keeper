@@ -3,7 +3,7 @@ import { useGetDashboardSummary, useListVehicles } from "@workspace/api-client-r
 import { LicensePlate } from "@/components/license-plate";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Car, ClipboardList, Wrench, AlertTriangle, Search, User, X } from "lucide-react";
+import { Car, ClipboardList, Wrench, AlertTriangle, Search, User, X, Clock, PackageSearch, FileText, CircleDollarSign, CalendarPlus } from "lucide-react";
 import { Link } from "wouter";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
@@ -139,6 +139,76 @@ export default function Dashboard() {
         </CardContent>
       </Card>
 
+      <div>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">Průběh dílny</h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          <Link href="/work-orders?filter=open">
+            <Card className="cursor-pointer hover:bg-accent/50 transition-colors h-full">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Dnes objednáno</CardTitle>
+                <CalendarPlus className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{summary.orderedToday ?? 0}</div>
+                <p className="text-xs text-muted-foreground">Nové zakázky dnes</p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/work-orders?filter=in_progress">
+            <Card className="cursor-pointer hover:bg-accent/50 transition-colors h-full">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Probíhá</CardTitle>
+                <Clock className="h-4 w-4 text-amber-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-amber-600">{summary.inProgressWorkOrders ?? 0}</div>
+                <p className="text-xs text-muted-foreground">Právě v práci</p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/work-orders?filter=waiting_parts">
+            <Card className="cursor-pointer hover:bg-accent/50 transition-colors h-full">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Čeká na díly</CardTitle>
+                <PackageSearch className="h-4 w-4 text-orange-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-600">{summary.waitingParts ?? 0}</div>
+                <p className="text-xs text-muted-foreground">Blokováno díly</p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/work-orders?filter=ready-to-invoice">
+            <Card className="cursor-pointer hover:bg-accent/50 transition-colors h-full">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Hotovo k fakturaci</CardTitle>
+                <FileText className="h-4 w-4 text-sky-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-sky-600">{summary.readyToInvoice ?? 0}</div>
+                <p className="text-xs text-muted-foreground">Připraveno vyfakturovat</p>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/work-orders?filter=invoiced-unpaid">
+            <Card className="cursor-pointer hover:bg-accent/50 transition-colors h-full">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Vyfakturováno – nezaplaceno</CardTitle>
+                <CircleDollarSign className="h-4 w-4 text-red-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-red-600">{summary.invoicedUnpaid ?? 0}</div>
+                <p className="text-xs text-muted-foreground">Čeká na platbu</p>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Link href="/work-orders?filter=active">
           <Card className="cursor-pointer hover:bg-accent/50 transition-colors h-full">
@@ -148,9 +218,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{summary.openWorkOrders}</div>
-              <p className="text-xs text-muted-foreground">
-                {summary.inProgressWorkOrders || 0} právě probíhá
-              </p>
+              <p className="text-xs text-muted-foreground">Všechny nedokončené</p>
             </CardContent>
           </Card>
         </Link>
@@ -170,13 +238,13 @@ export default function Dashboard() {
         <Link href="/vehicles?filter=stk">
           <Card className="cursor-pointer hover:bg-accent/50 transition-colors h-full">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Blížící se STK</CardTitle>
+              <CardTitle className="text-sm font-medium">STK / servis po termínu</CardTitle>
               <AlertTriangle className="h-4 w-4 text-amber-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-amber-600">{summary.stkExpiringSoon}</div>
+              <div className="text-2xl font-bold text-red-600">{summary.stkOverdue ?? 0}</div>
               <p className="text-xs text-muted-foreground">
-                Vozidla s expirací do 30 dnů
+                Po termínu · {summary.stkExpiringSoon} do 30 dnů
               </p>
             </CardContent>
           </Card>

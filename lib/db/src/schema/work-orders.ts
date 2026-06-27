@@ -7,8 +7,14 @@ export const workOrdersTable = pgTable("work_orders", {
   id: serial("id").primaryKey(),
   vehicleId: integer("vehicle_id").references(() => vehiclesTable.id, { onDelete: "set null" }),
   licensePlate: text("license_plate").notNull(),
+  // Work status: nová / probíhá / čeká na díly / má přijet znovu / dokončeno.
   status: text("status").notNull().default("open"),
-  paid: boolean("paid").notNull().default(false),
+  // Invoicing status (independent of work + payment): nefakturováno / připraveno
+  // k fakturaci / vyfakturováno. Replaces the old overloaded `paid` boolean.
+  invoiceStatus: text("invoice_status").notNull().default("not_invoiced"),
+  // Payment status (independent of invoicing): nezaplaceno / částečně zaplaceno
+  // / zaplaceno.
+  paymentStatus: text("payment_status").notNull().default("unpaid"),
   km: integer("km"),
   description: text("description"),
   oilChange: boolean("oil_change").notNull().default(false),

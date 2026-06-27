@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, ne, gte, lte, and, count, sql, isNull } from "drizzle-orm";
+import { eq, ne, gte, lte, lt, and, count, sql, isNull } from "drizzle-orm";
 import { db, vehiclesTable, workOrdersTable } from "@workspace/db";
 import { photosTable } from "@workspace/db";
 
@@ -35,6 +35,30 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
       ),
     );
 
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const [orderedTodayResult] = await db
+    .select({ count: count() })
+    .from(workOrdersTable)
+    .where(and(gte(workOrdersTable.createdAt, startOfToday), isNull(workOrdersTable.deletedAt)));
+  const [waitingPartsResult] = await db
+    .select({ count: count() })
+    .from(workOrdersTable)
+    .where(and(eq(workOrdersTable.status, "waiting_parts"), isNull(workOrdersTable.deletedAt)));
+  const [readyToInvoiceResult] = await db
+    .select({ count: count() })
+    .from(workOrdersTable)
+    .where(and(eq(workOrdersTable.invoiceStatus, "ready_to_invoice"), isNull(workOrdersTable.deletedAt)));
+  const [invoicedUnpaidResult] = await db
+    .select({ count: count() })
+    .from(workOrdersTable)
+    .where(
+      and(
+        eq(workOrdersTable.invoiceStatus, "invoiced"),
+        ne(workOrdersTable.paymentStatus, "paid"),
+        isNull(workOrdersTable.deletedAt),
+      ),
+    );
+
   const todayStr = now.toISOString().split("T")[0];
   const thirtyDaysStr = thirtyDaysFromNow.toISOString().split("T")[0];
   const [stkExpiringSoonResult] = await db
@@ -44,6 +68,15 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
       and(
         gte(vehiclesTable.stkValidUntil, todayStr),
         lte(vehiclesTable.stkValidUntil, thirtyDaysStr),
+        isNull(vehiclesTable.deletedAt),
+      ),
+    );
+  const [stkOverdueResult] = await db
+    .select({ count: count() })
+    .from(vehiclesTable)
+    .where(
+      and(
+        lt(vehiclesTable.stkValidUntil, todayStr),
         isNull(vehiclesTable.deletedAt),
       ),
     );
@@ -78,6 +111,11 @@ router.get("/dashboard/summary", async (_req, res): Promise<void> => {
     inProgressWorkOrders: inProgressResult.count,
     completedThisMonth: completedMonthResult.count,
     stkExpiringSoon: stkExpiringSoonResult.count,
+    orderedToday: orderedTodayResult.count,
+    waitingParts: waitingPartsResult.count,
+    readyToInvoice: readyToInvoiceResult.count,
+    invoicedUnpaid: invoicedUnpaidResult.count,
+    stkOverdue: stkOverdueResult.count,
     recentWorkOrders: withPhotos,
   });
 });

@@ -16,7 +16,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -30,7 +29,7 @@ import { cn } from "@/lib/utils";
 import { uploadFileWithProgress, UploadError } from "@/lib/upload";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { Progress } from "@/components/ui/progress";
-import { WorkOrderStatusBadge, WORK_ORDER_STATUSES, type WorkOrderStatus } from "@/lib/work-order-status";
+import { WorkOrderStatusBadge, InvoiceStatusBadge, PaymentStatusBadge, WORK_ORDER_STATUSES, INVOICE_STATUSES, PAYMENT_STATUSES, type WorkOrderStatus, type InvoiceStatus, type PaymentStatus } from "@/lib/work-order-status";
 import { DEFAULT_HOURLY_RATE, computeLaborPrice, isManualLaborPrice } from "@/lib/labor";
 
 function fileToBase64(file: File): Promise<string> {
@@ -233,9 +232,16 @@ export default function WorkOrderDetail() {
     });
   }
 
-  function handleTogglePaid(value: boolean) {
-    updateOrder.mutate({ id, data: { paid: value } }, {
-      onSuccess: () => { invalidateOrder(); toast({ title: value ? "Označeno jako zaplaceno" : "Označeno jako nezaplaceno" }); },
+  function handleQuickInvoiceStatus(value: string) {
+    updateOrder.mutate({ id, data: { invoiceStatus: value as InvoiceStatus } }, {
+      onSuccess: () => { invalidateOrder(); toast({ title: "Stav fakturace změněn" }); },
+      onError: (err) => toast({ title: "Chyba", description: getApiErrorMessage(err, "Stav fakturace se nepodařilo změnit."), variant: "destructive" }),
+    });
+  }
+
+  function handleQuickPaymentStatus(value: string) {
+    updateOrder.mutate({ id, data: { paymentStatus: value as PaymentStatus } }, {
+      onSuccess: () => { invalidateOrder(); toast({ title: "Stav platby změněn" }); },
       onError: (err) => toast({ title: "Chyba", description: getApiErrorMessage(err, "Stav platby se nepodařilo změnit."), variant: "destructive" }),
     });
   }
@@ -491,9 +497,8 @@ export default function WorkOrderDetail() {
           <div className="flex items-center gap-3 flex-wrap">
             <LicensePlate plate={order.licensePlate} size="xl" />
             <WorkOrderStatusBadge status={order.status} />
-            {order.paid && (
-              <Badge className="bg-emerald-600 text-white hover:bg-emerald-700 text-sm px-3 py-1">Zaplaceno</Badge>
-            )}
+            <InvoiceStatusBadge status={order.invoiceStatus} />
+            <PaymentStatusBadge status={order.paymentStatus} />
           </div>
           <p className="text-muted-foreground text-sm mt-1">
             Zakázka #{order.id} — {order.serviceDate
@@ -505,7 +510,7 @@ export default function WorkOrderDetail() {
           <div className="flex items-center gap-2">
             <Label className="text-xs text-muted-foreground">Stav</Label>
             <Select value={order.status} onValueChange={handleQuickStatus}>
-              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {WORK_ORDER_STATUSES.map((s) => (
                   <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
@@ -513,10 +518,28 @@ export default function WorkOrderDetail() {
               </SelectContent>
             </Select>
           </div>
-          <label className="flex items-center gap-2 cursor-pointer select-none">
-            <Checkbox checked={order.paid} onCheckedChange={(v) => handleTogglePaid(v === true)} disabled={updateOrder.isPending} />
-            <span className="text-sm">Zaplaceno</span>
-          </label>
+          <div className="flex items-center gap-2">
+            <Label className="text-xs text-muted-foreground">Fakturace</Label>
+            <Select value={order.invoiceStatus} onValueChange={handleQuickInvoiceStatus}>
+              <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {INVOICE_STATUSES.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <Label className="text-xs text-muted-foreground">Platba</Label>
+            <Select value={order.paymentStatus} onValueChange={handleQuickPaymentStatus}>
+              <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {PAYMENT_STATUSES.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           {!editMode ? (
             <>
               <WorkOrderExportDialog

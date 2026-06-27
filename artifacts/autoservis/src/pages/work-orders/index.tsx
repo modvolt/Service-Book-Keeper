@@ -10,14 +10,18 @@ import { Plus, Search, Wrench, Image as ImageIcon } from "lucide-react";
 import { Link, useSearch } from "wouter";
 import { format, parseISO } from "date-fns";
 import { cs } from "date-fns/locale";
-import { WorkOrderStatusBadge, WORK_ORDER_STATUSES, type WorkOrderStatus } from "@/lib/work-order-status";
+import { WorkOrderStatusBadge, InvoiceStatusBadge, PaymentStatusBadge, WORK_ORDER_STATUSES, type WorkOrderStatus } from "@/lib/work-order-status";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "Všechny" },
   { value: "active", label: "Nedokončené" },
   ...WORK_ORDER_STATUSES.map((s) => ({ value: s.value, label: s.label })),
+  { value: "ready-to-invoice", label: "Připraveno k fakturaci" },
+  { value: "invoiced-unpaid", label: "Vyfakturováno – nezaplaceno" },
   { value: "completed-month", label: "Dokončeno tento měsíc" },
 ];
+
+const STATUS_OPTION_VALUES = new Set(STATUS_OPTIONS.map((o) => o.value));
 
 function ServiceIcons({ order }: { order: { oilChange?: boolean; transmissionOil?: boolean; brakes?: boolean; timing?: boolean; stk?: boolean; otherWork?: string | null; otherServices?: string | null } }) {
   const items = [
@@ -44,22 +48,20 @@ export default function WorkOrdersList() {
   const viewFilter = new URLSearchParams(searchString).get("filter");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<string>(() =>
-    viewFilter === "active" || viewFilter === "completed-month" ? viewFilter : "all"
+    viewFilter && STATUS_OPTION_VALUES.has(viewFilter) ? viewFilter : "all"
   );
 
   // Keep the filter in sync with the URL param so navigating to a different
   // ?filter= (e.g. from the dashboard cards or the plain "Zakázky" menu link)
   // updates the list even when this route stays mounted.
   useEffect(() => {
-    setStatus(
-      viewFilter === "active" || viewFilter === "completed-month" ? viewFilter : "all",
-    );
+    setStatus(viewFilter && STATUS_OPTION_VALUES.has(viewFilter) ? viewFilter : "all");
   }, [viewFilter]);
 
   const serverStatus =
     status === "completed-month"
       ? "completed"
-      : status !== "all" && status !== "active"
+      : WORK_ORDER_STATUSES.some((s) => s.value === status)
         ? (status as WorkOrderStatus)
         : undefined;
 
@@ -76,6 +78,8 @@ export default function WorkOrdersList() {
       if (wo.status !== "completed" || !wo.completedAt) return false;
       if (new Date(wo.completedAt) < startOfMonth) return false;
     }
+    if (status === "ready-to-invoice" && wo.invoiceStatus !== "ready_to_invoice") return false;
+    if (status === "invoiced-unpaid" && !(wo.invoiceStatus === "invoiced" && wo.paymentStatus !== "paid")) return false;
     if (!search) return true;
     const s = search.toLowerCase();
     return wo.licensePlate.toLowerCase().includes(s) ||
@@ -150,8 +154,11 @@ export default function WorkOrdersList() {
                           <span className="text-sm text-muted-foreground">{wo.ownerName}</span>
                         )}
                         <WorkOrderStatusBadge status={wo.status} size="sm" />
-                        {wo.paid && (
-                          <Badge className="bg-emerald-600 text-white hover:bg-emerald-700">Zaplaceno</Badge>
+                        {wo.invoiceStatus && wo.invoiceStatus !== "not_invoiced" && (
+                          <InvoiceStatusBadge status={wo.invoiceStatus} size="sm" />
+                        )}
+                        {wo.paymentStatus && wo.paymentStatus !== "unpaid" && (
+                          <PaymentStatusBadge status={wo.paymentStatus} size="sm" />
                         )}
                         {wo.photos && wo.photos.length > 0 && (
                           <span className="flex items-center gap-1 text-xs text-muted-foreground">

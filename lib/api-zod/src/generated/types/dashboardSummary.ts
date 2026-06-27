@@ -13,5 +13,15 @@ export interface DashboardSummary {
   inProgressWorkOrders?: number;
   completedThisMonth: number;
   stkExpiringSoon: number;
+  /** Work orders created today (Dnes objednáno) */
+  orderedToday?: number;
+  /** Work orders waiting for parts (Čeká na díly) */
+  waitingParts?: number;
+  /** Work orders ready to invoice (Hotovo k fakturaci) */
+  readyToInvoice?: number;
+  /** Invoiced work orders not fully paid (Vyfakturováno-nezaplaceno) */
+  invoicedUnpaid?: number;
+  /** Vehicles with STK already expired (STK po termínu) */
+  stkOverdue?: number;
   recentWorkOrders?: WorkOrder[];
 }

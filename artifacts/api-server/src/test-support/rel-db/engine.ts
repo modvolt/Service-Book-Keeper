@@ -3,7 +3,7 @@
  * work-order / GDPR tests. Unlike the singleton `fake-db`, this engine actually
  * evaluates `where` predicates, supports `leftJoin` (with table aliases) and
  * `.returning()`, so it can faithfully exercise filter logic, overlap windows
- * and the work-order paid auto-close coupling.
+ * and the work-order invoicing auto-close coupling.
  *
  * Only the subset of the Drizzle query-builder surface these routes use is
  * implemented: select (+ joins, where, orderBy, limit, count(*) aggregate),
@@ -103,6 +103,11 @@ export const desc = (col: ColumnRef): OrderSpec => ({ t: "order", col, dir: "des
 
 export function sql(strings: TemplateStringsArray, ...values: unknown[]): SqlMarker {
   return { __sql: true, text: strings.join(" ") + " " + values.join(" ") };
+}
+
+/** `count()` aggregate stand-in — produces a `count(*)` SQL marker the select engine recognizes. */
+export function count(_col?: unknown): SqlMarker {
+  return { __sql: true, text: "count(*)" };
 }
 
 // ---------------------------------------------------------------------------
@@ -491,12 +496,12 @@ export const loanersTable = makeTable("loaners", [
 export const vehiclesTable = makeTable("vehicles", [
   "id", "licensePlate", "make", "model", "isFleet", "ownerType", "ownerName",
   "ownerAddress", "ownerPhone", "ownerEmail", "ownerIco", "ownerDic",
-  "consentGivenAt", "consentNote", "currentKm", ...SOFT_DELETE_COLS,
+  "consentGivenAt", "consentNote", "currentKm", "stkValidUntil", ...SOFT_DELETE_COLS,
 ]);
 
 export const workOrdersTable = makeTable("work_orders", [
-  "id", "vehicleId", "licensePlate", "status", "paid", "completedAt",
-  "serviceDate", "createdAt", "description", ...SOFT_DELETE_COLS,
+  "id", "vehicleId", "licensePlate", "status", "invoiceStatus", "paymentStatus",
+  "completedAt", "serviceDate", "createdAt", "description", ...SOFT_DELETE_COLS,
 ]);
 
 export const workOrderMaterialsTable = makeTable("work_order_materials", [

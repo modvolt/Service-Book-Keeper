@@ -5,11 +5,14 @@
  * AutoServis API
  * OpenAPI spec version: 0.1.0
  */
+import type { WorkOrderUpdateInvoiceStatus } from './workOrderUpdateInvoiceStatus';
+import type { WorkOrderUpdatePaymentStatus } from './workOrderUpdatePaymentStatus';
 import type { WorkOrderUpdateStatus } from './workOrderUpdateStatus';
 
 export interface WorkOrderUpdate {
   status?: WorkOrderUpdateStatus;
-  paid?: boolean;
+  invoiceStatus?: WorkOrderUpdateInvoiceStatus;
+  paymentStatus?: WorkOrderUpdatePaymentStatus;
   /** @nullable */
   km?: number | null;
   /** @nullable */

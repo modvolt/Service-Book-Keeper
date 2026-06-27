@@ -73,7 +73,7 @@ export function LoanerSection({
   const [confirmOverlapOpen, setConfirmOverlapOpen] = useState(false);
 
   // The loan runs automatically from the work order's creation date until the
-  // order is marked as invoiced (Zaplaceno), unless returned manually.
+  // order is marked as invoiced (Vyfakturováno), unless returned manually.
   const startDate = order.createdAt ? order.createdAt.slice(0, 10) : todayISO();
 
   const { data: suggestions = [] } = useListLoanerCustomerSuggestions(
@@ -241,7 +241,7 @@ export function LoanerSection({
                 />
                 {!loaner.manualEndDate && loaner.status === "active" && (
                   <p className="text-xs text-muted-foreground">
-                    Vozidlo se automaticky vrátí při označení zakázky jako vyfakturované (Zaplaceno).
+                    Vozidlo se automaticky vrátí při označení zakázky jako vyfakturované (Vyfakturováno).
                   </p>
                 )}
               </div>

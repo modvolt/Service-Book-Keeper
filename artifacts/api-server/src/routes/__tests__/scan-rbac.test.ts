@@ -42,11 +42,11 @@ type Role = "admin" | "scanner";
 function seedOrders(): void {
   seed(workOrdersTable, [
     // Open order for the queried plate — the one the scanner should pair to.
-    { id: 1, vehicleId: 10, licensePlate: "1AB 2345", status: "in_progress", paid: false, completedAt: null, serviceDate: null, createdAt: "2026-06-01T00:00:00.000Z", description: "Výměna oleje" },
+    { id: 1, vehicleId: 10, licensePlate: "1AB 2345", status: "in_progress", invoiceStatus: "not_invoiced", paymentStatus: "unpaid", completedAt: null, serviceDate: null, createdAt: "2026-06-01T00:00:00.000Z", description: "Výměna oleje" },
     // Same plate but completed — must be excluded (not an open order).
-    { id: 2, vehicleId: 10, licensePlate: "1AB 2345", status: "completed", paid: true, completedAt: "2026-05-01T00:00:00.000Z", serviceDate: "2026-05-01", createdAt: "2026-05-01T00:00:00.000Z", description: "Stará zakázka" },
+    { id: 2, vehicleId: 10, licensePlate: "1AB 2345", status: "completed", invoiceStatus: "invoiced", paymentStatus: "paid", completedAt: "2026-05-01T00:00:00.000Z", serviceDate: "2026-05-01", createdAt: "2026-05-01T00:00:00.000Z", description: "Stará zakázka" },
     // A different vehicle's open order — must never leak into the lookup.
-    { id: 3, vehicleId: 20, licensePlate: "9XY 9999", status: "in_progress", paid: false, completedAt: null, serviceDate: null, createdAt: "2026-06-02T00:00:00.000Z", description: "Jiné vozidlo" },
+    { id: 3, vehicleId: 20, licensePlate: "9XY 9999", status: "in_progress", invoiceStatus: "not_invoiced", paymentStatus: "unpaid", completedAt: null, serviceDate: null, createdAt: "2026-06-02T00:00:00.000Z", description: "Jiné vozidlo" },
   ]);
 }
 

@@ -3,7 +3,7 @@ import express, { type Express } from "express";
 import request from "supertest";
 
 /**
- * Marking a work order paid (Vyfakturováno) must auto-return any *active* loaner
+ * Marking a work order invoiced (Vyfakturováno) must auto-return any *active* loaner
  * tied to that order, unless the return date was set manually (manualEndDate).
  * This couples work-orders.ts -> loanersTable, so we exercise it through the
  * PATCH handler with the relational engine and stub the unrelated vehicle-status
@@ -45,7 +45,7 @@ function seedOrder(overrides: Record<string, unknown> = {}): void {
       vehicleId: null,
       licensePlate: "1A0 0001",
       status: "open",
-      paid: false,
+      invoiceStatus: "not_invoiced", paymentStatus: "unpaid",
       completedAt: null,
       createdAt: new Date(),
       ...overrides,
@@ -84,12 +84,12 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("PATCH /work-orders/:id — paid auto-closes loaners", () => {
-  it("returns an active, auto-managed loaner on the order when marked paid", async () => {
+describe("PATCH /work-orders/:id — invoicing auto-closes loaners", () => {
+  it("returns an active, auto-managed loaner on the order when marked invoiced", async () => {
     seedOrder();
     seedLoaner({ id: 1, status: "active", manualEndDate: false, endDate: null });
 
-    const res = await request(makeApp()).patch("/work-orders/1").send({ paid: true });
+    const res = await request(makeApp()).patch("/work-orders/1").send({ invoiceStatus: "invoiced" });
 
     expect(res.status).toBe(200);
     const l = loaner(1);
@@ -100,7 +100,7 @@ describe("PATCH /work-orders/:id — paid auto-closes loaners", () => {
     seedOrder();
     seedLoaner({ id: 1, status: "active", manualEndDate: true, endDate: "2026-03-01" });
 
-    const res = await request(makeApp()).patch("/work-orders/1").send({ paid: true });
+    const res = await request(makeApp()).patch("/work-orders/1").send({ invoiceStatus: "invoiced" });
 
     expect(res.status).toBe(200);
     const l = loaner(1);
@@ -111,29 +111,29 @@ describe("PATCH /work-orders/:id — paid auto-closes loaners", () => {
     seedOrder();
     seedLoaner({ id: 1, status: "returned", manualEndDate: false, endDate: "2026-02-15" });
 
-    await request(makeApp()).patch("/work-orders/1").send({ paid: true });
+    await request(makeApp()).patch("/work-orders/1").send({ invoiceStatus: "invoiced" });
 
     const l = loaner(1);
     // endDate must keep its original value, not be overwritten with today.
     expect(l).toMatchObject({ status: "returned", endDate: "2026-02-15" });
   });
 
-  it("only closes loaners tied to the paid order, not loaners on other orders", async () => {
+  it("only closes loaners tied to the invoiced order, not loaners on other orders", async () => {
     seedOrder({ id: 1 });
     seed(workOrdersTable, [
-      { id: 2, vehicleId: null, licensePlate: "2B0 0002", status: "open", paid: false, completedAt: null, createdAt: new Date() },
+      { id: 2, vehicleId: null, licensePlate: "2B0 0002", status: "open", invoiceStatus: "not_invoiced", paymentStatus: "unpaid", completedAt: null, createdAt: new Date() },
     ]);
     seedLoaner({ id: 1, workOrderId: 1, status: "active" });
     seedLoaner({ id: 2, workOrderId: 2, status: "active" });
 
-    await request(makeApp()).patch("/work-orders/1").send({ paid: true });
+    await request(makeApp()).patch("/work-orders/1").send({ invoiceStatus: "invoiced" });
 
     expect(loaner(1)).toMatchObject({ status: "returned", endDate: TODAY });
     // The loaner on order #2 must remain active.
     expect(loaner(2)).toMatchObject({ status: "active", endDate: null });
   });
 
-  it("does not auto-close loaners when the update does not set paid=true", async () => {
+  it("does not auto-close loaners when the update does not set invoiceStatus=invoiced", async () => {
     seedOrder();
     seedLoaner({ id: 1, status: "active", manualEndDate: false, endDate: null });
 
@@ -145,7 +145,7 @@ describe("PATCH /work-orders/:id — paid auto-closes loaners", () => {
   it("returns 404 for an unknown work order without altering loaners", async () => {
     seedLoaner({ id: 1, workOrderId: 1, status: "active" });
 
-    const res = await request(makeApp()).patch("/work-orders/999").send({ paid: true });
+    const res = await request(makeApp()).patch("/work-orders/999").send({ invoiceStatus: "invoiced" });
 
     expect(res.status).toBe(404);
     expect(loaner(1)).toMatchObject({ status: "active" });
@@ -155,8 +155,8 @@ describe("PATCH /work-orders/:id — paid auto-closes loaners", () => {
 describe("GET /work-orders — SPZ search is space-insensitive", () => {
   function seedOrders(): void {
     seed(workOrdersTable, [
-      { id: 1, vehicleId: null, licensePlate: "1AB 2345", status: "open", paid: false, completedAt: null, createdAt: new Date() },
-      { id: 2, vehicleId: null, licensePlate: "9ZZ 9999", status: "in_progress", paid: false, completedAt: null, createdAt: new Date() },
+      { id: 1, vehicleId: null, licensePlate: "1AB 2345", status: "open", invoiceStatus: "not_invoiced", paymentStatus: "unpaid", completedAt: null, createdAt: new Date() },
+      { id: 2, vehicleId: null, licensePlate: "9ZZ 9999", status: "in_progress", invoiceStatus: "not_invoiced", paymentStatus: "unpaid", completedAt: null, createdAt: new Date() },
     ]);
   }
 

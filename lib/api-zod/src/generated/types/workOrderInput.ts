@@ -5,11 +5,14 @@
  * AutoServis API
  * OpenAPI spec version: 0.1.0
  */
+import type { WorkOrderInputInvoiceStatus } from './workOrderInputInvoiceStatus';
+import type { WorkOrderInputPaymentStatus } from './workOrderInputPaymentStatus';
 
 export interface WorkOrderInput {
   /** @minLength 1 */
   licensePlate: string;
-  paid?: boolean;
+  invoiceStatus?: WorkOrderInputInvoiceStatus;
+  paymentStatus?: WorkOrderInputPaymentStatus;
   /** @nullable */
   km?: number | null;
   /** @nullable */

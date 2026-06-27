@@ -2015,7 +2015,7 @@ components:
 
     WorkOrder:
       type: object
-      required: [id, licensePlate, status, paid, createdAt]
+      required: [id, licensePlate, status, invoiceStatus, paymentStatus, createdAt]
       properties:
         id:
           type: integer
@@ -2031,9 +2031,16 @@ components:
           type: ["string", "null"]
         status:
           type: string
+          description: Work status
           enum: [open, in_progress, waiting_parts, needs_return, completed]
-        paid:
-          type: boolean
+        invoiceStatus:
+          type: string
+          description: Invoicing status
+          enum: [not_invoiced, ready_to_invoice, invoiced]
+        paymentStatus:
+          type: string
+          description: Payment status
+          enum: [unpaid, partial, paid]
         km:
           type: ["integer", "null"]
         description:
@@ -2109,8 +2116,12 @@ components:
         licensePlate:
           type: string
           minLength: 1
-        paid:
-          type: boolean
+        invoiceStatus:
+          type: string
+          enum: [not_invoiced, ready_to_invoice, invoiced]
+        paymentStatus:
+          type: string
+          enum: [unpaid, partial, paid]
         km:
           type: ["integer", "null"]
         description:
@@ -2172,8 +2183,12 @@ components:
         status:
           type: string
           enum: [open, in_progress, waiting_parts, needs_return, completed]
-        paid:
-          type: boolean
+        invoiceStatus:
+          type: string
+          enum: [not_invoiced, ready_to_invoice, invoiced]
+        paymentStatus:
+          type: string
+          enum: [unpaid, partial, paid]
         km:
           type: ["integer", "null"]
         description:
@@ -2857,6 +2872,21 @@ components:
           type: integer
         stkExpiringSoon:
           type: integer
+        orderedToday:
+          type: integer
+          description: Work orders created today (Dnes objednáno)
+        waitingParts:
+          type: integer
+          description: Work orders waiting for parts (Čeká na díly)
+        readyToInvoice:
+          type: integer
+          description: Work orders ready to invoice (Hotovo k fakturaci)
+        invoicedUnpaid:
+          type: integer
+          description: Invoiced work orders not fully paid (Vyfakturováno-nezaplaceno)
+        stkOverdue:
+          type: integer
+          description: Vehicles with STK already expired (STK po termínu)
         recentWorkOrders:
           type: array
           items:

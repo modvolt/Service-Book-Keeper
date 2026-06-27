@@ -15,4 +15,5 @@ export {
   asc,
   desc,
   sql,
+  count,
 } from "./engine";

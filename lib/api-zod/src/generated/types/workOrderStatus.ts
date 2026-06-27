@@ -6,6 +6,9 @@
  * OpenAPI spec version: 0.1.0
  */
 
+/**
+ * Work status
+ */
 export type WorkOrderStatus = typeof WorkOrderStatus[keyof typeof WorkOrderStatus];
 
 

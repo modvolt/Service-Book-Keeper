@@ -57,6 +57,20 @@
       "when": 1782516439990,
       "tag": "0007_salty_spirit",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1782518567881,
+      "tag": "0008_add_invoice_payment_status",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1782518587036,
+      "tag": "0009_drop_paid_column",
+      "breakpoints": true
     }
   ]
 }

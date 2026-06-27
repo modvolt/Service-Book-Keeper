@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { Photo } from './photo';
+import type { WorkOrderInvoiceStatus } from './workOrderInvoiceStatus';
+import type { WorkOrderPaymentStatus } from './workOrderPaymentStatus';
 import type { WorkOrderStatus } from './workOrderStatus';
 
 export interface WorkOrder {
@@ -19,8 +21,12 @@ export interface WorkOrder {
   model?: string | null;
   /** @nullable */
   ownerName?: string | null;
+  /** Work status */
   status: WorkOrderStatus;
-  paid: boolean;
+  /** Invoicing status */
+  invoiceStatus: WorkOrderInvoiceStatus;
+  /** Payment status */
+  paymentStatus: WorkOrderPaymentStatus;
   /** @nullable */
   km?: number | null;
   /** @nullable */

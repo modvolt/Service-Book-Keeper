@@ -227,6 +227,9 @@ export interface ServiceRecord {
   createdAt: string;
 }
 
+/**
+ * Work status
+ */
 export type WorkOrderStatus = typeof WorkOrderStatus[keyof typeof WorkOrderStatus];
 
 
@@ -236,6 +239,30 @@ export const WorkOrderStatus = {
   waiting_parts: 'waiting_parts',
   needs_return: 'needs_return',
   completed: 'completed',
+} as const;
+
+/**
+ * Invoicing status
+ */
+export type WorkOrderInvoiceStatus = typeof WorkOrderInvoiceStatus[keyof typeof WorkOrderInvoiceStatus];
+
+
+export const WorkOrderInvoiceStatus = {
+  not_invoiced: 'not_invoiced',
+  ready_to_invoice: 'ready_to_invoice',
+  invoiced: 'invoiced',
+} as const;
+
+/**
+ * Payment status
+ */
+export type WorkOrderPaymentStatus = typeof WorkOrderPaymentStatus[keyof typeof WorkOrderPaymentStatus];
+
+
+export const WorkOrderPaymentStatus = {
+  unpaid: 'unpaid',
+  partial: 'partial',
+  paid: 'paid',
 } as const;
 
 export interface Photo {
@@ -257,8 +284,12 @@ export interface WorkOrder {
   model?: string | null;
   /** @nullable */
   ownerName?: string | null;
+  /** Work status */
   status: WorkOrderStatus;
-  paid: boolean;
+  /** Invoicing status */
+  invoiceStatus: WorkOrderInvoiceStatus;
+  /** Payment status */
+  paymentStatus: WorkOrderPaymentStatus;
   /** @nullable */
   km?: number | null;
   /** @nullable */
@@ -591,10 +622,29 @@ export interface ServiceRecordInput {
   technician?: string | null;
 }
 
+export type WorkOrderInputInvoiceStatus = typeof WorkOrderInputInvoiceStatus[keyof typeof WorkOrderInputInvoiceStatus];
+
+
+export const WorkOrderInputInvoiceStatus = {
+  not_invoiced: 'not_invoiced',
+  ready_to_invoice: 'ready_to_invoice',
+  invoiced: 'invoiced',
+} as const;
+
+export type WorkOrderInputPaymentStatus = typeof WorkOrderInputPaymentStatus[keyof typeof WorkOrderInputPaymentStatus];
+
+
+export const WorkOrderInputPaymentStatus = {
+  unpaid: 'unpaid',
+  partial: 'partial',
+  paid: 'paid',
+} as const;
+
 export interface WorkOrderInput {
   /** @minLength 1 */
   licensePlate: string;
-  paid?: boolean;
+  invoiceStatus?: WorkOrderInputInvoiceStatus;
+  paymentStatus?: WorkOrderInputPaymentStatus;
   /** @nullable */
   km?: number | null;
   /** @nullable */
@@ -643,9 +693,28 @@ export const WorkOrderUpdateStatus = {
   completed: 'completed',
 } as const;
 
+export type WorkOrderUpdateInvoiceStatus = typeof WorkOrderUpdateInvoiceStatus[keyof typeof WorkOrderUpdateInvoiceStatus];
+
+
+export const WorkOrderUpdateInvoiceStatus = {
+  not_invoiced: 'not_invoiced',
+  ready_to_invoice: 'ready_to_invoice',
+  invoiced: 'invoiced',
+} as const;
+
+export type WorkOrderUpdatePaymentStatus = typeof WorkOrderUpdatePaymentStatus[keyof typeof WorkOrderUpdatePaymentStatus];
+
+
+export const WorkOrderUpdatePaymentStatus = {
+  unpaid: 'unpaid',
+  partial: 'partial',
+  paid: 'paid',
+} as const;
+
 export interface WorkOrderUpdate {
   status?: WorkOrderUpdateStatus;
-  paid?: boolean;
+  invoiceStatus?: WorkOrderUpdateInvoiceStatus;
+  paymentStatus?: WorkOrderUpdatePaymentStatus;
   /** @nullable */
   km?: number | null;
   /** @nullable */
@@ -1240,6 +1309,16 @@ export interface DashboardSummary {
   inProgressWorkOrders?: number;
   completedThisMonth: number;
   stkExpiringSoon: number;
+  /** Work orders created today (Dnes objednáno) */
+  orderedToday?: number;
+  /** Work orders waiting for parts (Čeká na díly) */
+  waitingParts?: number;
+  /** Work orders ready to invoice (Hotovo k fakturaci) */
+  readyToInvoice?: number;
+  /** Invoiced work orders not fully paid (Vyfakturováno-nezaplaceno) */
+  invoicedUnpaid?: number;
+  /** Vehicles with STK already expired (STK po termínu) */
+  stkOverdue?: number;
   recentWorkOrders?: WorkOrder[];
 }
 
