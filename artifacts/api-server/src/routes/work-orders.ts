@@ -4,7 +4,7 @@ import multer from "multer";
 import { db, workOrdersTable, vehiclesTable, photosTable, loanersTable } from "@workspace/db";
 import { getObjectStorageService } from "../lib/storage";
 import { validateImageUpload } from "../lib/fileValidation";
-import { auditEntity } from "../lib/audit";
+import { auditEntity, type AuditActor } from "../lib/audit";
 import { getActor } from "../lib/actor";
 import {
   ListWorkOrdersQueryParams,
@@ -272,9 +272,48 @@ router.delete("/work-orders/:id", async (req, res): Promise<void> => {
     .returning();
   if (!order) { res.status(404).json({ error: "Zakázka nenalezena" }); return; }
   await auditEntity.deleted("work_order", order.id, actor, order, order.licensePlate);
+
+  // Cascade the soft-delete to the work order's children (photos + any loaner
+  // linked via workOrderId) so nothing is left "live" pointing at a hidden
+  // parent and a later cascade restore brings the whole subtree back. Mirrors
+  // cascadeSoftDeleteVehicleChildren in vehicles.ts and the trash router's
+  // child-link map (photo via workOrderId, loaner via workOrderId).
+  await cascadeSoftDeleteWorkOrderChildren(order.id, actor, reason, order.deletedAt ?? new Date());
+
   if (order.vehicleId) await recomputeVehicleServiceStatus(order.vehicleId);
   res.sendStatus(204);
 });
+
+// Soft-delete a work order's photos and any loaner linked via workOrderId with
+// the same actor/reason/timestamp, auditing each cascaded delete. Only rows not
+// already trashed are touched (isNull(deletedAt)), so a child deleted separately
+// earlier keeps its own deletedBy/deleteReason.
+async function cascadeSoftDeleteWorkOrderChildren(
+  workOrderId: number,
+  actor: AuditActor,
+  reason: string | null,
+  deletedAt: Date,
+): Promise<void> {
+  const set = { deletedAt, deletedBy: actor, deleteReason: reason };
+
+  const photos = await db
+    .update(photosTable)
+    .set(set)
+    .where(and(eq(photosTable.workOrderId, workOrderId), isNull(photosTable.deletedAt)))
+    .returning();
+  for (const row of photos) {
+    await auditEntity.deleted("photo", row.id, actor, row, row.filename);
+  }
+
+  const loaners = await db
+    .update(loanersTable)
+    .set(set)
+    .where(and(eq(loanersTable.workOrderId, workOrderId), isNull(loanersTable.deletedAt)))
+    .returning();
+  for (const row of loaners) {
+    await auditEntity.deleted("loaner", row.id, actor, row);
+  }
+}
 
 // Photos
 router.get("/work-orders/:id/photos", async (req, res): Promise<void> => {
