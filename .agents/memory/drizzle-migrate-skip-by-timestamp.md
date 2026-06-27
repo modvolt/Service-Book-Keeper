@@ -42,3 +42,14 @@ migration deploy is safe, reproduce it on scratch databases on the dev Postgres:
    assert the schema change + data backfill.
 3. Idempotency: run migrate once more; it must be a clean no-op.
 Drop the scratch DBs afterward.
+
+This recipe is now an automated release smoke test (runs under the `test`
+validation). It uses drizzle-orm's in-process `migrate()` rather than the
+`drizzle-kit migrate` CLI prod boots with — safe because both share the SAME
+journal semantics: apply in `_journal.json` order, split on
+`--> statement-breakpoint`, record into `drizzle.__drizzle_migrations` with
+`created_at` = the journal `when`. So a scratch DB migrated in-process is
+byte-for-byte compatible with one drizzle-kit would produce, and the test
+faithfully mirrors the container boot path. The upgrade-from-previous-release
+folder is built by trimming `_journal.json` to a baseline tag (no temp config
+needed for the programmatic migrator — `migrationsFolder` is enough).
