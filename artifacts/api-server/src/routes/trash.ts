@@ -12,8 +12,10 @@ import {
 } from "@workspace/db";
 import { auditEntity } from "../lib/audit";
 import { getActor } from "../lib/actor";
+import { getObjectStorageService } from "../lib/storage";
 
 const router: IRouter = Router();
+const storage = getObjectStorageService();
 
 type TrashEntity =
   | "vehicle"
@@ -42,9 +44,16 @@ interface EntityConfig {
   // Clears the soft-delete flags; returns the restored row or null if not found.
   restore: (id: number) => Promise<Snapshot | null>;
   // Hard-deletes the row (children cascade / set-null via FK); returns the
-  // purged row or null if not found. Storage blobs are intentionally left for
-  // the storage cleanup task — purge only removes DB rows here.
+  // purged row or null if not found. Only removes DB rows — the route handler
+  // deletes the associated storage blobs first via `photoUrls` (below).
   purge: (id: number) => Promise<Snapshot | null>;
+  // Collects the `/objects/...` paths of photo blobs that this purge would
+  // orphan, but only when the target is a trashed, purge-eligible row. The
+  // handler deletes these blobs before the DB rows (GDPR erasure ordering:
+  // abort on blob failure so we never claim a delete that left files behind).
+  // Omitted for entities that own no photos. A vehicle purge set-nulls its
+  // work orders (they survive), so it intentionally has no blobs to clean.
+  photoUrls?: (id: number) => Promise<string[]>;
 }
 
 const CLEAR = { deletedAt: null, deletedBy: null, deleteReason: null };
@@ -104,6 +113,20 @@ const ENTITIES: Record<TrashEntity, EntityConfig> = {
       if (!existing) return null;
       await db.delete(workOrdersTable).where(eq(workOrdersTable.id, id));
       return existing;
+    },
+    photoUrls: async (id) => {
+      // Only a trashed, purge-eligible work order; otherwise we'd delete the
+      // blobs of a live work order.
+      const [existing] = await db
+        .select({ id: workOrdersTable.id })
+        .from(workOrdersTable)
+        .where(and(eq(workOrdersTable.id, id), isNotNull(workOrdersTable.deletedAt)));
+      if (!existing) return [];
+      const rows = await db
+        .select({ url: photosTable.url })
+        .from(photosTable)
+        .where(eq(photosTable.workOrderId, id));
+      return rows.map((r) => r.url);
     },
   },
   service_record: {
@@ -251,6 +274,13 @@ const ENTITIES: Record<TrashEntity, EntityConfig> = {
       await db.delete(photosTable).where(eq(photosTable.id, id));
       return existing;
     },
+    photoUrls: async (id) => {
+      const [existing] = await db
+        .select({ url: photosTable.url })
+        .from(photosTable)
+        .where(and(eq(photosTable.id, id), isNotNull(photosTable.deletedAt)));
+      return existing ? [existing.url] : [];
+    },
   },
 };
 
@@ -323,7 +353,31 @@ router.delete("/trash/:entity/:id", async (req, res): Promise<void> => {
     return;
   }
 
-  const purged = await ENTITIES[entity].purge(id);
+  const cfg = ENTITIES[entity];
+
+  // Free up object storage: delete the photo blobs this purge would orphan
+  // BEFORE removing the DB rows (GDPR erasure ordering). `photoUrls` only
+  // returns paths for a trashed, purge-eligible row, so a non-existent/live
+  // target yields none. deleteObject is idempotent, so a retry is safe.
+  if (cfg.photoUrls) {
+    const urls = await cfg.photoUrls(id);
+    if (urls.length > 0) {
+      const results = await Promise.allSettled(urls.map((u) => storage.deleteObject(u)));
+      const failed = results.filter((r) => r.status === "rejected");
+      if (failed.length > 0) {
+        req.log.error(
+          { entity, id, failed: failed.length },
+          "Trash purge aborted: failed to delete photo blobs from storage",
+        );
+        res.status(500).json({
+          error: "Smazání fotografií z úložiště selhalo. Záznam nebyl smazán, zkuste to znovu.",
+        });
+        return;
+      }
+    }
+  }
+
+  const purged = await cfg.purge(id);
   if (!purged) {
     res.status(404).json({ error: "Záznam nenalezen" });
     return;
