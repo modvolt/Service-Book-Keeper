@@ -38,6 +38,9 @@ services:
       # --- Auth / session ---
       SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET in .env}
       APP_PASSWORD: ${APP_PASSWORD:?set APP_PASSWORD in .env}
+      # Optional password for the restricted "scanner" role (mobile scan). Seeds the
+      # scanner auth row on first login; leave empty to keep the scanner disabled.
+      SCANNER_PASSWORD: ${SCANNER_PASSWORD:-}
       # Public HTTPS origin (used to build password-reset links). e.g. https://autoservis.example.com
       APP_URL: ${APP_URL:-}
       # Comma-separated CORS allowlist. Single-origin deploy needs none; leave empty.
@@ -54,6 +57,15 @@ services:
       S3_FORCE_PATH_STYLE: ${S3_FORCE_PATH_STYLE:-true}
       S3_PRIVATE_PREFIX: ${S3_PRIVATE_PREFIX:-private}
       S3_PUBLIC_PREFIX: ${S3_PUBLIC_PREFIX:-public}
+
+      # --- Automatic database backups ---
+      # Number of most-recent automatic backups to keep (older ones are pruned).
+      BACKUP_RETENTION_COUNT: ${BACKUP_RETENTION_COUNT:-14}
+
+      # --- Diagnostics (optional) ---
+      # Admin-only by default. Set to true ONLY for a short debugging window to
+      # expose /api/diagnostics without a login. Leave off in normal operation.
+      ENABLE_PUBLIC_DIAGNOSTICS: ${ENABLE_PUBLIC_DIAGNOSTICS:-false}
 
       # --- AI (OpenAI or any OpenAI-compatible endpoint) ---
       AI_INTEGRATIONS_OPENAI_BASE_URL: ${AI_INTEGRATIONS_OPENAI_BASE_URL:-https://api.openai.com/v1}

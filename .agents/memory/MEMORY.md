@@ -23,3 +23,4 @@
 - [Soft-delete filtering completeness](soft-delete-filtering-completeness.md) — when adding deletedAt, EVERY read/get/update/FK-resolve/scan query needs isNull(deletedAt), not just list endpoints; side-channels leak deleted rows.
 - [Inline-mock route tests](inline-mock-route-tests.md) — api-server tests that inline-mock drizzle-orm 500 when a route adds a new operator import (isNull/and); add it to the mock + its matchRow.
 - [rel-db harness extension](rel-db-harness-extension.md) — a route under test 500s when it uses a drizzle feature the in-memory rel-db harness lacks (onConflictDoUpdate/execute/getTableColumns/sql.identifier); extend engine + re-export, don't reshape the route.
+- [Verify migrations on a fresh DB](verify-migrations-fresh-db.md) — verify the prod boot migrate path on a throwaway scratch DB; the push-provisioned dev DB gives false migrate failures.
